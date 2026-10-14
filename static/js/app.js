@@ -2453,15 +2453,39 @@ function formatWhatsAppChatId(rawPhone, fallbackDdd = '12') {
 }
 
 /**
- * Resolve Spintax: {Olá|Oi|Tudo bem?}
+ * Resolve Spintax robusto: {Opção 1|Opção 2|Opção 3}
+ * Suporta múltiplas variações e blocos aninhados.
+ * Preserva tags normais sem pipe como {empresa} ou {nome} para não interferir na substituição de variáveis.
  */
 function parseSpintax(text) {
-    if (!text) return '';
+    if (!text || typeof text !== 'string') return text || '';
+    if (!text.includes('{') || !text.includes('}')) return text;
+
     const regex = /\{([^{}]+)\}/g;
-    return text.replace(regex, (match, choices) => {
-        const options = choices.split('|');
-        return options[Math.floor(Math.random() * options.length)].trim();
-    });
+    let result = text;
+    let iterations = 0;
+
+    while (result.includes('{') && result.includes('}') && iterations < 15) {
+        let hasSpin = false;
+        const newResult = result.replace(regex, (match, choices) => {
+            if (choices.includes('|')) {
+                hasSpin = true;
+                const options = choices.split('|').map(opt => opt.trim()).filter(opt => opt.length > 0);
+                if (options.length === 0) return '';
+                const randomIndex = Math.floor(Math.random() * options.length);
+                return options[randomIndex];
+            }
+            return match;
+        });
+
+        if (!hasSpin || newResult === result) {
+            break;
+        }
+        result = newResult;
+        iterations++;
+    }
+
+    return result;
 }
 
 /**
@@ -2531,7 +2555,7 @@ function buildPersonalizedMessage(lead, customTemplate = null, options = {}) {
         template = `[{saudacao}], [{primeiro_nome}]! Sou da [NOME_DA_EMPRESA]. Trabalhamos com [SOLUCAO_CONFIRMADA] para [PUBLICO_ALVO]. Gostaria de saber se faz sentido conversar sobre [BENEFICIO_CONFIRMADO]. Posso fazer uma pergunta rápida?\n\nSe preferir não receber mensagens, é só me avisar.`;
     }
 
-    // 1. Processa Spintax primeiro: {Opção 1|Opção 2}
+    // 1. Processa Spintax inicial: {Opção 1|Opção 2}
     let res = parseSpintax(template);
 
     // 2. Substituições com suporte aos múltiplos formatos da interface e do usuário
@@ -2590,6 +2614,9 @@ function buildPersonalizedMessage(lead, customTemplate = null, options = {}) {
             res = res.trim() + '\n\nSe preferir não receber mensagens, é só me avisar.';
         }
     }
+
+    // 4. Passe final de Spintax para garantir que nenhuma variação restante fique literal
+    res = parseSpintax(res);
 
     return res;
 }
