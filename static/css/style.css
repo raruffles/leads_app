@@ -242,6 +242,11 @@ textarea::placeholder,
     display: flex;
     flex-direction: column;
     min-height: 100vh;
+    min-width: 0;
+    width: calc(100vw - 270px);
+    max-width: calc(100vw - 270px);
+    box-sizing: border-box;
+    overflow-x: hidden;
 }
 
 /* TOPBAR */
@@ -253,10 +258,14 @@ textarea::placeholder,
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 32px;
+    padding: 0 24px;
     position: sticky;
     top: 0;
     z-index: 40;
+    min-width: 0;
+    max-width: 100%;
+    flex-wrap: wrap;
+    gap: 10px;
 }
 
 .page-title {
@@ -347,13 +356,20 @@ textarea::placeholder,
 
 /* CONTAINER DAS PÁGINAS */
 .content-container {
-    padding: 32px;
+    padding: 22px 28px;
     flex: 1;
+    min-width: 0;
+    max-width: 100%;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .tab-content {
     display: none;
     animation: fadeIn 0.3s ease;
+    min-width: 0;
+    max-width: 100%;
+    width: 100%;
 }
 
 .tab-content.active {
@@ -370,11 +386,15 @@ textarea::placeholder,
     background: var(--bg-card);
     border: 1px solid var(--border-color);
     border-radius: 14px;
-    padding: 24px;
+    padding: 22px 24px;
     backdrop-filter: blur(16px);
     position: relative;
     overflow: hidden;
     margin-bottom: 24px;
+    min-width: 0;
+    max-width: 100%;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .card-header {
@@ -382,6 +402,8 @@ textarea::placeholder,
     align-items: center;
     justify-content: space-between;
     margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 12px;
 }
 
 .card-title {
@@ -486,9 +508,25 @@ textarea::placeholder,
 /* FORMULÁRIO DE VARREDURA */
 .search-form-grid {
     display: grid;
-    grid-template-columns: 1.2fr 1fr 140px 180px;
-    gap: 16px;
+    grid-template-columns: minmax(180px, 1.4fr) 120px minmax(180px, 1.5fr) 85px 150px;
+    gap: 12px;
     align-items: flex-end;
+    width: 100%;
+    min-width: 0;
+}
+
+@media (max-width: 1400px) {
+    .search-form-grid {
+        grid-template-columns: 1.2fr 110px 1.3fr 75px 135px;
+        gap: 10px;
+    }
+}
+
+@media (max-width: 1180px) {
+    .search-form-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+    }
 }
 
 .form-group {
@@ -612,13 +650,17 @@ textarea::placeholder,
     align-items: center;
     justify-content: space-between;
     margin-bottom: 18px;
-    gap: 16px;
+    gap: 12px;
     flex-wrap: wrap;
+    min-width: 0;
+    max-width: 100%;
 }
 
 .filter-buttons {
     display: flex;
-    gap: 8px;
+    gap: 6px;
+    flex-wrap: wrap;
+    min-width: 0;
 }
 
 .filter-btn {
@@ -673,7 +715,10 @@ textarea::placeholder,
 
 .leads-table-container {
     width: 100%;
+    max-width: 100%;
+    min-width: 0;
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
     border-radius: 10px;
     border: 1px solid var(--border-color);
     background: rgba(14, 11, 28, 0.6);
@@ -681,6 +726,7 @@ textarea::placeholder,
 
 .leads-table {
     width: 100%;
+    min-width: 980px;
     border-collapse: collapse;
     text-align: left;
     font-size: 13.5px;
@@ -706,6 +752,64 @@ textarea::placeholder,
 
 .leads-table tr:hover {
     background: rgba(255, 255, 255, 0.025);
+}
+
+/* LARGURAS DAS COLUNAS DA TABELA DE PROSPECÇÃO B2B */
+.leads-table th.th-col-empresa,
+.leads-table td.col-empresa {
+    width: 320px;
+    min-width: 280px;
+    max-width: 380px;
+}
+
+.leads-table th.th-col-site,
+.leads-table td.col-site {
+    width: 110px;
+    min-width: 95px;
+    max-width: 125px;
+    text-align: center;
+}
+
+.leads-table th.th-col-wa,
+.leads-table td.col-wa {
+    width: 125px;
+    min-width: 110px;
+}
+
+.leads-table th.th-col-tel,
+.leads-table td.col-tel {
+    width: 125px;
+    min-width: 110px;
+}
+
+.leads-table th.th-col-insta,
+.leads-table td.col-insta {
+    width: 115px;
+    min-width: 105px;
+}
+
+.leads-table th.th-col-valor,
+.leads-table td.col-valor {
+    width: 95px;
+    min-width: 90px;
+}
+
+.leads-table th.th-col-resp,
+.leads-table td.col-resp {
+    width: 95px;
+    min-width: 90px;
+}
+
+.leads-table th.th-col-maps,
+.leads-table td.col-maps {
+    width: 105px;
+    min-width: 95px;
+}
+
+.leads-table th.th-col-acoes,
+.leads-table td.col-acoes {
+    width: 105px;
+    min-width: 95px;
 }
 
 .company-cell {
@@ -739,35 +843,45 @@ textarea::placeholder,
 .badge-no-site {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 4px;
     background: linear-gradient(135deg, rgba(255, 59, 87, 0.2), rgba(255, 120, 0, 0.25));
     border: 1px solid var(--alert-red);
     color: #ff5b73;
-    padding: 5px 10px;
-    border-radius: 6px;
-    font-size: 11.5px;
+    padding: 3px 8px;
+    border-radius: 5px;
+    font-size: 11px;
     font-weight: 700;
-    box-shadow: 0 0 10px rgba(255, 59, 87, 0.2);
-    animation: pulseAlert 2s infinite ease-in-out;
-}
-
-@keyframes pulseAlert {
-    0%, 100% { box-shadow: 0 0 8px rgba(255, 59, 87, 0.2); }
-    50% { box-shadow: 0 0 16px rgba(255, 59, 87, 0.5); }
+    box-shadow: 0 0 8px rgba(255, 59, 87, 0.2);
+    white-space: nowrap;
 }
 
 .badge-has-site {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 4px;
     color: var(--neon-cyan);
     text-decoration: none;
-    font-size: 12.5px;
-    font-weight: 500;
+    font-size: 11.5px;
+    font-weight: 600;
+    background: rgba(0, 210, 255, 0.08);
+    border: 1px solid rgba(0, 210, 255, 0.25);
+    padding: 3px 8px;
+    border-radius: 5px;
+    white-space: nowrap;
+    transition: all 0.2s ease;
 }
 .badge-has-site:hover {
-    text-decoration: underline;
+    background: rgba(0, 210, 255, 0.2);
     color: #fff;
+    border-color: var(--neon-cyan);
+}
+
+.b2b-template-pill.active {
+    background: rgba(0, 255, 136, 0.15) !important;
+    border-color: var(--neon-green) !important;
+    color: var(--neon-green) !important;
+    font-weight: 700 !important;
+    box-shadow: 0 0 10px rgba(0, 255, 136, 0.2);
 }
 
 .email-link {
@@ -3301,8 +3415,106 @@ textarea::placeholder,
     box-shadow: 0 0 8px rgba(0, 255, 136, 0.4);
 }
 
+/* RESPONSIVIDADE & AJUSTES ANTI-CORTE PARA TELAS DE NOTEBOOK / DESKTOP (<= 1440px / 1366px / 1280px) */
+@media (max-width: 1440px) {
+    .content-container {
+        padding: 18px 20px;
+    }
+    .topbar {
+        padding: 0 18px;
+    }
+    .card {
+        padding: 18px 20px;
+        margin-bottom: 18px;
+    }
+    .filter-btn {
+        padding: 5px 10px;
+        font-size: 11.5px;
+    }
+    .btn-sm {
+        padding: 5px 10px;
+        font-size: 11.5px;
+    }
+    .search-box {
+        min-width: 200px;
+        flex: 1;
+    }
+}
 
+@media (max-width: 1280px) {
+    .sidebar {
+        width: 240px;
+    }
+    .main-wrapper {
+        margin-left: 240px;
+        width: calc(100vw - 240px);
+        max-width: calc(100vw - 240px);
+    }
+    .content-container {
+        padding: 14px 16px;
+    }
+    .topbar {
+        padding: 0 14px;
+        height: 60px;
+    }
+    .page-title {
+        font-size: 17px;
+    }
+    .card {
+        padding: 16px;
+    }
+}
 
-
-
-
+/* ========================================================
+   GERENCIAMENTO DE TEMPO DO DISPARADOR AUTOMÁTICO (ANTI-BAN)
+   ======================================================== */
+.disp-time-management-box {
+    background: rgba(0, 255, 136, 0.03);
+    border: 1px solid rgba(0, 255, 136, 0.2);
+    border-radius: 10px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.disp-time-presets {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.disp-preset-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: var(--text-secondary);
+    border-radius: 6px;
+    padding: 6px 11px;
+    font-size: 11.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+.disp-preset-btn:hover {
+    background: rgba(0, 255, 136, 0.1);
+    color: var(--neon-green);
+    border-color: rgba(0, 255, 136, 0.4);
+    transform: translateY(-1px);
+}
+.disp-preset-btn.active {
+    background: rgba(0, 255, 136, 0.16);
+    color: var(--neon-green);
+    border-color: var(--neon-green);
+    box-shadow: 0 0 10px rgba(0, 255, 136, 0.25);
+    font-weight: 700;
+}
+.disp-time-estimate-pill {
+    background: rgba(0, 210, 255, 0.08);
+    border: 1px solid rgba(0, 210, 255, 0.25);
+    color: var(--neon-cyan);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+}

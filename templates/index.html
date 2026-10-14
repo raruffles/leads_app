@@ -398,7 +398,7 @@
                     </div>
 
                     <form id="scan-form">
-                        <div class="search-form-grid" style="grid-template-columns: 1fr 140px 1.1fr 110px 160px;">
+                        <div class="search-form-grid">
                             <div class="form-group">
                                 <label class="form-label" for="niche-input">
                                     <i class="fas fa-tag"></i> Nicho de Mercado
@@ -449,7 +449,7 @@
                     </form>
 
                     <!-- OPÇÃO DE IMPORTAR DIRETO DO INSTANT DATA SCRAPER -->
-                    <div style="margin-top: 14px; padding-top: 12px; border-top: 1px dashed rgba(157, 78, 221, 0.2); display: flex; align-items: center; justify-content: space-between;">
+                    <div style="margin-top: 14px; padding-top: 12px; border-top: 1px dashed rgba(157, 78, 221, 0.2); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
                         <span style="font-size: 12.5px; color: var(--text-secondary);">
                             <i class="fas fa-file-import" style="color:var(--neon-cyan);"></i> Já raspou no Chrome com o <strong>Instant Data Scraper</strong>?
                         </span>
@@ -498,8 +498,8 @@
                             <button class="btn btn-secondary btn-sm" style="color:#ffaa00; border-color: rgba(255, 170, 0, 0.4);" onclick="openCleanupModal('keep_closed')">
                                 <i class="fas fa-shield-alt"></i> Salvar Só Fechados
                             </button>
-                            <button class="btn btn-secondary btn-sm" style="color:#ff5b73; border-color: rgba(255, 91, 115, 0.4);" onclick="openCleanupModal('all')">
-                                <i class="fas fa-trash-alt"></i> Limpar Dados
+                            <button class="btn btn-secondary btn-sm" style="color:#ff4d6d; border-color: rgba(255, 77, 109, 0.5); font-weight: 700; background: rgba(255, 77, 109, 0.08);" onclick="openCleanupModal('all')" title="Excluir ou limpar lista de leads">
+                                <i class="fas fa-trash-alt"></i> Excluir Lista
                             </button>
                         </div>
                     </div>
@@ -508,6 +508,9 @@
                     <div class="table-filters-bar">
                         <div class="filter-buttons" style="flex-wrap: wrap;">
                             <button class="filter-btn active" data-filter="all">Todos os Leads</button>
+                            <button class="filter-btn" data-filter="selected" id="filter-btn-selected" title="Ver apenas os leads marcados na seleção">
+                                <i class="fas fa-check-square" style="color:var(--neon-green);"></i> Selecionados (<span id="filter-selected-badge">0</span>)
+                            </button>
                             <button class="filter-btn" data-filter="no-site" style="border-color: rgba(255, 59, 87, 0.4);">
                                 <i class="fas fa-fire" style="color:var(--alert-red);"></i> Sem Site
                             </button>
@@ -541,8 +544,8 @@
                     </div>
 
                     <!-- BARRA DE AÇÕES EM MASSA -->
-                    <div id="table-bulk-bar" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; background: rgba(0, 255, 136, 0.05); border: 1px solid rgba(0, 255, 136, 0.2); border-radius: 8px; margin-bottom: 12px;">
-                        <div style="display: flex; align-items: center; gap: 12px; font-size: 13px;">
+                    <div id="table-bulk-bar" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; background: rgba(0, 255, 136, 0.05); border: 1px solid rgba(0, 255, 136, 0.2); border-radius: 8px; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
+                        <div style="display: flex; align-items: center; gap: 10px; font-size: 13px; flex-wrap: wrap;">
                             <span style="color: var(--text-secondary);">Selecionados: <strong id="selected-leads-count" style="color: var(--neon-green); font-size: 14px;">0</strong></span>
                             <button type="button" class="btn btn-secondary btn-sm" onclick="selectAllLeads(true)">
                                 <i class="fas fa-check-square"></i> Marcar Todos
@@ -550,13 +553,16 @@
                             <button type="button" class="btn btn-secondary btn-sm" onclick="selectAllLeads(false)">
                                 <i class="fas fa-square"></i> Desmarcar
                             </button>
+                            <button type="button" id="btn-bulk-delete" class="btn btn-secondary btn-sm" onclick="handleBulkDeleteSelected()" style="color:#ff4d6d; border-color:rgba(255,77,109,0.5); font-weight:700; background:rgba(255,77,109,0.08);" title="Apagar permanentemente apenas os leads que estão selecionados">
+                                <i class="fas fa-trash-alt"></i> Apagar Selecionados (<span id="bulk-delete-count">0</span>)
+                            </button>
                         </div>
-                        <div style="display: flex; gap: 10px; align-items: center;">
+                        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
                             <button type="button" id="btn-bulk-enrich" class="btn btn-secondary btn-sm" onclick="handleEnrichSelectedLeads()" style="color:var(--neon-green); border-color:rgba(0,255,136,0.4);" title="Puxar dados reais de contato para os estabelecimentos">
                                 <i class="fas fa-magic"></i> Puxar Dados Reais (<span id="bulk-enrich-count">0</span>)
                             </button>
-                            <button type="button" id="btn-bulk-whatsapp" class="btn btn-neon btn-sm" onclick="handleBulkSendAction(this)">
-                                <i class="fab fa-whatsapp"></i> Disparar WhatsApp em Massa (<span id="bulk-btn-count">0</span>)
+                            <button type="button" id="btn-bulk-whatsapp" class="btn btn-neon btn-sm" onclick="openB2BQuickDispatchModal()" title="Enviar mensagem para os leads selecionados com base na Prospecção B2B">
+                                <i class="fab fa-whatsapp"></i> Enviar Mensagem para Selecionados (<span id="bulk-btn-count">0</span>)
                             </button>
                         </div>
                     </div>
@@ -566,18 +572,18 @@
                         <table class="leads-table">
                             <thead>
                                 <tr>
-                                    <th style="width: 40px; text-align: center;">
+                                    <th style="width: 38px; text-align: center;">
                                         <input type="checkbox" id="th-select-all" class="lead-select-checkbox" onchange="toggleSelectAllRows(this)" title="Selecionar Todos">
                                     </th>
-                                    <th>Empresa</th>
-                                    <th>WhatsApp</th>
-                                    <th>Telefone</th>
-                                    <th>Instagram</th>
-                                    <th>Valor (R$)</th>
-                                    <th>Responsável</th>
-                                    <th>Site Oficial</th>
-                                    <th>Google / Maps</th>
-                                    <th>Ações</th>
+                                    <th class="th-col-empresa">Empresa</th>
+                                    <th class="th-col-wa">WhatsApp</th>
+                                    <th class="th-col-tel">Telefone</th>
+                                    <th class="th-col-insta">Instagram</th>
+                                    <th class="th-col-valor">Valor (R$)</th>
+                                    <th class="th-col-resp">Responsável</th>
+                                    <th class="th-col-site">Site Oficial</th>
+                                    <th class="th-col-maps">Google / Maps</th>
+                                    <th class="th-col-acoes">Ações</th>
                                 </tr>
                             </thead>
                             <tbody id="leads-table-body">
@@ -1135,11 +1141,11 @@
                                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                                         <div>
                                             <span style="font-size: 12px; font-weight: 500; color: var(--text-secondary);">Delay Mínimo (seg):</span>
-                                            <input type="number" id="bulk-delay-min" class="form-control" value="15" min="5" max="60" style="padding: 6px 10px; font-size: 12px;">
+                                            <input type="number" id="bulk-delay-min" class="form-control" value="15" min="15" max="3600" style="padding: 6px 10px; font-size: 12px;" title="Mínimo obrigatório de 15 segundos">
                                         </div>
                                         <div>
                                             <span style="font-size: 12px; font-weight: 500; color: var(--text-secondary);">Delay Máximo (seg):</span>
-                                            <input type="number" id="bulk-delay-max" class="form-control" value="35" min="10" max="120" style="padding: 6px 10px; font-size: 12px;">
+                                            <input type="number" id="bulk-delay-max" class="form-control" value="35" min="15" max="3600" style="padding: 6px 10px; font-size: 12px;">
                                         </div>
                                     </div>
                                     <small style="color: var(--text-secondary); font-size: 11.5px; margin-top: 6px; display: block;">
@@ -1274,8 +1280,8 @@ Desenvolvemos páginas de alta velocidade para capturar clientes direto pelo cel
                     </div>
                     <div class="card" style="padding: 16px; border-left: 3px solid #ffcc00;">
                         <div style="color: var(--text-secondary); font-size: 11.5px; text-transform: uppercase; font-weight: 700;">Proteção Anti-Banimento</div>
-                        <div style="font-size: 18px; font-weight: 800; color: #ffcc00; margin-top: 8px;">ATIVADA (15s-35s)</div>
-                        <small style="color: var(--text-muted); font-size: 11px;">Simulação de digitação humana</small>
+                        <div id="disp-kpi-delay-text" style="font-size: 18px; font-weight: 800; color: #ffcc00; margin-top: 8px;">ATIVADA (15s-35s)</div>
+                        <small id="disp-kpi-delay-desc" style="color: var(--text-muted); font-size: 11px;">Mínimo obrigatório de 15s</small>
                     </div>
                 </div>
 
@@ -1428,14 +1434,55 @@ Se preferir não receber mensagens, é só me avisar.</textarea>
                                     <span>Garantir rodapé anti-bloqueio / LGPD: <em style="color:var(--text-secondary);">"Se preferir não receber mensagens, é só me avisar."</em></span>
                                 </label>
 
-                                <div style="display: flex; align-items: center; gap: 14px; background: rgba(0,255,136,0.03); border: 1px solid rgba(0,255,136,0.15); border-radius: 8px; padding: 10px 14px;">
-                                    <i class="fas fa-shield-alt" style="color: var(--neon-green); font-size: 18px;"></i>
-                                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                                        <span style="font-size: 12px; color: var(--text-secondary);">Delay Humano Randômico:</span>
-                                        <input type="number" id="disp-delay-min" class="form-control" value="15" min="5" max="60" style="width: 60px; padding: 4px 8px; font-size: 12px; text-align: center;">
-                                        <span style="font-size: 12px; color: var(--text-secondary);">a</span>
-                                        <input type="number" id="disp-delay-max" class="form-control" value="35" min="10" max="120" style="width: 60px; padding: 4px 8px; font-size: 12px; text-align: center;">
-                                        <span style="font-size: 12px; color: var(--text-secondary);">segundos entre cada envio</span>
+                                <!-- GERENCIAMENTO DE CADÊNCIA & TEMPO DE DISPARO -->
+                                <div class="disp-time-management-box">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                            <i class="fas fa-clock" style="color: var(--neon-green); font-size: 16px;"></i>
+                                            <span style="font-size: 13px; font-weight: 700; color: #fff;">Cadência & Intervalo Anti-Banimento</span>
+                                            <span style="background: rgba(0, 255, 136, 0.15); color: var(--neon-green); border: 1px solid rgba(0, 255, 136, 0.35); font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 10px;" title="Tempo mínimo estrito exigido pelo sistema para evitar banimento">MÍNIMO: 15s</span>
+                                        </div>
+                                        <span id="disp-time-human-desc" style="font-size: 12px; color: var(--neon-cyan); font-weight: 700;">
+                                            Média: ~25s por envio
+                                        </span>
+                                    </div>
+
+                                    <!-- PRESETS RÁPIDOS DE CADÊNCIA -->
+                                    <div class="disp-time-presets">
+                                        <button type="button" class="disp-preset-btn active" id="btn-preset-15-35" onclick="setDisparadorDelayPreset(15, 35)">
+                                            ⚡ Rápido Seguro (15s - 35s)
+                                        </button>
+                                        <button type="button" class="disp-preset-btn" id="btn-preset-30-60" onclick="setDisparadorDelayPreset(30, 60)">
+                                            🛡️ Moderado (30s - 60s)
+                                        </button>
+                                        <button type="button" class="disp-preset-btn" id="btn-preset-60-120" onclick="setDisparadorDelayPreset(60, 120)">
+                                            ⏳ Lento (1 a 2 min)
+                                        </button>
+                                        <button type="button" class="disp-preset-btn" id="btn-preset-120-300" onclick="setDisparadorDelayPreset(120, 300)">
+                                            ☕ Ultra Seguro (2 a 5 min)
+                                        </button>
+                                        <button type="button" class="disp-preset-btn" id="btn-preset-300-600" onclick="setDisparadorDelayPreset(300, 600)">
+                                            🧘 Muito Espaçado (5 a 10 min)
+                                        </button>
+                                    </div>
+
+                                    <!-- INPUTS DE AJUSTE LIVRE (PISO MÍNIMO 15s) -->
+                                    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: rgba(0,0,0,0.3); padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.06);">
+                                        <span style="font-size: 11.5px; color: var(--text-secondary); font-weight: 600;">Personalizado:</span>
+                                        <div style="display: flex; align-items: center; gap: 5px;">
+                                            <span style="font-size: 11.5px; color: var(--text-secondary);">Min:</span>
+                                            <input type="number" id="disp-delay-min" class="form-control" value="15" min="15" max="3600" style="width: 70px; padding: 4px 8px; font-size: 12px; text-align: center;" onchange="onDisparadorDelayChange()" oninput="onDisparadorDelayChange()" title="Tempo mínimo permitido: 15 segundos">
+                                            <span style="font-size: 11.5px; color: var(--text-secondary);">seg</span>
+                                        </div>
+                                        <span style="color: var(--text-secondary); font-size: 11.5px;">a</span>
+                                        <div style="display: flex; align-items: center; gap: 5px;">
+                                            <span style="font-size: 11.5px; color: var(--text-secondary);">Max:</span>
+                                            <input type="number" id="disp-delay-max" class="form-control" value="35" min="15" max="3600" style="width: 70px; padding: 4px 8px; font-size: 12px; text-align: center;" onchange="onDisparadorDelayChange()" oninput="onDisparadorDelayChange()" title="Sem teto fixo - configure quanto tempo desejar">
+                                            <span style="font-size: 11.5px; color: var(--text-secondary);">seg</span>
+                                        </div>
+                                        <div id="disp-total-time-estimate" class="disp-time-estimate-pill" style="margin-left: auto;">
+                                            ⏱️ Estimativa: ~5 min
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -2724,7 +2771,105 @@ Se preferir não receber mensagens, é só me avisar.</textarea>
                 </div>
             </section>
 
-        </main>
+    <!-- MODAL DE DISPARO RÁPIDO PARA SELECIONADOS NA PROSPECÇÃO B2B -->
+    <div id="modal-b2b-quick-dispatch" class="modal-overlay">
+        <div class="modal-container" style="max-width: 620px;">
+            <div class="modal-header">
+                <div>
+                    <h3 style="color: #fff; font-size: 18px; font-weight: 800; display:flex; align-items:center; gap:8px;">
+                        <i class="fab fa-whatsapp" style="color:var(--neon-green);"></i> Enviar Mensagem para Selecionados
+                    </h3>
+                    <span style="font-size: 12px; color: var(--text-secondary);">
+                        Disparo com base na Prospecção B2B • <strong id="b2b-modal-selected-count" style="color:var(--neon-green);">0</strong> empresas selecionadas
+                    </span>
+                </div>
+                <button type="button" class="modal-close" onclick="closeB2BQuickDispatchModal()"><i class="fas fa-times"></i></button>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 16px; padding: 14px 0;">
+                <!-- SELETOR DE ETAPA DA PROSPECÇÃO B2B -->
+                <div class="form-group">
+                    <label class="form-label" style="font-weight: 700; color: var(--neon-cyan);">
+                        <i class="fas fa-layer-group"></i> Etapa da Mensagem de Prospecção:
+                    </label>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px;">
+                        <button type="button" class="btn btn-secondary btn-sm b2b-template-pill active" onclick="selectB2BTemplate('contato')" id="btn-tpl-contato" style="padding: 7px 10px; font-size: 11.5px; border-color: var(--neon-green); color: var(--neon-green); font-weight: 700;">
+                            <i class="fas fa-handshake"></i> 1º Contato (Maps)
+                        </button>
+                        <button type="button" class="btn btn-secondary btn-sm b2b-template-pill" onclick="selectB2BTemplate('follow1')" id="btn-tpl-follow1" style="padding: 7px 10px; font-size: 11.5px;">
+                            <i class="fas fa-file-invoice-dollar"></i> Follow 1 (Proposta)
+                        </button>
+                        <button type="button" class="btn btn-secondary btn-sm b2b-template-pill" onclick="selectB2BTemplate('follow2')" id="btn-tpl-follow2" style="padding: 7px 10px; font-size: 11.5px;">
+                            <i class="fas fa-bell"></i> Follow 2 (Prévia)
+                        </button>
+                        <button type="button" class="btn btn-secondary btn-sm b2b-template-pill" onclick="selectB2BTemplate('custom')" id="btn-tpl-custom" style="padding: 7px 10px; font-size: 11.5px;">
+                            <i class="fas fa-pen"></i> Personalizada
+                        </button>
+                    </div>
+                </div>
+
+                <!-- TEXTO DA MENSAGEM -->
+                <div class="form-group">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px;">
+                        <label class="form-label" style="margin-bottom:0;">
+                            <i class="fas fa-comment-dots"></i> Conteúdo da Mensagem (WhatsApp):
+                        </label>
+                        <span style="font-size: 11px; color: var(--text-muted);">Tags: <code style="color:var(--neon-green);">{nome}</code>, <code style="color:var(--neon-cyan);">{empresa}</code>, <code style="color:#ffaa00;">{cidade}</code></span>
+                    </div>
+                    <textarea id="b2b-modal-message-text" class="form-control" rows="5" style="font-family: var(--font-main); font-size: 13.5px; line-height: 1.5; resize: vertical;" placeholder="Escreva a mensagem aqui..."></textarea>
+                </div>
+
+                <!-- DELAY HUMANO ANTI-BAN -->
+                <div style="display: flex; gap: 14px; align-items: center; background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 14px;">
+                    <div style="font-size: 12.5px; color: var(--text-secondary); display:flex; align-items:center; gap:8px;">
+                        <i class="fas fa-shield-alt" style="color:var(--neon-green); font-size:16px;"></i>
+                        <span>Delay Anti-Ban (Humano):</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:8px; margin-left:auto;">
+                        <input type="number" id="b2b-delay-min" class="form-control" value="15" min="15" max="3600" style="width: 65px; height: 32px; padding: 4px 8px; text-align: center; font-size: 12.5px;" title="Mínimo obrigatório de 15 segundos">
+                        <span style="font-size: 12px; color: var(--text-muted);">a</span>
+                        <input type="number" id="b2b-delay-max" class="form-control" value="35" min="15" max="3600" style="width: 65px; height: 32px; padding: 4px 8px; text-align: center; font-size: 12.5px;">
+                        <span style="font-size: 12px; color: var(--text-muted);">seg</span>
+                    </div>
+                </div>
+
+                <!-- LISTA DE DESTINATÁRIOS PRÉVIA -->
+                <div style="background: rgba(14, 11, 28, 0.6); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 14px; max-height: 120px; overflow-y: auto;">
+                    <div style="font-size: 11.5px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px; text-transform: uppercase;">
+                        Destinatários Selecionados:
+                    </div>
+                    <div id="b2b-modal-recipient-preview" style="display: flex; flex-direction: column; gap: 4px; font-size: 12px;">
+                        <!-- Injetado via JS -->
+                    </div>
+                </div>
+
+                <!-- PAINEL DE PROGRESSO DE ENVIO -->
+                <div id="b2b-dispatch-progress-panel" style="display: none; background: rgba(0, 255, 136, 0.05); border: 1px solid rgba(0, 255, 136, 0.25); border-radius: 8px; padding: 12px 14px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+                        <span id="b2b-dispatch-status-text" style="font-size: 12.5px; font-weight: 700; color: var(--neon-green);">
+                            <i class="fas fa-spinner fa-spin"></i> Disparando mensagens...
+                        </span>
+                        <span id="b2b-dispatch-pct-text" style="font-size: 13px; font-weight: 800; font-family: var(--font-mono); color: var(--neon-green);">0%</span>
+                    </div>
+                    <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden; margin-bottom: 8px;">
+                        <div id="b2b-dispatch-progress-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, var(--neon-cyan), var(--neon-green)); border-radius: 4px; transition: width 0.3s ease;"></div>
+                    </div>
+                    <div id="b2b-dispatch-log-box" style="font-family: var(--font-mono); font-size: 11px; color: #a7f3d0; max-height: 80px; overflow-y: auto;"></div>
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color); padding-top: 14px; margin-top: 4px;">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="closeB2BQuickDispatchModal()">Fechar</button>
+                <div style="display: flex; gap: 10px;">
+                    <button type="button" id="btn-b2b-stop-dispatch" class="btn btn-secondary btn-sm" onclick="stopB2BQuickDispatch()" style="display: none; color: var(--alert-red); border-color: rgba(255,77,109,0.4);">
+                        <i class="fas fa-stop"></i> Interromper
+                    </button>
+                    <button type="button" id="btn-b2b-start-dispatch" class="btn btn-neon btn-sm" onclick="startB2BQuickDispatch()">
+                        <i class="fas fa-paper-plane"></i> Iniciar Disparo para Selecionados
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- MODAL DE DETALHES DO LEAD -->

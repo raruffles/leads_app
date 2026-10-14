@@ -757,13 +757,20 @@ class LeadScraper:
             if not instagram:
                 instagram = search_instagram_fallback(name, cidade_nome)
 
-            # Se temos telefone celular válido e ainda não temos WhatsApp, define o WhatsApp automaticamente
+            # Se ainda não temos WhatsApp definido e temos telefone/dígitos, aproveita o telefone como WhatsApp também
             if not whatsapp and digits:
                 if len(digits) == 10 and digits[2] in ('6', '7', '8', '9'):
                     digits = f"{digits[:2]}9{digits[2:]}"
                     phone = clean_phone(digits)
-                if len(digits) == 11 and digits[2] == '9':
                     whatsapp = format_whatsapp_number(digits)
+                elif len(digits) in (10, 11):
+                    whatsapp = format_whatsapp_number(digits)
+                elif len(digits) in (8, 9):
+                    digits = f"{ddd}{digits}"
+                    if len(digits) == 10 and digits[2] in ('6', '7', '8', '9'):
+                        digits = f"{digits[:2]}9{digits[2:]}"
+                    whatsapp = format_whatsapp_number(digits)
+                    phone = clean_phone(digits)
 
             # Se ainda não temos WhatsApp, tenta busca externa de WhatsApp real comercial
             if not whatsapp:
@@ -772,6 +779,12 @@ class LeadScraper:
                     whatsapp = external_wa
                     if not phone:
                         phone = clean_phone(external_wa)
+
+            # Garantia universal: se tem telefone válido, aproveita como WhatsApp (WhatsApp Business aceita fixo e celular)
+            if not whatsapp and phone:
+                whatsapp = format_whatsapp_number(phone)
+            if not phone and whatsapp:
+                phone = clean_phone(whatsapp)
 
             photos = item.get("photos", [])
             lead_addr = item.get("address", f"{cidade_nome} - {loc_data.get('uf', 'SP')}")

@@ -1,6 +1,7 @@
 import sqlite3
 import json
 import os
+import re
 import urllib.parse
 import hashlib
 import secrets
@@ -156,6 +157,13 @@ def init_db():
     # Garante a senha Akali para a conta admin
     try:
         cursor.execute("UPDATE users SET password_hash = ? WHERE username = 'admin'", (hash_password("Akali"),))
+    except Exception:
+        pass
+
+    # Sincroniza automaticamente telefones como WhatsApp caso o campo WhatsApp esteja vazio
+    try:
+        cursor.execute("UPDATE leads SET whatsapp = phone WHERE (whatsapp IS NULL OR whatsapp = '') AND phone != '' AND phone IS NOT NULL")
+        conn.commit()
     except Exception:
         pass
     
@@ -909,6 +917,23 @@ def delete_lead(lead_id: int) -> bool:
     conn.commit()
     conn.close()
     return True
+
+def delete_leads_bulk(lead_ids: List[int]) -> int:
+    """Exclui múltiplos leads em lote a partir de uma lista de IDs"""
+    if not lead_ids:
+        return 0
+    # Sanitiza IDs
+    valid_ids = [int(i) for i in lead_ids if isinstance(i, (int, str)) and str(i).isdigit()]
+    if not valid_ids:
+        return 0
+    conn = get_connection()
+    cursor = conn.cursor()
+    placeholders = ",".join("?" for _ in valid_ids)
+    cursor.execute(f"DELETE FROM leads WHERE id IN ({placeholders})", valid_ids)
+    deleted_count = cursor.rowcount
+    conn.commit()
+    conn.close()
+    return deleted_count
 
 def get_dashboard_stats() -> Dict[str, Any]:
     conn = get_connection()

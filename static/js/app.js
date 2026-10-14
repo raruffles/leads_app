@@ -379,32 +379,32 @@ function initCityAutocomplete(inputId, dropdownId, onSelect) {
         });
     };
 
+    const fetchCities = async (query = '') => {
+        try {
+            const url = query ? `/api/cities?q=${encodeURIComponent(query)}` : '/api/cities';
+            const res = await fetch(url);
+            if (!res.ok) return;
+            const data = await res.json();
+            renderItems(data);
+        } catch (err) {
+            console.error('Erro ao buscar cidades:', err);
+        }
+    };
+
     input.addEventListener('input', (e) => {
         if (isSelecting) return;
         const query = e.target.value.trim();
         clearTimeout(debounceTimer);
 
-        if (query.length < 1) {
-            closeDropdown();
-            return;
-        }
-
-        debounceTimer = setTimeout(async () => {
-            try {
-                const res = await fetch(`/api/cities?q=${encodeURIComponent(query)}`);
-                if (!res.ok) return;
-                const data = await res.json();
-                renderItems(data);
-            } catch (err) {
-                console.error('Erro ao buscar cidades:', err);
-            }
-        }, 120);
+        debounceTimer = setTimeout(() => {
+            fetchCities(query);
+        }, 80);
     });
 
     input.addEventListener('keydown', (e) => {
         if (dropdown.style.display === 'none') {
-            if (e.key === 'ArrowDown' && input.value.trim().length >= 1) {
-                input.dispatchEvent(new Event('input'));
+            if (e.key === 'ArrowDown') {
+                fetchCities(input.value.trim());
             }
             return;
         }
@@ -424,6 +424,9 @@ function initCityAutocomplete(inputId, dropdownId, onSelect) {
             if (activeIndex >= 0 && activeIndex < currentResults.length) {
                 e.preventDefault();
                 selectCity(currentResults[activeIndex].label);
+            } else if (currentResults.length > 0) {
+                e.preventDefault();
+                selectCity(currentResults[0].label);
             }
         } else if (e.key === 'Escape') {
             closeDropdown();
@@ -437,8 +440,14 @@ function initCityAutocomplete(inputId, dropdownId, onSelect) {
     });
 
     input.addEventListener('focus', () => {
-        if (input.value.trim().length >= 1 && dropdown.style.display === 'none') {
-            input.dispatchEvent(new Event('input'));
+        if (dropdown.style.display === 'none') {
+            fetchCities(input.value.trim());
+        }
+    });
+
+    input.addEventListener('click', () => {
+        if (dropdown.style.display === 'none') {
+            fetchCities(input.value.trim());
         }
     });
 }
@@ -477,33 +486,43 @@ function setupEventListeners() {
 
     // Consulta de CEP em Tempo Real
     const cepInput = document.getElementById('cep-input');
-    if (cepInput) {
-        cepInput.addEventListener('input', async (e) => {
-            const raw = e.target.value.replace(/\D/g, '');
-            if (raw.length === 8) {
-                try {
-                    const res = await fetch(`/api/cep/${raw}`);
-                    const json = await res.json();
-                    if (json.found && json.data) {
-                        const d = json.data;
-                        const locInput = document.getElementById('location-input');
-                        if (locInput) locInput.value = d.formatted;
-
-                        const badge = document.getElementById('cep-resolved-badge');
-                        const badgeText = document.getElementById('cep-resolved-text');
-                        if (badge && badgeText) {
-                            badgeText.innerHTML = `<strong>${d.cidade} - ${d.uf}</strong> ${d.bairro ? `(Bairro: ${d.bairro})` : ''} | <strong>DDD (${d.ddd || '12'})</strong> verificado via ViaCEP`;
-                            badge.style.display = 'block';
-                        }
+    const resolveCepValue = async (val) => {
+        const raw = (val || '').replace(/\D/g, '');
+        if (raw.length === 8) {
+            try {
+                const res = await fetch(`/api/cep/${raw}`);
+                const json = await res.json();
+                if (json.found && json.data) {
+                    const d = json.data;
+                    const locInput = document.getElementById('location-input');
+                    if (locInput) {
+                        locInput.value = d.formatted;
+                        locInput.dispatchEvent(new Event('change', { bubbles: true }));
                     }
-                } catch (err) {
-                    console.error("Erro ao consultar CEP:", err);
+
+                    const badge = document.getElementById('cep-resolved-badge');
+                    const badgeText = document.getElementById('cep-resolved-text');
+                    if (badge && badgeText) {
+                        badgeText.innerHTML = `<strong>${d.cidade} - ${d.uf}</strong> ${d.bairro ? `(Bairro: ${d.bairro})` : ''} | <strong>DDD (${d.ddd || '12'})</strong> verificado via ViaCEP`;
+                        badge.style.display = 'block';
+                    }
                 }
-            } else if (raw.length < 8) {
-                const badge = document.getElementById('cep-resolved-badge');
-                if (badge) badge.style.display = 'none';
+            } catch (err) {
+                console.error("Erro ao consultar CEP:", err);
             }
-        });
+        } else if (raw.length < 8) {
+            const badge = document.getElementById('cep-resolved-badge');
+            if (badge) badge.style.display = 'none';
+        }
+    };
+
+    if (cepInput) {
+        cepInput.addEventListener('input', (e) => resolveCepValue(e.target.value));
+        cepInput.addEventListener('change', (e) => resolveCepValue(e.target.value));
+        cepInput.addEventListener('blur', (e) => resolveCepValue(e.target.value));
+        if (cepInput.value && cepInput.value.replace(/\D/g, '').length === 8) {
+            resolveCepValue(cepInput.value);
+        }
     }
 
     // Filtros da tabela
@@ -633,7 +652,7 @@ async function handleScanSubmit(e) {
 
     addLog(`Iniciando varredura para nicho: "${niche}" em "${location}"`);
 
-    currentEventSource.onmessage = (event) => {
+    currentEventSource.onmessage = async (event) => {
         try {
             const data = JSON.parse(event.data);
             
@@ -652,13 +671,26 @@ async function handleScanSubmit(e) {
             if (data.step === 'finished') {
                 currentEventSource.close();
                 startBtn.disabled = false;
-                startBtn.innerHTML = `<i class="fas fa-bolt"></i> INICIAR VARREDURA`;
-                progressStatus.innerHTML = `<i class="fas fa-check-circle" style="color:var(--neon-green)"></i> ${data.message}`;
+                startBtn.innerHTML = `<i class="fas fa-bolt"></i> VARREDURA`;
+                progressBar.style.width = '100%';
+                progressPercent.textContent = '100%';
+                progressStatus.innerHTML = `<i class="fas fa-check-circle" style="color:var(--neon-green)"></i> ${data.message || 'Varredura concluída!'}`;
                 
                 currentScanId = data.scan_id;
+                await loadDashboardStats();
+                await loadLeads(data.scan_id);
+                await loadRecentScans();
+                if (typeof showToast === 'function') {
+                    showToast(data.message || 'Varredura concluída com sucesso!', 'success');
+                }
+            } else if (data.step === 'error') {
+                currentEventSource.close();
+                startBtn.disabled = false;
+                startBtn.innerHTML = `<i class="fas fa-bolt"></i> VARREDURA`;
+                progressStatus.innerHTML = `<i class="fas fa-exclamation-triangle" style="color:var(--alert-red)"></i> ${data.message}`;
+                addLog(`ERRO: ${data.message}`);
                 loadDashboardStats();
-                loadLeads(data.scan_id);
-                loadRecentScans();
+                loadLeads();
             }
         } catch (err) {
             console.error("Erro no parse do SSE:", err);
@@ -666,13 +698,23 @@ async function handleScanSubmit(e) {
     };
 
     currentEventSource.onerror = (err) => {
-        console.error("Erro no SSE:", err);
+        console.warn("SSE encerrado:", err);
         currentEventSource.close();
         startBtn.disabled = false;
-        startBtn.innerHTML = `<i class="fas fa-bolt"></i> INICIAR VARREDURA`;
-        addLog("Conexão com o scanner finalizada.");
+        startBtn.innerHTML = `<i class="fas fa-bolt"></i> VARREDURA`;
+
+        const curPct = parseInt(progressPercent.textContent) || 0;
+        if (curPct >= 85) {
+            progressBar.style.width = '100%';
+            progressPercent.textContent = '100%';
+            progressStatus.innerHTML = `<i class="fas fa-check-circle" style="color:var(--neon-green)"></i> Varredura concluída com sucesso!`;
+            addLog("Varredura concluída.");
+        } else {
+            addLog("Conexão com o scanner finalizada.");
+        }
         loadDashboardStats();
-        loadLeads();
+        loadLeads(currentScanId || null);
+        loadRecentScans();
     };
 }
 
@@ -3078,9 +3120,11 @@ window.updateSelectedLeadsCount = function() {
     const badge = document.getElementById('selected-leads-count');
     const bulkBtnCount = document.getElementById('bulk-btn-count');
     const bulkEnrichCount = document.getElementById('bulk-enrich-count');
+    const bulkDeleteCount = document.getElementById('bulk-delete-count');
     if (badge) badge.textContent = count;
     if (bulkBtnCount) bulkBtnCount.textContent = count;
     if (bulkEnrichCount) bulkEnrichCount.textContent = count;
+    if (bulkDeleteCount) bulkDeleteCount.textContent = count;
 
     const masterCb = document.getElementById('th-select-all');
     const allBoxes = document.querySelectorAll('.lead-select-checkbox');
@@ -3105,6 +3149,81 @@ window.selectAllLeads = function(selectAll) {
     const masterCb = document.getElementById('th-select-all');
     if (masterCb) masterCb.checked = selectAll;
     updateSelectedLeadsCount();
+};
+
+// EXCLUSÃO EM LOTE DOS LEADS SELECIONADOS
+window.handleBulkDeleteSelected = async function() {
+    const checkedBoxes = document.querySelectorAll('.lead-select-checkbox:checked');
+    const ids = Array.from(checkedBoxes)
+        .map(cb => parseInt(cb.value))
+        .filter(id => !isNaN(id) && id > 0);
+
+    if (ids.length === 0) {
+        if (typeof showToast === 'function') {
+            showToast("Nenhum lead selecionado. Marque os leads que deseja excluir.", "warning");
+        } else {
+            alert("Nenhum lead selecionado. Marque os leads que deseja excluir.");
+        }
+        return;
+    }
+
+    const confirmMsg = `Tem certeza que deseja excluir permanentemente ${ids.length} lead(s) selecionado(s)?\n\nEssa ação apagará esses contatos do banco de dados e de todas as abas.`;
+    if (!confirm(confirmMsg)) {
+        return;
+    }
+
+    const btn = document.getElementById('btn-bulk-delete');
+    try {
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Excluindo...`;
+        }
+
+        const res = await fetch('/api/leads/bulk-delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ lead_ids: ids })
+        });
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+            const idSet = new Set(ids);
+            currentLeads = currentLeads.filter(l => !idSet.has(l.id));
+
+            applyFiltersAndRender();
+            loadDashboardStats();
+            loadDashboardRecentLeads();
+            if (document.getElementById('tab-campaigns')?.classList.contains('active')) {
+                loadCampaignsView();
+            }
+
+            if (typeof showToast === 'function') {
+                showToast(`${data.deleted_count || ids.length} lead(s) excluído(s) com sucesso!`, "success");
+            } else {
+                alert(`${data.deleted_count || ids.length} lead(s) excluído(s) com sucesso!`);
+            }
+        } else {
+            const errorMsg = data.error || data.detail || "Erro ao excluir leads.";
+            if (typeof showToast === 'function') {
+                showToast("Erro: " + errorMsg, "error");
+            } else {
+                alert("Erro: " + errorMsg);
+            }
+        }
+    } catch (err) {
+        console.error("Erro na exclusão em lote:", err);
+        if (typeof showToast === 'function') {
+            showToast("Falha de rede ao excluir: " + err.message, "error");
+        } else {
+            alert("Falha de rede ao excluir: " + err.message);
+        }
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = `<i class="fas fa-trash-alt"></i> Excluir Selecionados (<span id="bulk-delete-count">0</span>)`;
+        }
+        updateSelectedLeadsCount();
+    }
 };
 
 // HANDLERS DE BUSCA DE INSTAGRAM E ENRIQUECIMENTO DE DADOS REAIS
@@ -3405,8 +3524,8 @@ window.handleStartBulkCampaign = function() {
         return;
     }
 
-    const minSec = parseInt(document.getElementById('bulk-delay-min').value) || 15;
-    const maxSec = parseInt(document.getElementById('bulk-delay-max').value) || 35;
+    const minSec = Math.max(15, parseInt(document.getElementById('bulk-delay-min').value) || 15);
+    const maxSec = Math.max(minSec, parseInt(document.getElementById('bulk-delay-max').value) || 35);
 
     if (confirm(`Iniciar disparo em massa para ${targetLeads.length} leads do grupo selecionado com delay humano entre ${minSec}s e ${maxSec}s?`)) {
         sendBulkWhatsApp(targetLeads, document.getElementById('btn-start-bulk'));
@@ -3420,14 +3539,14 @@ window.handleStopBulkCampaign = function() {
 };
 
 /**
- * Função de Envio em Massa com Delay Randômico Anti-Ban (15s a 35s)
+ * Função de Envio em Massa com Delay Randômico Anti-Ban (Mínimo estrito: 15s)
  */
 async function sendBulkWhatsApp(leadsList, triggerButton = null) {
     if (!leadsList || leadsList.length === 0) return;
 
     isBulkCampaignActive = true;
-    const minDelaySec = parseInt(document.getElementById('bulk-delay-min').value) || 15;
-    const maxDelaySec = parseInt(document.getElementById('bulk-delay-max').value) || 35;
+    const minDelaySec = Math.max(15, parseInt(document.getElementById('bulk-delay-min').value) || 15);
+    const maxDelaySec = Math.max(minDelaySec, parseInt(document.getElementById('bulk-delay-max').value) || 35);
     const customTemplate = document.getElementById('bulk-message-template').value;
 
     const stopBtn = document.getElementById('btn-stop-bulk');
@@ -3944,6 +4063,7 @@ window.executeCleanupAction = async function() {
 
         await loadLeads();
         await loadDashboardStats();
+        updateSelectedLeadsCount();
         if (document.getElementById('tab-campaigns')?.classList.contains('active')) {
             loadCampaignsView();
         }
@@ -6480,6 +6600,19 @@ window.loadDisparadorView = async function() {
         `).join('');
     }
 
+    // 4. Restaurar preferências de tempo e cadência do disparador
+    try {
+        const savedMin = localStorage.getItem('disp_delay_min');
+        const savedMax = localStorage.getItem('disp_delay_max');
+        if (savedMin && document.getElementById('disp-delay-min')) {
+            document.getElementById('disp-delay-min').value = Math.max(15, parseInt(savedMin, 10));
+        }
+        if (savedMax && document.getElementById('disp-delay-max')) {
+            document.getElementById('disp-delay-max').value = Math.max(15, parseInt(savedMax, 10));
+        }
+    } catch (e) {}
+
+    if (typeof onDisparadorDelayChange === 'function') onDisparadorDelayChange();
     if (typeof updateDisparadorAudienceCount === 'function') updateDisparadorAudienceCount();
     if (typeof updateDisparadorPreview === 'function') updateDisparadorPreview();
 };
@@ -6651,6 +6784,105 @@ window.updateDisparadorAudienceCount = function() {
     };
 
     summary.innerHTML = descriptions[group] || `📱 <strong>${leadsToCount.length} lead(s)</strong> prontos para disparo.`;
+    if (typeof onDisparadorDelayChange === 'function') onDisparadorDelayChange();
+};
+
+// ========================================================
+// GERENCIAMENTO DE CADÊNCIA & TEMPO DO DISPARADOR AUTOMÁTICO
+// ========================================================
+window.formatSecondsToHumanTime = function(seconds) {
+    if (isNaN(seconds) || seconds <= 0) return '0s';
+    if (seconds < 60) return `${seconds}s`;
+    const mins = Math.floor(seconds / 60);
+    const remSec = seconds % 60;
+    if (mins < 60) {
+        return remSec > 0 ? `${mins}m ${remSec}s` : `${mins} min`;
+    }
+    const hours = Math.floor(mins / 60);
+    const remMins = mins % 60;
+    return remMins > 0 ? `${hours}h ${remMins}min` : `${hours}h`;
+};
+
+window.setDisparadorDelayPreset = function(minSec, maxSec) {
+    minSec = Math.max(15, parseInt(minSec, 10) || 15);
+    maxSec = Math.max(minSec, parseInt(maxSec, 10) || minSec + 10);
+
+    const minInput = document.getElementById('disp-delay-min');
+    const maxInput = document.getElementById('disp-delay-max');
+    if (minInput) minInput.value = minSec;
+    if (maxInput) maxInput.value = maxSec;
+
+    onDisparadorDelayChange();
+    if (typeof showToast === 'function') {
+        const avg = Math.round((minSec + maxSec) / 2);
+        showToast(`Cadência configurada: ${minSec}s a ${maxSec}s (~${formatSecondsToHumanTime(avg)} médio por envio)`, 'info');
+    }
+};
+
+window.onDisparadorDelayChange = function() {
+    const minInput = document.getElementById('disp-delay-min');
+    const maxInput = document.getElementById('disp-delay-max');
+    if (!minInput || !maxInput) return;
+
+    let minVal = parseInt(minInput.value, 10);
+    let maxVal = parseInt(maxInput.value, 10);
+
+    if (isNaN(minVal)) minVal = 15;
+    if (isNaN(maxVal)) maxVal = 35;
+
+    // Regra estrita: O tempo mínimo tem que ser no mínimo 15 segundos
+    if (minVal < 15) {
+        minVal = 15;
+        minInput.value = 15;
+        if (typeof showToast === 'function') {
+            showToast("O tempo mínimo seguro é de 15 segundos para proteger seu número contra banimentos.", "warning");
+        }
+    }
+
+    // O máximo nunca pode ser menor que o mínimo
+    if (maxVal < minVal) {
+        maxVal = minVal;
+        maxInput.value = maxVal;
+    }
+
+    // Salva preferências no localStorage para persistência
+    try {
+        localStorage.setItem('disp_delay_min', minVal);
+        localStorage.setItem('disp_delay_max', maxVal);
+    } catch (e) {}
+
+    // Destaca botão de preset se coincidir exatamente
+    document.querySelectorAll('.disp-preset-btn').forEach(btn => btn.classList.remove('active'));
+    const matchedBtn = document.getElementById(`btn-preset-${minVal}-${maxVal}`);
+    if (matchedBtn) {
+        matchedBtn.classList.add('active');
+    }
+
+    // Atualiza texto da média
+    const avg = Math.round((minVal + maxVal) / 2);
+    const humanDesc = document.getElementById('disp-time-human-desc');
+    if (humanDesc) {
+        humanDesc.textContent = `Média: ~${formatSecondsToHumanTime(avg)} por envio`;
+    }
+
+    // Atualiza estimativa de duração total da lista
+    const totalEstimateEl = document.getElementById('disp-total-time-estimate');
+    if (totalEstimateEl) {
+        const groupSelect = document.getElementById('disparador-target-group');
+        const count = groupSelect ? window.getLeadsForAudienceGroup(groupSelect.value).length : 0;
+        if (count > 0) {
+            const totalSec = count * avg;
+            totalEstimateEl.textContent = `⏱️ Estimativa: ~${formatSecondsToHumanTime(totalSec)} (${count} leads)`;
+        } else {
+            totalEstimateEl.textContent = `⏱️ Estimativa: ~0 min (0 leads)`;
+        }
+    }
+
+    // Atualiza KPI strip no topo
+    const kpiDelay = document.getElementById('disp-kpi-delay-text');
+    if (kpiDelay) {
+        kpiDelay.textContent = `ATIVADA (${minVal}s - ${maxVal}s)`;
+    }
 };
 
 function appendDisparadorLog(msg, type = 'info') {
@@ -6679,8 +6911,21 @@ window.handleStartDisparador = async function() {
         return;
     }
 
-    const minSec = parseInt(document.getElementById('disp-delay-min').value) || 15;
-    const maxSec = parseInt(document.getElementById('disp-delay-max').value) || 35;
+    let minSec = parseInt(document.getElementById('disp-delay-min').value, 10);
+    let maxSec = parseInt(document.getElementById('disp-delay-max').value, 10);
+    if (isNaN(minSec) || minSec < 15) {
+        minSec = 15;
+        document.getElementById('disp-delay-min').value = 15;
+        showToast("Tempo mínimo ajustado para 15 segundos (proteção anti-banimento).", "info");
+    }
+    if (isNaN(maxSec) || maxSec < minSec) {
+        maxSec = Math.max(minSec + 5, 35);
+        document.getElementById('disp-delay-max').value = maxSec;
+    }
+
+    const avgDelay = Math.round((minSec + maxSec) / 2);
+    const estimatedTotalSec = (targetLeads.length - 1) * avgDelay;
+    const humanTotalEstimate = formatSecondsToHumanTime(estimatedTotalSec);
 
     // Define para qual etapa o lead vai avançar
     const activeSectionKey = window.currentDisparadorSection || 'contato';
@@ -6693,7 +6938,12 @@ window.handleStartDisparador = async function() {
     else if (group === 'stage-follow-todos') nextStage = 'follow2';
     else if (group === 'stage-proposta') nextStage = 'proposta';
 
-    if (!confirm(`Iniciar disparo automático da seção "${sectionDef ? sectionDef.name : 'Geral'}" para ${targetLeads.length} leads?\n\nApós o envio bem-sucedido, os leads avançarão automaticamente para a etapa: "${nextStage}".\nDelay anti-banimento configurado: ${minSec}s a ${maxSec}s.`)) {
+    const confirmMsg = `Iniciar disparo automático da seção "${sectionDef ? sectionDef.name : 'Geral'}" para ${targetLeads.length} leads?\n\n` +
+        `• Intervalo configurado: ${minSec}s a ${maxSec}s entre mensagens (Média: ~${avgDelay}s)\n` +
+        `• Duração total estimada da campanha: ~${humanTotalEstimate}\n` +
+        `• Após envio com sucesso, avança lead para: "${nextStage}".`;
+
+    if (!confirm(confirmMsg)) {
         return;
     }
 
@@ -6716,6 +6966,7 @@ window.handleStartDisparador = async function() {
     const total = targetLeads.length;
 
     appendDisparadorLog(`🚀 Iniciando campanha da seção "${sectionDef ? sectionDef.name : 'Geral'}" (${total} leads)...`, 'info');
+    appendDisparadorLog(`⏱️ Cadência: ${minSec}s a ${maxSec}s por envio | Estimativa total: ~${humanTotalEstimate}`, 'info');
 
     try {
         for (let i = 0; i < total; i++) {
@@ -6750,12 +7001,13 @@ window.handleStartDisparador = async function() {
                 const randomDelayMs = Math.floor(Math.random() * ((maxSec - minSec) * 1000 + 1)) + (minSec * 1000);
                 const delaySecs = Math.round(randomDelayMs / 1000);
 
-                appendDisparadorLog(`⏳ Aguardando delay anti-banimento de ${delaySecs}s antes do próximo contato...`, 'info');
+                appendDisparadorLog(`⏳ Aguardando delay anti-banimento de ${formatSecondsToHumanTime(delaySecs)} (${delaySecs}s) antes do próximo contato...`, 'info');
 
                 let remaining = delaySecs;
                 while (remaining > 0 && isDisparadorActive) {
-                    if (countdownText) countdownText.textContent = `Delay anti-ban: ${remaining}s...`;
-                    startBtn.innerHTML = `<i class="fas fa-clock"></i> Aguardando ${remaining}s (${currentIdx}/${total})...`;
+                    const remStr = formatSecondsToHumanTime(remaining);
+                    if (countdownText) countdownText.textContent = `Delay anti-ban: ${remStr} (${remaining}s)...`;
+                    startBtn.innerHTML = `<i class="fas fa-clock"></i> Aguardando ${remStr} (${currentIdx}/${total})...`;
                     await new Promise(r => setTimeout(r, 1000));
                     remaining--;
                 }

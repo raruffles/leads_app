@@ -102,7 +102,9 @@ def search_cities(query: str, limit: int = 15) -> List[Dict[str, str]]:
     
     q_norm = _normalize_text(query)
     if not q_norm:
-        return []
+        # Retorna as principais cidades do país como sugestão inicial ao focar
+        priority_cities = [c for c in _CITIES_CACHE if c["is_priority"] == 0][:limit]
+        return [{"name": c["name"], "uf": c["uf"], "label": c["label"]} for c in priority_cities]
     
     # 1. Checa apelido / sigla exata (ex: 'bh' -> Belo Horizonte, 'sjc' -> São José dos Campos)
     alias_label = CITY_ALIASES.get(q_norm)

@@ -8,7 +8,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime
 from typing import Optional, Dict, Any, Union, List
-from fastapi import FastAPI, Request, Query, BackgroundTasks
+from fastapi import FastAPI, Request, Query, BackgroundTasks, Body
 from fastapi.responses import HTMLResponse, StreamingResponse, Response, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -34,8 +34,6 @@ async def get_favicon():
 @app.get("/api/cities")
 async def api_get_cities(q: str = Query("", description="Termo de busca para cidades brasileiras")):
     """Retorna sugestões de cidades brasileiras no formato 'Cidade - UF'"""
-    if not q or len(q.strip()) < 1:
-        return []
     return search_cities(q.strip(), limit=15)
 
 # Suporte a CORS para uso online e em rede local
@@ -440,6 +438,18 @@ async def api_delete_lead(lead_id: int):
     success = database.delete_lead(lead_id)
     return {"success": success, "message": "Lead removido com sucesso!"}
 
+class BulkDeletePayload(BaseModel):
+    lead_ids: List[int]
+
+@app.post("/api/leads/bulk-delete")
+async def api_bulk_delete_leads(payload: BulkDeletePayload):
+    deleted = database.delete_leads_bulk(payload.lead_ids)
+    return {
+        "success": True,
+        "deleted_count": deleted,
+        "message": f"{deleted} leads excluídos com sucesso!"
+    }
+
 class SaveInstagramPayload(BaseModel):
     instagram: str
 
@@ -489,7 +499,7 @@ async def api_cleanup_leads(payload: CleanupPayload):
 
 @app.delete("/api/leads/clear")
 @app.post("/api/leads/clear")
-async def api_clear_leads(payload: Optional[ClearDataPayload] = None, scan_id: Optional[int] = None):
+async def api_clear_leads(payload: Optional[ClearDataPayload] = Body(None), scan_id: Optional[int] = None):
     effective_scan_id = (payload.scan_id if payload else None) or scan_id
     success = database.clear_leads_data(scan_id=effective_scan_id)
     return {
@@ -1302,20 +1312,32 @@ async def scan_stream(
         last_leads = []
         no_web_count = 0
         
-        for event in scraper.run_scan_stream(niche, location, cep=cep, max_leads=max_leads):
-            if event.get("step") == "finished":
-                last_leads = event.get("leads", [])
-                no_web_count = event.get("no_website_count", 0)
-                city_name = event.get("city", location)
-                
-                # Salvar no SQLite
-                scan_id = database.save_scan(niche, city_name, len(last_leads), no_web_count)
-                database.save_leads(scan_id, last_leads)
-                event["scan_id"] = scan_id
-                
-            data_str = json.dumps(event, ensure_ascii=False)
-            yield f"data: {data_str}\n\n"
-            await asyncio.sleep(0.01)
+        try:
+            for event in scraper.run_scan_stream(niche, location, cep=cep, max_leads=max_leads):
+                if event.get("step") == "finished":
+                    last_leads = event.get("leads", [])
+                    no_web_count = event.get("no_website_count", 0)
+                    city_name = event.get("city", location)
+                    
+                    # Salvar no SQLite com proteção contra erro
+                    try:
+                        scan_id = database.save_scan(niche, city_name, len(last_leads), no_web_count)
+                        database.save_leads(scan_id, last_leads)
+                        event["scan_id"] = scan_id
+                    except Exception as db_err:
+                        print(f"Aviso ao salvar leads no banco: {db_err}")
+                    
+                data_str = json.dumps(event, ensure_ascii=False)
+                yield f"data: {data_str}\n\n"
+                await asyncio.sleep(0.01)
+        except Exception as e:
+            print(f"Erro no streaming do scraper: {e}")
+            err_event = {
+                "step": "error",
+                "percent": 100,
+                "message": f"Erro durante a varredura: {str(e)}"
+            }
+            yield f"data: {json.dumps(err_event, ensure_ascii=False)}\n\n"
             
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
