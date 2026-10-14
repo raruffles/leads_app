@@ -550,6 +550,19 @@ class LeadScraper:
             "message": f"Localização confirmada via ViaCEP/Geo: {cidade_nome}{bairro_info} | DDD: ({ddd})"
         }
         time.sleep(self.delay * 0.4)
+
+        # 1b. Consulta histórico do banco para deduplicação inteligente (não puxar repetidos!)
+        import database
+        from google_maps_playwright import normalize_signature
+        exclude_signatures = database.get_existing_lead_signatures(city=cidade_nome)
+        known_leads_count = len(exclude_signatures.get("names", set()))
+        if known_leads_count > 0:
+            yield {
+                "step": "history_dedup",
+                "percent": 25,
+                "message": f"Radar Histórico: {known_leads_count} empresas já capturadas em {cidade_nome} serão ignoradas para trazer apenas leads inéditos!"
+            }
+            time.sleep(self.delay * 0.3)
         
         # 2. Obter empresas: Priorizar Apify Google Places & Photos se token configurado
         candidates = []
@@ -618,20 +631,20 @@ class LeadScraper:
             yield {
                 "step": "searching_maps_real",
                 "percent": 40,
-                "message": f"Extraindo dados REAIS no Google Maps para '{niche} em {cidade_nome}'..."
+                "message": f"Extraindo dados REAIS no Google Maps com rolagem dinâmica para '{niche} em {cidade_nome}'..."
             }
             try:
                 from google_maps_playwright import run_real_maps_sync
                 search_query = f"{niche} em {cidade_nome}"
                 if loc_data.get("bairro"):
                     search_query += f" {loc_data['bairro']}"
-                real_results = run_real_maps_sync(search_query, limit=max_leads)
+                real_results = run_real_maps_sync(search_query, limit=max_leads, exclude_signatures=exclude_signatures)
                 if real_results:
                     candidates = real_results
                     yield {
                         "step": "maps_real_success",
                         "percent": 55,
-                        "message": f"{len(candidates)} estabelecimentos REAIS encontrados no Google Maps!"
+                        "message": f"{len(candidates)} estabelecimentos REAIS e inéditos encontrados no Google Maps!"
                     }
             except Exception as e:
                 print(f"Erro ao extrair dados reais do Google Maps: {e}")
@@ -639,6 +652,19 @@ class LeadScraper:
         # Se não encontrou no Maps (ex: query muito específica), tenta base verificada municipal
         if not candidates:
             candidates = self.get_real_city_leads(niche, loc_data, count=max_leads)
+
+        # Filtro de garantia contra duplicatas históricas
+        if candidates and known_leads_count > 0:
+            fresh_candidates = []
+            for c in candidates:
+                norm_c_name = normalize_signature(c.get("name", ""))
+                c_phone = re.sub(r'\D', '', c.get("phone", ""))[-8:]
+                if norm_c_name in exclude_signatures.get("names", set()):
+                    continue
+                if c_phone and c_phone in exclude_signatures.get("phones", set()):
+                    continue
+                fresh_candidates.append(c)
+            candidates = fresh_candidates
 
         total_found = len(candidates)
         

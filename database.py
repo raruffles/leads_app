@@ -605,6 +605,24 @@ def save_leads(scan_id: int, leads: List[Dict[str, Any]]) -> List[int]:
         assigned = lead.get("assigned_to", "")
         closed_at = lead.get("closed_at", "")
 
+        # Verificação de unicidade no banco de dados
+        phone_check = lead.get("phone", "").strip()
+        p_digits = re.sub(r'\D', '', phone_check) if phone_check else ""
+        if len(p_digits) >= 8:
+            cursor.execute(
+                "SELECT id FROM leads WHERE phone LIKE ? OR whatsapp LIKE ? LIMIT 1", 
+                (f"%{p_digits[-8:]}%", f"%{p_digits[-8:]}%")
+            )
+            if cursor.fetchone():
+                continue
+        else:
+            cursor.execute(
+                "SELECT id FROM leads WHERE LOWER(name) = ? AND (address = ? OR address LIKE ?) LIMIT 1",
+                (name.strip().lower(), address, f"%{address[:18]}%" if len(address) > 18 else "%")
+            )
+            if cursor.fetchone():
+                continue
+
         cursor.execute("""
             INSERT INTO leads (
                 scan_id, name, phone, whatsapp, email, website, has_website,
@@ -728,6 +746,66 @@ def get_leads(
     rows = [dict(r) for r in cursor.fetchall()]
     conn.close()
     return rows
+
+def get_existing_lead_signatures(city: Optional[str] = None) -> Dict[str, set]:
+    """
+    Retorna conjuntos de nomes normalizados, telefones e websites de leads já
+    salvos no banco de dados. Usado pelos scrapers para pular automaticamente
+    empresas repetidas e trazer apenas leads inéditos do histórico.
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+    query = "SELECT name, phone, whatsapp, address, website FROM leads"
+    params = []
+    if city and city.strip():
+        # Busca por cidades na coluna endereço ou busca ampla
+        query += " WHERE LOWER(address) LIKE ? OR LOWER(address) LIKE ?"
+        c_clean = city.strip().lower()
+        params.extend([f"%{c_clean}%", f"%{c_clean.split('-')[0].strip()}%"])
+        
+    cursor.execute(query, params)
+    rows = cursor.fetchall()
+    conn.close()
+    
+    names = set()
+    phones = set()
+    websites = set()
+    
+    import unicodedata
+    def _norm(s: str) -> str:
+        if not s:
+            return ""
+        n = unicodedata.normalize("NFKD", s)
+        return "".join(c for c in n if not unicodedata.combining(c)).lower().strip()
+
+    for r in rows:
+        n = _norm(r["name"])
+        if n and len(n) > 2:
+            names.add(n)
+            
+        p = re.sub(r'\D', '', r["phone"] or "")
+        if len(p) >= 8:
+            phones.add(p[-8:])
+            if len(p) >= 10:
+                phones.add(p[-10:])
+                
+        w = re.sub(r'\D', '', r["whatsapp"] or "")
+        if len(w) >= 8:
+            phones.add(w[-8:])
+            if len(w) >= 10:
+                phones.add(w[-10:])
+                
+        site = (r["website"] or "").strip().lower()
+        if site:
+            clean_dom = re.sub(r'^https?://(www\.)?', '', site).split('/')[0].split('?')[0]
+            if clean_dom and len(clean_dom) > 3:
+                websites.add(clean_dom)
+                
+    return {
+        "names": names,
+        "phones": phones,
+        "websites": websites
+    }
 
 def get_lead_by_id(lead_id: int) -> Optional[Dict[str, Any]]:
     conn = get_connection()
