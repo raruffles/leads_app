@@ -749,6 +749,46 @@ function applyFiltersAndRender() {
     renderLeadsTable(filtered);
 }
 
+function getLeadMapsUrl(lead) {
+    if (!lead) return 'https://www.google.com/maps';
+    if (lead.maps_url && lead.maps_url.startsWith('http') && !lead.maps_url.includes('query=undefined') && !lead.maps_url.includes('pousada+em+')) {
+        return lead.maps_url;
+    }
+    const cleanName = (lead.name || '').replace(/[\ufffd\?]+/g, ' ').trim();
+    let loc = '';
+    if (lead.address && !lead.address.toLowerCase().includes('pousada em') && lead.address.length > 3) {
+        loc = lead.address;
+    } else {
+        loc = 'SP';
+    }
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(cleanName + ' ' + loc)}&hl=pt-BR`;
+}
+window.getLeadMapsUrl = getLeadMapsUrl;
+
+function getInstagramButtonHtml(lead) {
+    const handle = lead.instagram ? lead.instagram.trim() : '';
+    if (handle) {
+        const cleanH = handle.replace('@', '');
+        return `
+            <div style="display:flex; align-items:center; gap:4px;">
+                <a href="https://instagram.com/${cleanH}" target="_blank" rel="noopener noreferrer" class="btn btn-instagram btn-sm" title="Abrir Instagram de ${escapeHtml(lead.name)} (@${cleanH})" style="text-decoration:none;">
+                    <i class="fab fa-instagram"></i> ${escapeHtml(handle)}
+                </a>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="handleSearchInstagram(event, ${lead.id})" title="Rebuscar perfil no Instagram" style="padding:4px 6px; font-size:10px; color:#ff7eb3;">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+            </div>
+        `;
+    } else {
+        return `
+            <button type="button" class="btn btn-instagram-search btn-sm" onclick="handleSearchInstagram(event, ${lead.id})" title="Buscar perfil do Instagram para ${escapeHtml(lead.name)}">
+                <i class="fab fa-instagram"></i> Buscar Insta
+            </button>
+        `;
+    }
+}
+window.getInstagramButtonHtml = getInstagramButtonHtml;
+
 function renderLeadsTable(leads) {
     const tbody = document.getElementById('leads-table-body');
     const countBadge = document.getElementById('table-count-badge');
@@ -761,7 +801,7 @@ function renderLeadsTable(leads) {
     if (leads.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="9" style="text-align: center; padding: 40px; color: var(--text-secondary); font-size: 13.5px; font-weight: 500;">
+                <td colspan="10" style="text-align: center; padding: 40px; color: var(--text-secondary); font-size: 13.5px; font-weight: 500;">
                     <i class="fas fa-search" style="font-size: 28px; margin-bottom: 12px; display: block; opacity: 0.8; color: var(--neon-cyan);"></i>
                     Nenhum lead encontrado com os filtros selecionados.<br>
                     <small style="color: var(--text-muted); font-size: 12px; margin-top: 4px; display: inline-block;">Inicie uma nova varredura no formulário acima para capturar contatos!</small>
@@ -787,7 +827,7 @@ function renderLeadsTable(leads) {
                  <button type="button" class="btn btn-whatsapp btn-sm" onclick="handleTableConversarClick(${lead.id})" title="Disparar mensagem via WAHA">
                    <i class="fab fa-whatsapp"></i> Conversar
                  </button>
-                 <a href="https://wa.me/${rawPhone.replace(/\D/g, '')}?text=${encodeURIComponent(getPitchMessage(lead))}" target="_blank" class="btn btn-secondary btn-sm" style="padding: 4px 7px;" title="Abrir WhatsApp Web manualmente">
+                 <a href="https://wa.me/${rawPhone.replace(/\D/g, '')}?text=${encodeURIComponent(getPitchMessage(lead))}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" style="padding: 4px 7px;" title="Abrir WhatsApp Web manualmente">
                    <i class="fas fa-external-link-alt"></i>
                  </a>
                </div>`
@@ -813,21 +853,21 @@ function renderLeadsTable(leads) {
             : `<span style="color:var(--text-secondary); font-size:11.5px; font-weight:500;">Sem resp.</span>`;
 
         const siteDisplay = lead.has_website && lead.website
-            ? `<a href="${lead.website}" target="_blank" class="badge-has-site">
+            ? `<a href="${lead.website}" target="_blank" rel="noopener noreferrer" class="badge-has-site">
                  <i class="fas fa-external-link-alt"></i> ${truncateUrl(lead.website)}
                </a>`
             : `<span class="badge-no-site">
                  <i class="fas fa-exclamation-triangle"></i> Sem Site
                </span>`;
 
-        const mapsHref = lead.maps_url || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(lead.name + ' ' + (lead.address || ''))}`;
+        const mapsHref = getLeadMapsUrl(lead);
         const googleHref = lead.google_url || `https://www.google.com/search?q=${encodeURIComponent(lead.name + ' ' + (lead.address || ''))}`;
         const analysisDisplay = `
             <div style="display:flex; gap:4px; align-items:center;">
-                <a href="${mapsHref}" target="_blank" class="btn btn-secondary btn-sm" title="Abrir no Google Maps Oficial" style="padding:4px 7px; font-size:11.5px; color:var(--neon-cyan);">
+                <a href="${mapsHref}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" title="Abrir localização no Google Maps Oficial" style="padding:4px 7px; font-size:11.5px; color:var(--neon-cyan); border-color:rgba(0,210,255,0.4);">
                     <i class="fas fa-map-marked-alt"></i> Maps
                 </a>
-                <a href="${googleHref}" target="_blank" class="btn btn-secondary btn-sm" title="Buscar Empresa no Google" style="padding:4px 7px; font-size:11.5px; color:#ffb703;">
+                <a href="${googleHref}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" title="Buscar Empresa no Google" style="padding:4px 7px; font-size:11.5px; color:#ffb703; border-color:rgba(255,183,3,0.4);">
                     <i class="fab fa-google"></i> Busca
                 </a>
             </div>
@@ -855,12 +895,16 @@ function renderLeadsTable(leads) {
                 </td>
                 <td>${waLink}</td>
                 <td>${phoneDisplay}</td>
+                <td>${getInstagramButtonHtml(lead)}</td>
                 <td>${dealValueDisplay}</td>
                 <td>${assignedDisplay}</td>
                 <td>${siteDisplay}</td>
                 <td>${analysisDisplay}</td>
                 <td>
                     <div style="display:flex; gap:5px; align-items:center;">
+                        <button class="btn btn-secondary btn-sm" onclick="handleEnrichLead(event, ${lead.id})" title="Puxar Dados Reais de Contato (Google Maps, Telefone, WhatsApp, E-mail)" style="color:var(--neon-green); border-color:rgba(0,255,136,0.35); padding:4px 7px;">
+                            <i class="fas fa-magic"></i>
+                        </button>
                         <button class="btn btn-secondary btn-sm" onclick="openLeadModal(${lead.id})" title="Ver Detalhes do Lead">
                             <i class="fas fa-eye"></i> Detalhes
                         </button>
@@ -881,7 +925,7 @@ function renderLeadsTable(leads) {
             const phoneDigits = rawPhone.replace(/\D/g, '');
             const telHref = phoneDigits ? `tel:${phoneDigits}` : '#';
             const photos = getLeadPhotos(lead);
-            const mapsHref = lead.maps_url || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(lead.name + ' ' + (lead.address || ''))}`;
+            const mapsHref = getLeadMapsUrl(lead);
             const googleHref = lead.google_url || `https://www.google.com/search?q=${encodeURIComponent(lead.name + ' ' + (lead.address || ''))}`;
             const dealVal = parseFloat(lead.deal_value || 0);
             const isProposta = (lead.campaign_status === 'proposta');
@@ -898,7 +942,7 @@ function renderLeadsTable(leads) {
                         </div>
                         ${!hasWeb 
                             ? `<span class="badge-no-site" style="font-size:10.5px; padding:3px 7px;">Sem Site</span>` 
-                            : `<a href="${lead.website}" target="_blank" class="badge-has-site" style="font-size:11.5px;"><i class="fas fa-globe"></i> Ver Site</a>`}
+                            : `<a href="${lead.website}" target="_blank" rel="noopener noreferrer" class="badge-has-site" style="font-size:11.5px;"><i class="fas fa-globe"></i> Ver Site</a>`}
                     </div>
 
                     <div class="lead-card-address">
@@ -915,8 +959,9 @@ function renderLeadsTable(leads) {
                         ${dealVal > 0 ? `<span class="badge-deal-value ${isProposta ? 'proposta' : ''}" style="font-size:11px; padding:2px 7px;">${formatBRL(dealVal)}</span>` : ''}
                         ${lead.assigned_to ? `<span class="badge-assigned" style="font-size:11px; padding:2px 7px;"><i class="fas fa-user"></i> ${escapeHtml(lead.assigned_to)}</span>` : ''}
                         ${photos.length > 0 ? `<button type="button" class="badge-photos" style="font-size:11px; padding:3px 7px;" onclick="openLeadPhotosModal(${lead.id})"><i class="fas fa-camera"></i> ${photos.length} fotos</button>` : ''}
-                        <a href="${mapsHref}" target="_blank" class="badge-has-site" style="font-size:11px; padding:3px 7px; color:var(--neon-cyan); border-color:rgba(0,210,255,0.3);"><i class="fas fa-map-marked-alt"></i> Maps</a>
-                        <a href="${googleHref}" target="_blank" class="badge-has-site" style="font-size:11px; padding:3px 7px; color:#ffb703; border-color:rgba(255,183,3,0.3);"><i class="fab fa-google"></i> Google</a>
+                        ${getInstagramButtonHtml(lead)}
+                        <a href="${mapsHref}" target="_blank" rel="noopener noreferrer" class="badge-has-site" style="font-size:11px; padding:3px 7px; color:var(--neon-cyan); border-color:rgba(0,210,255,0.3);"><i class="fas fa-map-marked-alt"></i> Maps</a>
+                        <button type="button" class="badge-has-site" onclick="handleEnrichLead(event, ${lead.id})" style="font-size:11px; padding:3px 7px; color:var(--neon-green); border-color:rgba(0,255,136,0.3); background:transparent; cursor:pointer;" title="Puxar Dados Reais"><i class="fas fa-magic"></i> Puxar Dados</button>
                     </div>
 
                     <div class="lead-card-actions">
@@ -1001,24 +1046,32 @@ window.openLeadModal = function(leadId) {
     // Links de Análise Real (Google Maps e Busca Google)
     const mapsBtn = document.getElementById('modal-google-maps-btn');
     if (mapsBtn) {
-        const mapsHref = lead.maps_url || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(lead.name + ' ' + (lead.address || ''))}`;
+        const mapsHref = getLeadMapsUrl(lead);
         mapsBtn.href = mapsHref;
+        mapsBtn.setAttribute('target', '_blank');
+        mapsBtn.setAttribute('rel', 'noopener noreferrer');
     }
 
     const googleBtn = document.getElementById('modal-google-search-btn');
     if (googleBtn) {
         const googleHref = lead.google_url || `https://www.google.com/search?q=${encodeURIComponent(lead.name + ' ' + (lead.address || ''))}`;
         googleBtn.href = googleHref;
+        googleBtn.setAttribute('target', '_blank');
+        googleBtn.setAttribute('rel', 'noopener noreferrer');
     }
 
     // Instagram no modal
     const instaElem = document.getElementById('modal-lead-instagram');
+    const instaBtn = document.getElementById('modal-search-insta-btn');
     if (instaElem) {
         if (lead.instagram && lead.instagram.trim()) {
             const h = lead.instagram.trim();
-            instaElem.innerHTML = `<a href="https://instagram.com/${h.replace('@', '')}" target="_blank" class="badge-instagram"><i class="fab fa-instagram"></i> ${escapeHtml(h)}</a>`;
+            const cleanH = h.replace('@', '');
+            instaElem.innerHTML = `<a href="https://instagram.com/${cleanH}" target="_blank" rel="noopener noreferrer" class="badge-instagram" style="font-size:13px; padding:4px 10px;"><i class="fab fa-instagram"></i> ${escapeHtml(h)}</a>`;
+            if (instaBtn) instaBtn.innerHTML = `<i class="fas fa-sync-alt"></i> Rebuscar Instagram`;
         } else {
             instaElem.innerHTML = `<span style="color:var(--text-secondary); font-size:13px; font-weight:500;">Não detectado</span>`;
+            if (instaBtn) instaBtn.innerHTML = `<i class="fab fa-instagram"></i> Buscar Instagram`;
         }
     }
 
@@ -3024,8 +3077,10 @@ window.updateSelectedLeadsCount = function() {
 
     const badge = document.getElementById('selected-leads-count');
     const bulkBtnCount = document.getElementById('bulk-btn-count');
+    const bulkEnrichCount = document.getElementById('bulk-enrich-count');
     if (badge) badge.textContent = count;
     if (bulkBtnCount) bulkBtnCount.textContent = count;
+    if (bulkEnrichCount) bulkEnrichCount.textContent = count;
 
     const masterCb = document.getElementById('th-select-all');
     const allBoxes = document.querySelectorAll('.lead-select-checkbox');
@@ -3050,6 +3105,146 @@ window.selectAllLeads = function(selectAll) {
     const masterCb = document.getElementById('th-select-all');
     if (masterCb) masterCb.checked = selectAll;
     updateSelectedLeadsCount();
+};
+
+// HANDLERS DE BUSCA DE INSTAGRAM E ENRIQUECIMENTO DE DADOS REAIS
+window.handleSearchInstagram = async function(event, leadId) {
+    if (event) event.stopPropagation();
+    const lead = currentLeads.find(l => l.id === leadId);
+    const leadName = lead ? lead.name : `Lead #${leadId}`;
+    
+    showToast(`Buscando Instagram para "${leadName}"...`, "info");
+    
+    try {
+        const res = await fetch(`/api/leads/${leadId}/find-instagram`, { method: 'POST' });
+        const data = await res.json();
+        
+        if (data.success && data.instagram) {
+            showToast(`Instagram encontrado: ${data.instagram}!`, "success");
+            if (lead) lead.instagram = data.instagram;
+            applyFiltersAndRender();
+            if (typeof activeLeadForModal !== 'undefined' && activeLeadForModal && activeLeadForModal.id === leadId) {
+                activeLeadForModal.instagram = data.instagram;
+                openLeadModal(leadId);
+            }
+            window.open(`https://instagram.com/${data.instagram.replace('@', '')}`, '_blank');
+        } else {
+            showToast(`Instagram não detectado automaticamente. Abrindo busca no Instagram...`, "info");
+            const searchUrl = data.search_url || `https://www.instagram.com/explore/search/keyword/?q=${encodeURIComponent(leadName)}`;
+            window.open(searchUrl, '_blank');
+            
+            setTimeout(async () => {
+                const manual = prompt(`Instagram de "${leadName}":\nAbrimos a pesquisa na outra aba. Se encontrou o perfil correto, digite o @usuario aqui para salvar:`, lead && lead.instagram ? lead.instagram : '');
+                if (manual && manual.trim()) {
+                    await handleSaveManualInstagram(leadId, manual.trim());
+                }
+            }, 800);
+        }
+    } catch (err) {
+        console.error("Erro ao buscar Instagram:", err);
+        showToast("Erro ao conectar ao buscador de Instagram.", "error");
+    }
+};
+
+window.handleSaveManualInstagram = async function(leadId, rawHandle) {
+    try {
+        const res = await fetch(`/api/leads/${leadId}/save-instagram`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ instagram: rawHandle })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast(`Instagram salvo com sucesso: ${data.instagram}!`, "success");
+            const lead = currentLeads.find(l => l.id === leadId);
+            if (lead) lead.instagram = data.instagram;
+            applyFiltersAndRender();
+            if (typeof activeLeadForModal !== 'undefined' && activeLeadForModal && activeLeadForModal.id === leadId) {
+                activeLeadForModal.instagram = data.instagram;
+                openLeadModal(leadId);
+            }
+        }
+    } catch (e) {
+        console.error("Erro ao salvar instagram:", e);
+    }
+};
+
+window.handleEnrichLead = async function(event, leadId) {
+    if (event) event.stopPropagation();
+    const lead = currentLeads.find(l => l.id === leadId);
+    const leadName = lead ? lead.name : `Lead #${leadId}`;
+    
+    showToast(`Puxando dados reais no Google Maps e web para "${leadName}"...`, "info");
+    
+    try {
+        const res = await fetch(`/api/leads/${leadId}/enrich`, { method: 'POST' });
+        const data = await res.json();
+        
+        if (data.success && data.lead) {
+            const updated = data.lead;
+            const idx = currentLeads.findIndex(l => l.id === leadId);
+            if (idx !== -1) currentLeads[idx] = updated;
+            applyFiltersAndRender();
+            
+            if (typeof activeLeadForModal !== 'undefined' && activeLeadForModal && activeLeadForModal.id === leadId) {
+                openLeadModal(leadId);
+            }
+            
+            const parts = [];
+            if (updated.phone) parts.push(`Tel: ${updated.phone}`);
+            if (updated.whatsapp) parts.push(`WhatsApp`);
+            if (updated.email) parts.push(`E-mail: ${updated.email}`);
+            if (updated.instagram) parts.push(`Instagram: ${updated.instagram}`);
+            
+            showToast(`Dados reais capturados para "${leadName}"! ${parts.join(' | ')}`, "success");
+        } else {
+            showToast(data.error || "Não foi possível puxar dados adicionais.", "warning");
+        }
+    } catch (err) {
+        console.error("Erro ao enriquecer lead:", err);
+        showToast("Erro ao processar enriquecimento de dados.", "error");
+    }
+};
+
+window.handleEnrichSelectedLeads = async function() {
+    const checkedBoxes = Array.from(document.querySelectorAll('.lead-select-checkbox:checked'));
+    const selectedIds = checkedBoxes.map(cb => parseInt(cb.value));
+    
+    showToast(`Puxando dados reais para ${selectedIds.length > 0 ? selectedIds.length + ' leads selecionados' : 'os leads pendentes'}...`, "info");
+    
+    try {
+        const res = await fetch('/api/leads/enrich-batch', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ lead_ids: selectedIds.length > 0 ? selectedIds : null, limit: 15 })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast(`${data.total_enriched} leads enriquecidos com dados reais!`, "success");
+            await loadLeads();
+        }
+    } catch (e) {
+        showToast("Erro ao enriquecer em lote.", "error");
+    }
+};
+
+window.handleModalEnrichLead = async function() {
+    if (typeof activeLeadForModal === 'undefined' || !activeLeadForModal) return;
+    await handleEnrichLead(null, activeLeadForModal.id);
+};
+
+window.handleModalSearchInstagram = async function() {
+    if (typeof activeLeadForModal === 'undefined' || !activeLeadForModal) return;
+    await handleSearchInstagram(null, activeLeadForModal.id);
+};
+
+window.handleModalEditInstagram = async function() {
+    if (typeof activeLeadForModal === 'undefined' || !activeLeadForModal) return;
+    const current = activeLeadForModal.instagram || '';
+    const manual = prompt(`Definir Instagram para "${activeLeadForModal.name}":`, current);
+    if (manual !== null) {
+        await handleSaveManualInstagram(activeLeadForModal.id, manual.trim());
+    }
 };
 
 // FUNÇÃO CENTRALIZADA DE FILTRAGEM POR GRUPO DE DISPARO
