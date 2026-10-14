@@ -45,6 +45,39 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.on_event("startup")
+async def startup_waha_session_configuration():
+    """Garante que na inicialização a sessão WAHA tenha os webhooks e store configurados para sincronização"""
+    async def _setup():
+        await asyncio.sleep(2.0)
+        try:
+            settings = database.get_settings()
+            base_url = settings.get("waha_base_url", "http://localhost:3000").rstrip("/")
+            session_name = settings.get("waha_session", "default").strip() or "default"
+            headers = get_waha_headers(settings)
+            payload = {
+                "config": {
+                    "webhooks": [
+                        {
+                            "url": "http://host.docker.internal:8000/api/waha/webhook",
+                            "events": ["message", "message.any", "message.ack", "state.change"]
+                        }
+                    ],
+                    "noweb": {
+                        "store": {
+                            "enabled": True,
+                            "fullSync": False
+                        }
+                    }
+                }
+            }
+            async with httpx.AsyncClient(timeout=httpx.Timeout(5.0)) as client:
+                await client.put(f"{base_url}/api/sessions/{session_name}", headers=headers, json=payload)
+        except Exception:
+            pass
+
+    asyncio.create_task(_setup())
+
 # Pastas estáticas e templates
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -894,6 +927,7 @@ async def api_waha_send(payload: WahaSendRequest):
             resp = await client.post(f"{base_url}/api/sendText", headers=headers, json=waha_body)
             if resp.is_success:
                 resp_json = resp.json() if resp.headers.get("content-type", "").startswith("application/json") else {}
+                waha_msg_id = resp_json.get("id")
                 # Salvar no histórico de mensagens unificado
                 database.save_message(
                     lead_id=payload.lead_id,
@@ -902,7 +936,8 @@ async def api_waha_send(payload: WahaSendRequest):
                     sender="Operador",
                     recipient=payload.chatId,
                     body=payload.text,
-                    status="sent"
+                    status="sent",
+                    waha_message_id=waha_msg_id
                 )
                 # Atualizar CRM automaticamente quando lead_id for fornecido
                 if payload.lead_id:
@@ -998,10 +1033,152 @@ async def api_chat_conversations(search: Optional[str] = None, filter: Optional[
     convos = database.get_chat_conversations(search=search, filter_type=filter)
     return {"success": True, "conversations": convos, "count": len(convos)}
 
+async def sync_waha_chat_messages(lead_id: Optional[int] = None, phone: Optional[str] = None) -> List[dict]:
+    """
+    Sincroniza mensagens do WAHA diretamente com o banco de dados local.
+    Puxa mensagens recebidas e enviadas para o lead/telefone especificado.
+    """
+    target_lead = None
+    target_number = phone
+    if lead_id:
+        target_lead = database.get_lead_by_id(lead_id)
+        if target_lead and not target_number:
+            target_number = target_lead.get("whatsapp") or target_lead.get("phone")
+    elif phone:
+        target_lead = database.find_lead_by_phone(phone)
+        if target_lead:
+            lead_id = target_lead["id"]
+
+    if not target_number:
+        return []
+
+    digits = "".join(c for c in target_number if c.isdigit())
+    if not digits:
+        return []
+    if len(digits) in (10, 11) and not digits.startswith("55"):
+        digits = f"55{digits}"
+    chat_id = f"{digits}@c.us"
+
+    settings = database.get_settings()
+    base_url = settings.get("waha_base_url", "http://localhost:3000").rstrip("/")
+    session_name = settings.get("waha_session", "default").strip() or "default"
+    headers = get_waha_headers(settings)
+
+    candidate_urls = [
+        f"{base_url}/api/{session_name}/chats/{chat_id}/messages?limit=100",
+        f"{base_url}/api/messages?session={session_name}&chatId={chat_id}&limit=100"
+    ]
+
+    synced_messages = []
+    async with httpx.AsyncClient(timeout=httpx.Timeout(4.0, connect=2.0)) as client:
+        for url in candidate_urls:
+            try:
+                resp = await client.get(url, headers=headers)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    if isinstance(data, list):
+                        synced_messages = data
+                        break
+            except Exception:
+                continue
+
+    if not synced_messages:
+        return []
+
+    has_incoming = False
+    for m in synced_messages:
+        waha_id = m.get("id") or ""
+        from_me = bool(m.get("fromMe"))
+        body_text = m.get("body") or ""
+        
+        # Fallbacks de extração de texto em múltiplos formatos do WAHA
+        if not body_text:
+            data_sub = m.get("_data", {})
+            msg_obj = data_sub.get("message", {}) if isinstance(data_sub, dict) else {}
+            if isinstance(msg_obj, dict):
+                body_text = (
+                    msg_obj.get("conversation") or 
+                    msg_obj.get("extendedTextMessage", {}).get("text") or 
+                    msg_obj.get("imageMessage", {}).get("caption") or 
+                    msg_obj.get("videoMessage", {}).get("caption") or ""
+                )
+        
+        if not body_text:
+            if m.get("hasMedia"):
+                body_text = "[Arquivo / Mídia recebida]"
+            else:
+                continue
+
+        direction = "outgoing" if from_me else "incoming"
+        sender = "Operador" if from_me else (target_lead.get("name") if target_lead else digits)
+        recipient = chat_id if from_me else "Operador"
+
+        # Timestamp
+        ts = m.get("timestamp")
+        created_at_dt = None
+        if ts:
+            try:
+                created_at_dt = datetime.fromtimestamp(int(ts)).strftime("%Y-%m-%d %H:%M:%S")
+            except Exception:
+                created_at_dt = None
+
+        # Status
+        ack = (m.get("ackName") or "").upper()
+        if ack == "READ":
+            status = "read"
+        elif ack in ("DELIVERY", "DEVICE"):
+            status = "delivered"
+        else:
+            status = "sent" if from_me else "read"
+
+        database.save_message(
+            lead_id=target_lead["id"] if target_lead else None,
+            channel="whatsapp",
+            direction=direction,
+            sender=sender,
+            recipient=recipient,
+            body=body_text,
+            status=status,
+            waha_message_id=waha_id,
+            created_at_override=created_at_dt
+        )
+
+        if direction == "incoming":
+            has_incoming = True
+
+    if has_incoming and target_lead:
+        curr_status = (target_lead.get("campaign_status") or "").lower()
+        if curr_status in ("novo", "contatado"):
+            database.update_lead_status(
+                lead_id=target_lead["id"],
+                status="respondido",
+                notes="Mensagem recebida do cliente sincronizada via WAHA."
+            )
+
+    return synced_messages
+
 @app.get("/api/chat/messages")
 async def api_chat_messages(lead_id: Optional[int] = None, phone: Optional[str] = None):
+    # Sincroniza ativamente com o WAHA antes de carregar do banco
+    try:
+        await sync_waha_chat_messages(lead_id=lead_id, phone=phone)
+    except Exception:
+        pass
     messages = database.get_messages(lead_id=lead_id, phone=phone, limit=200)
     return {"success": True, "messages": messages, "count": len(messages)}
+
+@app.post("/api/chat/sync")
+async def api_chat_sync(payload: Dict[str, Any] = Body(...)):
+    lead_id = payload.get("lead_id")
+    phone = payload.get("phone")
+    synced = await sync_waha_chat_messages(lead_id=lead_id, phone=phone)
+    messages = database.get_messages(lead_id=lead_id, phone=phone, limit=200)
+    return {
+        "success": True,
+        "synced_count": len(synced),
+        "messages": messages,
+        "message": f"Sincronização com WhatsApp concluída ({len(synced)} mensagens no WAHA)!"
+    }
 
 @app.post("/api/chat/send")
 async def api_chat_send(payload: ChatSendPayload):
@@ -1054,6 +1231,8 @@ async def api_chat_send(payload: ChatSendPayload):
             try:
                 resp = await client.post(f"{base_url}/api/sendText", headers=headers, json=waha_body)
                 if resp.is_success:
+                    resp_json = resp.json() if resp.headers.get("content-type", "").startswith("application/json") else {}
+                    waha_msg_id = resp_json.get("id")
                     msg_id = database.save_message(
                         lead_id=payload.lead_id,
                         channel="whatsapp",
@@ -1061,7 +1240,8 @@ async def api_chat_send(payload: ChatSendPayload):
                         sender="Operador",
                         recipient=chat_id,
                         body=payload.text,
-                        status="sent"
+                        status="sent",
+                        waha_message_id=waha_msg_id
                     )
                     if payload.lead_id:
                         database.update_lead_status(
@@ -1190,35 +1370,87 @@ async def api_chat_simulate_reply(payload: Dict[str, Any]):
 
 @app.post("/api/waha/webhook")
 async def api_waha_webhook(request: Request):
-    """Webhook para escutar mensagens recebidas pelo WAHA em tempo real"""
+    """Webhook para escutar mensagens recebidas e enviadas pelo WAHA em tempo real"""
     try:
         body = await request.json()
         event_name = body.get("event")
         payload = body.get("payload", {})
         
-        # Trata mensagens recebidas
+        # Trata mensagens (recebidas e enviadas externamente pelo celular)
         if event_name in ("message", "message.any"):
             from_jid = payload.get("from", "")
-            body_text = payload.get("body", "")
-            from_me = payload.get("fromMe", False)
+            to_jid = payload.get("to", "")
+            from_me = bool(payload.get("fromMe", False))
+            waha_id = payload.get("id") or ""
             
-            # Se a mensagem foi recebida (não enviada por mim)
-            if not from_me and body_text:
-                clean_phone = "".join(c for c in from_jid.split("@")[0] if c.isdigit())
-                # Tenta localizar lead pelo telefone
-                leads = database.get_leads(search=clean_phone[-8:] if len(clean_phone) >= 8 else clean_phone)
-                matched_lead = leads[0] if leads else None
-                lead_id = matched_lead["id"] if matched_lead else None
-                
-                database.save_message(
-                    lead_id=lead_id,
-                    channel="whatsapp",
-                    direction="incoming",
-                    sender=matched_lead["name"] if matched_lead else from_jid,
-                    recipient="Operador",
-                    body=body_text,
-                    status="read"
-                )
+            body_text = payload.get("body") or ""
+            if not body_text:
+                data_sub = payload.get("_data", {})
+                msg_obj = data_sub.get("message", {}) if isinstance(data_sub, dict) else {}
+                if isinstance(msg_obj, dict):
+                    body_text = (
+                        msg_obj.get("conversation") or 
+                        msg_obj.get("extendedTextMessage", {}).get("text") or 
+                        msg_obj.get("imageMessage", {}).get("caption") or 
+                        msg_obj.get("videoMessage", {}).get("caption") or ""
+                    )
+            
+            if not body_text:
+                if payload.get("hasMedia"):
+                    body_text = "[Arquivo / Mídia recebida]"
+                else:
+                    return {"status": "ignored", "reason": "empty body"}
+            
+            # Identifica o contato remoto
+            remote_jid = to_jid if from_me else from_jid
+            matched_lead = database.find_lead_by_phone(remote_jid)
+            lead_id = matched_lead["id"] if matched_lead else None
+            
+            ts = payload.get("timestamp")
+            created_at_dt = None
+            if ts:
+                try:
+                    created_at_dt = datetime.fromtimestamp(int(ts)).strftime("%Y-%m-%d %H:%M:%S")
+                except Exception:
+                    pass
+
+            ack = (payload.get("ackName") or "").upper()
+            status = "read" if ack == "READ" or not from_me else ("delivered" if ack in ("DELIVERY", "DEVICE") else "sent")
+            direction = "outgoing" if from_me else "incoming"
+            sender = "Operador" if from_me else (matched_lead["name"] if matched_lead else remote_jid.split("@")[0])
+            recipient = remote_jid if from_me else "Operador"
+
+            database.save_message(
+                lead_id=lead_id,
+                channel="whatsapp",
+                direction=direction,
+                sender=sender,
+                recipient=recipient,
+                body=body_text,
+                status=status,
+                waha_message_id=waha_id,
+                created_at_override=created_at_dt
+            )
+
+            if not from_me and matched_lead:
+                curr_st = (matched_lead.get("campaign_status") or "").lower()
+                if curr_st in ("novo", "contatado"):
+                    database.update_lead_status(
+                        lead_id=matched_lead["id"],
+                        status="respondido",
+                        notes="Mensagem recebida do cliente via webhook WAHA."
+                    )
+        elif event_name == "message.ack":
+            waha_id = payload.get("id")
+            ack = (payload.get("ackName") or "").upper()
+            if waha_id and ack:
+                status = "read" if ack == "READ" else ("delivered" if ack in ("DELIVERY", "DEVICE") else "sent")
+                conn = database.get_connection()
+                cursor = conn.cursor()
+                cursor.execute("UPDATE messages SET status = ? WHERE waha_message_id = ?", (status, waha_id))
+                conn.commit()
+                conn.close()
+
         return {"status": "ok"}
     except Exception as e:
         return {"status": "error", "error": str(e)}

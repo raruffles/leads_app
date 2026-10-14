@@ -131,6 +131,16 @@ def init_db():
     except sqlite3.OperationalError:
         pass
 
+    try:
+        cursor.execute("ALTER TABLE messages ADD COLUMN waha_message_id TEXT DEFAULT NULL")
+    except sqlite3.OperationalError:
+        pass
+
+    try:
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_messages_waha_id ON messages (waha_message_id)")
+    except sqlite3.OperationalError:
+        pass
+
     # Tabela de usuários para modo online e colaboração de 2 operadores
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS users (
@@ -865,9 +875,16 @@ def get_leads(
         query += " AND assigned_to = ?"
         params.append(assigned_to)
     if search:
-        query += " AND (name LIKE ? OR phone LIKE ? OR email LIKE ? OR address LIKE ? OR notes LIKE ?)"
         s = f"%{search}%"
-        params.extend([s, s, s, s, s])
+        digits = "".join(c for c in search if c.isdigit())
+        if len(digits) >= 8:
+            s_dig = f"%{digits}%"
+            s_last8 = f"%{digits[-8:]}%"
+            query += " AND (name LIKE ? OR phone LIKE ? OR whatsapp LIKE ? OR email LIKE ? OR address LIKE ? OR notes LIKE ? OR whatsapp LIKE ? OR phone LIKE ?)"
+            params.extend([s, s, s, s, s, s, s_dig, s_last8])
+        else:
+            query += " AND (name LIKE ? OR phone LIKE ? OR whatsapp LIKE ? OR email LIKE ? OR address LIKE ? OR notes LIKE ?)"
+            params.extend([s, s, s, s, s, s])
         
     query += " ORDER BY id DESC LIMIT 500"
     cursor.execute(query, params)
@@ -1331,6 +1348,50 @@ def update_settings(new_settings: Dict[str, str]):
 # FUNÇÕES DE MENSAGENS E CHAT MULTI-CANAL
 # ========================================================
 
+def find_lead_by_phone(phone_or_jid: str) -> Optional[Dict[str, Any]]:
+    if not phone_or_jid:
+        return None
+    raw = phone_or_jid.split("@")[0]
+    digits = "".join(c for c in raw if c.isdigit())
+    if not digits:
+        return None
+    
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    # 1. Busca exata por whatsapp ou phone
+    cursor.execute("SELECT * FROM leads WHERE whatsapp = ? OR phone = ?", (digits, digits))
+    row = cursor.fetchone()
+    if row:
+        conn.close()
+        return dict(row)
+        
+    # Se tiver código do país 55 (ex: 5512991567734 -> 12991567734)
+    without_country = digits[2:] if digits.startswith("55") and len(digits) >= 12 else digits
+    with_country = f"55{digits}" if not digits.startswith("55") and len(digits) in (10, 11) else digits
+    
+    cursor.execute("""
+        SELECT * FROM leads 
+        WHERE whatsapp = ? OR whatsapp = ? OR phone = ? OR phone = ?
+    """, (without_country, with_country, without_country, with_country))
+    row = cursor.fetchone()
+    if row:
+        conn.close()
+        return dict(row)
+        
+    # 2. Busca pelos últimos 8 ou 9 dígitos (número local sem DDD ou com nono dígito)
+    last8 = digits[-8:]
+    last9 = digits[-9:] if len(digits) >= 9 else last8
+    
+    cursor.execute("""
+        SELECT * FROM leads 
+        WHERE whatsapp LIKE ? OR whatsapp LIKE ? OR phone LIKE ? OR phone LIKE ?
+        ORDER BY id DESC LIMIT 1
+    """, (f"%{last9}%", f"%{last8}%", f"%{last9}%", f"%{last8}%"))
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
 def save_message(
     lead_id: Optional[int],
     channel: str = "whatsapp",
@@ -1340,16 +1401,31 @@ def save_message(
     subject: str = "",
     body: str = "",
     status: str = "sent",
-    error_message: str = ""
+    error_message: str = "",
+    waha_message_id: Optional[str] = None,
+    created_at_override: Optional[str] = None
 ) -> int:
     conn = get_connection()
     cursor = conn.cursor()
-    created_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    # Se waha_message_id for fornecido e já existir, não duplica
+    if waha_message_id:
+        cursor.execute("SELECT id, status FROM messages WHERE waha_message_id = ?", (waha_message_id,))
+        row = cursor.fetchone()
+        if row:
+            # Atualiza status se mudou (ex: sent -> delivered -> read)
+            if status and row[1] != status:
+                cursor.execute("UPDATE messages SET status = ? WHERE id = ?", (status, row[0]))
+                conn.commit()
+            conn.close()
+            return row[0]
+            
+    created_at = created_at_override or datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     cursor.execute("""
         INSERT INTO messages (
-            lead_id, channel, direction, sender, recipient, subject, body, status, error_message, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (lead_id, channel, direction, sender, recipient, subject, body, status, error_message, created_at))
+            lead_id, channel, direction, sender, recipient, subject, body, status, error_message, created_at, waha_message_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (lead_id, channel, direction, sender, recipient, subject, body, status, error_message, created_at, waha_message_id))
     msg_id = cursor.lastrowid
     conn.commit()
     conn.close()

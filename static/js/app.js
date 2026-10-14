@@ -1011,6 +1011,7 @@ function renderLeadsTable(leads) {
                             <div>
                                 <div class="lead-card-title">
                                     ${escapeHtml(lead.name)}
+                                    ${lead.rating ? `<span class="badge-rating" style="display:inline-flex; align-items:center; gap:3px; font-size:10.5px; padding:1px 5px; border-radius:4px; background:rgba(255, 183, 3, 0.12); border:1px solid rgba(255, 183, 3, 0.35); color:#ffb703; font-weight:700; margin-left:4px;"><i class="fas fa-star" style="font-size:9.5px;"></i> ${Number(lead.rating).toFixed(1)}</span>` : ''}
                                     ${lead.source && lead.source.toLowerCase() !== 'google maps' ? `<span style="font-size:9.5px; font-weight:700; padding:1px 5px; border-radius:4px; background:rgba(157, 78, 221, 0.18); border:1px solid rgba(157, 78, 221, 0.4); color:var(--neon-purple); margin-left:4px;">${escapeHtml(lead.source)}</span>` : ''}
                                 </div>
                                 <span class="lead-card-category">${escapeHtml(lead.category || 'Comércio')}</span>
@@ -1114,6 +1115,15 @@ window.openLeadModal = function(leadId) {
 
     document.getElementById('modal-lead-name').textContent = lead.name;
     document.getElementById('modal-lead-category').textContent = lead.category || 'Comércio Local';
+
+    const ratingBadge = document.getElementById('modal-lead-rating-badge');
+    if (ratingBadge) {
+        if (lead.rating) {
+            ratingBadge.innerHTML = `<span style="background: rgba(255, 183, 3, 0.15); color: #ffb703; border: 1px solid rgba(255, 183, 3, 0.4); font-size: 11px; padding: 2px 8px; border-radius: 12px; font-weight: 700; display:inline-flex; align-items:center; gap:4px;"><i class="fas fa-star" style="font-size:10px;"></i> ${Number(lead.rating).toFixed(1)} ${lead.reviews_count ? `(${lead.reviews_count} avaliações)` : ''}</span>`;
+        } else {
+            ratingBadge.innerHTML = '';
+        }
+    }
 
     const sourceBadge = document.getElementById('modal-lead-source-badge');
     if (sourceBadge) {
@@ -5075,7 +5085,7 @@ function updateChatComposerFields(lead) {
     }
 }
 
-window.loadChatMessages = async function(leadId) {
+window.loadChatMessages = async function(leadId, silent = false) {
     const container = document.getElementById('chat-messages-container');
     if (!container) return;
 
@@ -5087,7 +5097,45 @@ window.loadChatMessages = async function(leadId) {
             renderChatMessages(data.messages || []);
         }
     } catch (err) {
-        console.error("Erro ao carregar mensagens:", err);
+        if (!silent) console.error("Erro ao carregar mensagens:", err);
+    }
+};
+
+window.syncActiveChatMessages = async function() {
+    if (!activeChatLead) {
+        if (typeof showToast === 'function') showToast("Selecione uma conversa para sincronizar com o WhatsApp.", "info");
+        return;
+    }
+    const btn = document.getElementById('btn-sync-waha-chat');
+    const icon = document.getElementById('icon-sync-waha');
+    if (icon) icon.classList.add('fa-spin');
+    if (btn) btn.disabled = true;
+
+    try {
+        const res = await fetch('/api/chat/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ lead_id: activeChatLead.id })
+        });
+        const data = await res.json();
+        if (data.success) {
+            renderChatMessages(data.messages || []);
+            await loadChatConversations(activeChatLead.id);
+            if (typeof showToast === 'function') {
+                showToast(`Sincronizado com WhatsApp! (${data.synced_count || 0} mensagens no WAHA)`, "success");
+            }
+        } else {
+            if (typeof showToast === 'function') {
+                showToast(data.error || "Erro ao sincronizar com WAHA", "error");
+            }
+        }
+    } catch (err) {
+        if (typeof showToast === 'function') {
+            showToast("Falha na sincronização: " + err.message, "error");
+        }
+    } finally {
+        if (icon) icon.classList.remove('fa-spin');
+        if (btn) btn.disabled = false;
     }
 };
 
@@ -5624,9 +5672,9 @@ window.startChatPolling = function() {
     if (chatPollingInterval) clearInterval(chatPollingInterval);
     chatPollingInterval = setInterval(() => {
         if (activeChatLead) {
-            loadChatMessages(activeChatLead.id);
+            loadChatMessages(activeChatLead.id, true);
         }
-        loadChatConversations();
+        loadChatConversations(activeChatLead ? activeChatLead.id : null);
     }, 4000);
 };
 

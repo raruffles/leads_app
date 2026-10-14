@@ -25,7 +25,9 @@ services:
       - WAHA_LOG_FORMAT=JSON
       - WAHA_LOG_LEVEL=INFO
       - WAHA_DEBUG_MODE=false
-      - WAHA_WEBHOOKS_ENABLED=false
+      - WAHA_WEBHOOKS_ENABLED=true
+      - WHATSAPP_HOOK_URL=http://host.docker.internal:8000/api/waha/webhook
+      - WHATSAPP_HOOK_EVENTS=message,message.any,state.change,message.ack
       - WAHA_CORS_ORIGIN=*
       - WAHA_PRINT_QR=true
       - WHATSAPP_START_SESSION=default

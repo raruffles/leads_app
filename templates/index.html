@@ -824,6 +824,9 @@
 
                                 <!-- AÇÕES DO CABEÇALHO -->
                                 <div style="display:flex; align-items:center; gap:8px; margin-left:auto;">
+                                    <button type="button" class="btn btn-secondary btn-sm" id="btn-sync-waha-chat" onclick="syncActiveChatMessages()" title="Sincronizar mensagens enviadas e recebidas com o WhatsApp (WAHA)" style="border-color:rgba(0,255,136,0.4); color:var(--neon-green);">
+                                        <i class="fas fa-sync-alt" id="icon-sync-waha"></i> Sincronizar WAHA
+                                    </button>
                                     <button type="button" class="btn btn-secondary btn-sm" onclick="openLeadModalFromChat()" title="Ver ficha completa do Lead">
                                         <i class="fas fa-id-card"></i> Ficha CRM
                                     </button>
@@ -3138,6 +3141,7 @@ Se preferir não receber mensagens, é só me avisar.</textarea>
                     <h2 id="modal-lead-name" style="font-size: 20px; font-weight: 800; color: #fff;">Nome da Empresa</h2>
                     <div style="display:flex; align-items:center; gap:8px; margin-top:3px; flex-wrap:wrap;">
                         <span id="modal-lead-category" style="font-size: 13px; color: var(--neon-cyan);">Categoria</span>
+                        <span id="modal-lead-rating-badge"></span>
                         <span id="modal-lead-source-badge"></span>
                     </div>
                 </div>
