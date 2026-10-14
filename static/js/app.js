@@ -764,6 +764,8 @@ function applyFiltersAndRender() {
         filtered = filtered.filter(l => !l.has_website || !l.website);
     } else if (activeFilter === 'whatsapp') {
         filtered = filtered.filter(l => (l.whatsapp && l.whatsapp.trim().length > 0) || (l.phone && l.phone.trim().length > 0));
+    } else if (activeFilter === 'rating-45') {
+        filtered = filtered.filter(l => l.rating !== undefined && l.rating !== null && parseFloat(l.rating) >= 4.5);
     } else if (activeFilter === 'instagram') {
         filtered = filtered.filter(l => (l.instagram && l.instagram.trim().length > 0) || (l.source && l.source.toLowerCase() === 'instagram'));
     } else if (activeFilter === 'manual') {
