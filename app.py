@@ -1344,6 +1344,9 @@ async def api_chat_sync(payload: Dict[str, Any] = Body(...)):
 
 @app.post("/api/chat/send")
 async def api_chat_send(payload: ChatSendPayload):
+    # Failsafe de Spintax: garante que mensagens no chat com {a|b|c} sejam resolvidas dinamicamente
+    payload.text = resolve_spintax(payload.text)
+
     lead = database.get_lead_by_id(payload.lead_id) if payload.lead_id else None
     settings = database.get_settings()
     channel = (payload.channel or "whatsapp").lower()
@@ -1699,10 +1702,11 @@ async def api_chat_create_contact(payload: CreateChatContactPayload):
 
     send_result = None
     if payload.send_now and payload.initial_message and payload.initial_message.strip():
+        resolved_init_msg = resolve_spintax(payload.initial_message.strip())
         send_payload = ChatSendPayload(
             lead_id=lead["id"],
             channel=payload.channel or "whatsapp",
-            text=payload.initial_message.strip(),
+            text=resolved_init_msg,
             recipient=lead.get("email") if payload.channel == "email" else digits,
             phone=digits
         )
