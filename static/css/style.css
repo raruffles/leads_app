@@ -1694,6 +1694,47 @@ textarea::placeholder,
     transform: translateY(-1px);
 }
 
+.btn-instagram {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888);
+    color: #ffffff !important;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 11.5px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+.btn-instagram:hover {
+    opacity: 0.92;
+    transform: translateY(-1px);
+    box-shadow: 0 0 12px rgba(225, 48, 108, 0.5);
+}
+.btn-instagram-search {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(225, 48, 108, 0.1);
+    color: #ff6b9d;
+    border: 1px solid rgba(225, 48, 108, 0.35);
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 11.5px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+.btn-instagram-search:hover {
+    background: rgba(225, 48, 108, 0.22);
+    color: #fff;
+    border-color: #e1306c;
+}
+
+
 /* FOTOS BADGE & GALERIA */
 .badge-photos {
     display: inline-flex;
