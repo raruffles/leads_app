@@ -438,6 +438,36 @@ async def api_delete_lead(lead_id: int):
     success = database.delete_lead(lead_id)
     return {"success": success, "message": "Lead removido com sucesso!"}
 
+class CreateManualLeadPayload(BaseModel):
+    name: str
+    phone: Optional[str] = ""
+    whatsapp: Optional[str] = ""
+    email: Optional[str] = ""
+    website: Optional[str] = ""
+    address: Optional[str] = ""
+    category: Optional[str] = "Comércio Local"
+    instagram: Optional[str] = ""
+    opportunity_score: Optional[int] = None
+    campaign_status: Optional[str] = "novo"
+    follow_stage: Optional[str] = "contato"
+    notes: Optional[str] = ""
+    deal_value: Optional[float] = 0.0
+    assigned_to: Optional[str] = ""
+    source: Optional[str] = "Instagram"
+    scan_id: Optional[int] = None
+
+@app.post("/api/leads")
+@app.post("/api/leads/manual")
+async def api_create_manual_lead(payload: CreateManualLeadPayload):
+    if not payload.name or not payload.name.strip():
+        raise HTTPException(status_code=400, detail="O nome do estabelecimento é obrigatório.")
+    lead = database.create_manual_lead(payload.dict())
+    return {
+        "success": True,
+        "message": f"Lead '{lead.get('name')}' cadastrado com sucesso!",
+        "lead": lead
+    }
+
 class BulkDeletePayload(BaseModel):
     lead_ids: List[int]
 

@@ -486,6 +486,9 @@
                             <span id="table-count-badge" class="brand-badge" style="margin-left: 8px;">0 encontrados</span>
                         </div>
                         <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                            <button type="button" class="btn btn-neon btn-sm" style="font-weight: 800; box-shadow: 0 0 12px rgba(0, 255, 136, 0.35);" onclick="openManualLeadModal()" title="Cadastrar manualmente um lead vindo do Instagram, WhatsApp, Indicação ou outras fontes">
+                                <i class="fas fa-plus-circle"></i> + Novo Lead Manual
+                            </button>
                             <button class="btn btn-secondary btn-sm" style="color:var(--neon-cyan); border-color: rgba(0, 210, 255, 0.4);" onclick="openExecutiveReportModal()">
                                 <i class="fas fa-file-invoice"></i> Relatório Executivo
                             </button>
@@ -516,6 +519,12 @@
                             </button>
                             <button class="filter-btn" data-filter="whatsapp">
                                 <i class="fab fa-whatsapp" style="color:var(--neon-green);"></i> Com WhatsApp
+                            </button>
+                            <button class="filter-btn" data-filter="instagram" style="border-color: rgba(225, 48, 108, 0.4);" title="Leads que possuem perfil no Instagram ou vieram do Instagram">
+                                <i class="fab fa-instagram" style="color:#ff75a0;"></i> Do Instagram
+                            </button>
+                            <button class="filter-btn" data-filter="manual" style="border-color: rgba(157, 78, 221, 0.4);" title="Leads inseridos manualmente na base">
+                                <i class="fas fa-user-edit" style="color:var(--neon-purple);"></i> Manuais
                             </button>
                             <button class="filter-btn" data-filter="proposta" style="border-color: rgba(255, 123, 0, 0.4);">
                                 <i class="fas fa-file-invoice-dollar" style="color:var(--alert-orange);"></i> Em Proposta
@@ -2872,13 +2881,161 @@ Se preferir não receber mensagens, é só me avisar.</textarea>
         </div>
     </div>
 
+    <!-- MODAL: CADASTRAR NOVO LEAD MANUAL (INSTAGRAM / OUTRAS FONTES) -->
+    <div id="modal-manual-lead" class="modal-overlay">
+        <div class="modal-container" style="max-width: 680px;">
+            <div class="modal-header">
+                <div>
+                    <h3 style="color: #fff; font-size: 19px; font-weight: 800; display:flex; align-items:center; gap:8px; margin:0;">
+                        <i class="fas fa-user-plus" style="color:var(--neon-green);"></i> Cadastrar Novo Lead Manual
+                    </h3>
+                    <span style="font-size: 12px; color: var(--text-secondary); margin-top: 3px; display: block;">
+                        Adicione oportunidades do Instagram, WhatsApp, Indicação ou Prospecção Ativa
+                    </span>
+                </div>
+                <button type="button" class="modal-close" onclick="closeManualLeadModal()"><i class="fas fa-times"></i></button>
+            </div>
+
+            <form id="form-manual-lead" onsubmit="handleCreateManualLead(event)" style="padding-top: 12px;">
+                <!-- SEÇÃO 1: IDENTIFICAÇÃO E ORIGEM -->
+                <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(0, 255, 136, 0.2); border-radius: 10px; padding: 14px; margin-bottom: 14px;">
+                    <div style="font-size: 11.5px; font-weight: 800; color: var(--neon-green); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 10px; display:flex; align-items:center; gap:6px;">
+                        <i class="fas fa-id-card"></i> 1. Identificação & Origem do Contato
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 12px; margin-bottom: 10px;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label" style="font-size: 12px; font-weight: 700;">Nome do Estabelecimento / Contato *</label>
+                            <input type="text" id="mlead-name" class="form-control" placeholder="Ex: Barbearia Vip ou Dra. Camila" required autofocus>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label" style="font-size: 12px; font-weight: 700;">Origem / Canal *</label>
+                            <select id="mlead-source" class="form-control" style="font-weight: 600;">
+                                <option value="Instagram" selected>📱 Instagram (Direct / Perfil)</option>
+                                <option value="WhatsApp">💬 WhatsApp Comercial</option>
+                                <option value="Indicação">🤝 Indicação de Cliente / Parceiro</option>
+                                <option value="Google Maps">📍 Prospecção Google Maps</option>
+                                <option value="Google Busca">🔍 Prospecção Web / Google</option>
+                                <option value="Networking">🎟️ Evento / Networking</option>
+                                <option value="Outro">🌐 Outra Fonte</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label" style="font-size: 12px;">Nicho / Categoria</label>
+                        <input type="text" id="mlead-category" class="form-control" placeholder="Ex: Barbearia, Odontologia, Restaurante, Contabilidade...">
+                    </div>
+                </div>
+
+                <!-- SEÇÃO 2: DADOS DE CONTATO & REDES -->
+                <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(0, 210, 255, 0.2); border-radius: 10px; padding: 14px; margin-bottom: 14px;">
+                    <div style="font-size: 11.5px; font-weight: 800; color: var(--neon-cyan); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 10px; display:flex; align-items:center; gap:6px;">
+                        <i class="fas fa-address-book"></i> 2. Contatos & Redes Sociais
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 10px;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label" style="font-size: 12px; display:flex; align-items:center; gap:4px;">
+                                <i class="fas fa-phone-alt" style="color:var(--neon-cyan);"></i> Telefone
+                            </label>
+                            <input type="text" id="mlead-phone" class="form-control" placeholder="(11) 98888-7777" oninput="onManualPhoneInput(this)">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label" style="font-size: 12px; display:flex; align-items:center; gap:4px;">
+                                <i class="fab fa-whatsapp" style="color:var(--neon-green);"></i> WhatsApp (DDI+DDD)
+                            </label>
+                            <input type="text" id="mlead-whatsapp" class="form-control" placeholder="5511988887777">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label" style="font-size: 12px; display:flex; align-items:center; gap:4px;">
+                                <i class="fab fa-instagram" style="color:#ff75a0;"></i> Instagram (@)
+                            </label>
+                            <input type="text" id="mlead-instagram" class="form-control" placeholder="@perfil_oficial">
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 12px;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label" style="font-size: 12px;">E-mail Comercial</label>
+                            <input type="email" id="mlead-email" class="form-control" placeholder="contato@empresa.com">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label" style="font-size: 12px;">Endereço / Cidade</label>
+                            <input type="text" id="mlead-address" class="form-control" placeholder="Ex: Av. Paulista, 1000 - São Paulo, SP">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SEÇÃO 3: DIAGNÓSTICO DO SITE & OPORTUNIDADE -->
+                <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 170, 0, 0.2); border-radius: 10px; padding: 14px; margin-bottom: 14px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+                        <div style="font-size: 11.5px; font-weight: 800; color: #ffaa00; text-transform: uppercase; letter-spacing: 0.6px; display:flex; align-items:center; gap:6px;">
+                            <i class="fas fa-globe"></i> 3. Diagnóstico de Presença Web
+                        </div>
+                        <span id="mlead-opp-indicator" style="padding: 2px 10px; border-radius: 12px; font-size: 11.5px; font-weight: 800; background: rgba(0, 255, 136, 0.15); border: 1px solid var(--neon-green); color: var(--neon-green);">
+                            Alta Oportunidade: 95/100 (Sem Site)
+                        </span>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label" style="font-size: 12px;">Site Oficial (Deixe em branco se a empresa NÃO possui site próprio):</label>
+                        <input type="url" id="mlead-website" class="form-control" placeholder="https://exemplo.com.br" oninput="onManualWebsiteInput(this)">
+                        <input type="hidden" id="mlead-opp-score" value="95">
+                    </div>
+                </div>
+
+                <!-- SEÇÃO 4: CRM, FUNIL & RESPONSÁVEL -->
+                <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(157, 78, 221, 0.2); border-radius: 10px; padding: 14px; margin-bottom: 14px;">
+                    <div style="font-size: 11.5px; font-weight: 800; color: var(--neon-purple); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 10px; display:flex; align-items:center; gap:6px;">
+                        <i class="fas fa-funnel-dollar"></i> 4. Gestão Comercial & Funil CRM
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 12px; margin-bottom: 10px;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label" style="font-size: 12px; font-weight: 700;">Etapa Inicial do Funil</label>
+                            <select id="mlead-stage" class="form-control">
+                                <option value="contato" selected>1º Contato (Google / Insta)</option>
+                                <option value="follow1">Follow 1 (Proposta Sem Custo)</option>
+                                <option value="follow2">Follow 2 (Cobrança & Prévia)</option>
+                                <option value="proposta">Em Proposta / Negociação</option>
+                                <option value="fechado">Fechado / Ganho 🎉</option>
+                                <option value="novo">Novo Lead (Aguardando)</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label" style="font-size: 12px; font-weight: 700;">Operador Responsável</label>
+                            <select id="mlead-assigned-to" class="form-control">
+                                <option value="">Não atribuído</option>
+                                <option value="Operador 1" selected>Operador 1</option>
+                                <option value="Operador 2">Operador 2</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label" style="font-size: 12px;">Valor Estimado (R$)</label>
+                            <input type="number" step="0.01" id="mlead-deal-value" class="form-control" placeholder="1500.00">
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label" style="font-size: 12px;">Notas / Histórico da Conversa Inicial</label>
+                        <textarea id="mlead-notes" class="form-control" rows="2" placeholder="Ex: Lead abordado pelo direct do Instagram, interessado em criar site para captação..."></textarea>
+                    </div>
+                </div>
+
+                <div style="display:flex; justify-content:flex-end; gap:10px; margin-top: 16px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeManualLeadModal()">Cancelar</button>
+                    <button type="submit" id="btn-save-manual-lead" class="btn btn-neon" style="box-shadow: 0 0 14px rgba(0, 255, 136, 0.35);">
+                        <i class="fas fa-check-circle"></i> Cadastrar e Abrir Ficha
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- MODAL DE DETALHES DO LEAD -->
     <div id="lead-details-modal" class="modal-overlay">
         <div class="modal-container">
             <div class="modal-header">
                 <div>
                     <h2 id="modal-lead-name" style="font-size: 20px; font-weight: 800; color: #fff;">Nome da Empresa</h2>
-                    <span id="modal-lead-category" style="font-size: 13px; color: var(--neon-cyan);">Categoria</span>
+                    <div style="display:flex; align-items:center; gap:8px; margin-top:3px; flex-wrap:wrap;">
+                        <span id="modal-lead-category" style="font-size: 13px; color: var(--neon-cyan);">Categoria</span>
+                        <span id="modal-lead-source-badge"></span>
+                    </div>
                 </div>
                 <button id="modal-close-btn" class="modal-close"><i class="fas fa-times"></i></button>
             </div>

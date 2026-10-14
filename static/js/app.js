@@ -8,6 +8,9 @@ let currentEventSource = null;
 let currentUser = { id: 1, username: 'operador1', name: 'Operador 1', role: 'operador' };
 let systemUsers = [];
 let pendingCleanupMode = 'all';
+let selectedLeadIds = new Set();
+let b2bDispatchStopRequested = false;
+let currentB2BTemplate = 'contato';
 
 function formatBRL(value) {
     const num = parseFloat(value) || 0;
@@ -748,12 +751,16 @@ function getLeadPhotos(lead) {
 function applyFiltersAndRender() {
     let filtered = [...currentLeads];
 
-    if (activeFilter === 'no-site') {
+    if (activeFilter === 'selected') {
+        filtered = filtered.filter(l => selectedLeadIds.has(l.id));
+    } else if (activeFilter === 'no-site') {
         filtered = filtered.filter(l => !l.has_website || !l.website);
     } else if (activeFilter === 'whatsapp') {
-        filtered = filtered.filter(l => l.whatsapp && l.whatsapp.trim().length > 0);
+        filtered = filtered.filter(l => (l.whatsapp && l.whatsapp.trim().length > 0) || (l.phone && l.phone.trim().length > 0));
     } else if (activeFilter === 'instagram') {
-        filtered = filtered.filter(l => l.instagram && l.instagram.trim().length > 0);
+        filtered = filtered.filter(l => (l.instagram && l.instagram.trim().length > 0) || (l.source && l.source.toLowerCase() === 'instagram'));
+    } else if (activeFilter === 'manual') {
+        filtered = filtered.filter(l => l.source && l.source.toLowerCase() !== 'google maps' && l.source.toLowerCase() !== 'google_maps');
     } else if (activeFilter === 'photos') {
         filtered = filtered.filter(l => getLeadPhotos(l).length > 0);
     } else if (activeFilter === 'email') {
@@ -784,9 +791,13 @@ function applyFiltersAndRender() {
             (l.email && l.email.toLowerCase().includes(term)) ||
             (l.address && l.address.toLowerCase().includes(term)) ||
             (l.assigned_to && l.assigned_to.toLowerCase().includes(term)) ||
+            (l.source && l.source.toLowerCase().includes(term)) ||
             (l.deal_value && String(l.deal_value).includes(term))
         );
     }
+
+    const filterSelectedBadge = document.getElementById('filter-selected-badge');
+    if (filterSelectedBadge) filterSelectedBadge.textContent = selectedLeadIds.size;
 
     renderLeadsTable(filtered);
 }
@@ -863,6 +874,9 @@ function renderLeadsTable(leads) {
 
     // 1. Renderiza a tabela clássica (para Desktop)
     tbody.innerHTML = leads.map(lead => {
+        if (!lead.whatsapp && lead.phone) {
+            lead.whatsapp = lead.phone;
+        }
         const rawPhone = lead.whatsapp || lead.phone || '';
         const waLink = rawPhone 
             ? `<div style="display:flex; gap:6px; align-items:center;">
@@ -895,8 +909,8 @@ function renderLeadsTable(leads) {
             : `<span style="color:var(--text-secondary); font-size:11.5px; font-weight:500;">Sem resp.</span>`;
 
         const siteDisplay = lead.has_website && lead.website
-            ? `<a href="${lead.website}" target="_blank" rel="noopener noreferrer" class="badge-has-site">
-                 <i class="fas fa-external-link-alt"></i> ${truncateUrl(lead.website)}
+            ? `<a href="${lead.website}" target="_blank" rel="noopener noreferrer" class="badge-has-site" title="${escapeHtml(lead.website)}">
+                 <i class="fas fa-globe"></i> Ver Site
                </a>`
             : `<span class="badge-no-site">
                  <i class="fas fa-exclamation-triangle"></i> Sem Site
@@ -918,13 +932,14 @@ function renderLeadsTable(leads) {
         return `
             <tr draggable="true" ondragstart="onCardDragStart(event, ${lead.id})" ondragend="onCardDragEnd(event)" style="cursor: grab;">
                 <td style="text-align: center;">
-                    <input type="checkbox" class="lead-select-checkbox" value="${lead.id}" onchange="updateSelectedLeadsCount()">
+                    <input type="checkbox" class="lead-select-checkbox" value="${lead.id}" ${selectedLeadIds.has(lead.id) ? 'checked' : ''} onchange="toggleLeadSelection(${lead.id}, this.checked)">
                 </td>
-                <td>
+                <td class="col-empresa">
                     <div class="company-cell">
-                        <div style="display:flex; align-items:center; gap:6px;">
+                        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
                             <i class="fas fa-grip-vertical" style="color:var(--text-secondary); cursor:grab; font-size:12px;" title="Arraste este lead para a aba Campanhas & CRM!"></i>
                             <span class="company-name">${escapeHtml(lead.name)}</span>
+                            ${lead.source && lead.source.toLowerCase() !== 'google maps' ? `<span style="font-size:10px; font-weight:700; padding:1px 6px; border-radius:4px; background:rgba(157, 78, 221, 0.18); border:1px solid rgba(157, 78, 221, 0.4); color:var(--neon-purple); display:inline-flex; align-items:center; gap:3px;"><i class="${lead.source.toLowerCase() === 'instagram' ? 'fab fa-instagram' : 'fas fa-user-edit'}"></i> ${escapeHtml(lead.source)}</span>` : ''}
                         </div>
                         <span class="company-meta"><i class="fas fa-map-marker-alt"></i> ${escapeHtml(lead.address || 'Local não especificado')}</span>
                         ${(() => {
@@ -935,14 +950,14 @@ function renderLeadsTable(leads) {
                         })()}
                     </div>
                 </td>
-                <td>${waLink}</td>
-                <td>${phoneDisplay}</td>
-                <td>${getInstagramButtonHtml(lead)}</td>
-                <td>${dealValueDisplay}</td>
-                <td>${assignedDisplay}</td>
-                <td>${siteDisplay}</td>
-                <td>${analysisDisplay}</td>
-                <td>
+                <td class="col-wa">${waLink}</td>
+                <td class="col-tel">${phoneDisplay}</td>
+                <td class="col-insta">${getInstagramButtonHtml(lead)}</td>
+                <td class="col-valor">${dealValueDisplay}</td>
+                <td class="col-resp">${assignedDisplay}</td>
+                <td class="col-site">${siteDisplay}</td>
+                <td class="col-maps">${analysisDisplay}</td>
+                <td class="col-acoes">
                     <div style="display:flex; gap:5px; align-items:center;">
                         <button class="btn btn-secondary btn-sm" onclick="handleEnrichLead(event, ${lead.id})" title="Puxar Dados Reais de Contato (Google Maps, Telefone, WhatsApp, E-mail)" style="color:var(--neon-green); border-color:rgba(0,255,136,0.35); padding:4px 7px;">
                             <i class="fas fa-magic"></i>
@@ -976,9 +991,12 @@ function renderLeadsTable(leads) {
                 <div class="lead-mobile-card">
                     <div class="lead-card-header">
                         <div style="display: flex; align-items: center; gap: 8px;">
-                            <input type="checkbox" class="lead-select-checkbox" value="${lead.id}" onchange="updateSelectedLeadsCount()">
+                            <input type="checkbox" class="lead-select-checkbox" value="${lead.id}" ${selectedLeadIds.has(lead.id) ? 'checked' : ''} onchange="toggleLeadSelection(${lead.id}, this.checked)">
                             <div>
-                                <div class="lead-card-title">${escapeHtml(lead.name)}</div>
+                                <div class="lead-card-title">
+                                    ${escapeHtml(lead.name)}
+                                    ${lead.source && lead.source.toLowerCase() !== 'google maps' ? `<span style="font-size:9.5px; font-weight:700; padding:1px 5px; border-radius:4px; background:rgba(157, 78, 221, 0.18); border:1px solid rgba(157, 78, 221, 0.4); color:var(--neon-purple); margin-left:4px;">${escapeHtml(lead.source)}</span>` : ''}
+                                </div>
                                 <span class="lead-card-category">${escapeHtml(lead.category || 'Comércio')}</span>
                             </div>
                         </div>
@@ -1080,6 +1098,15 @@ window.openLeadModal = function(leadId) {
 
     document.getElementById('modal-lead-name').textContent = lead.name;
     document.getElementById('modal-lead-category').textContent = lead.category || 'Comércio Local';
+
+    const sourceBadge = document.getElementById('modal-lead-source-badge');
+    if (sourceBadge) {
+        const src = lead.source || 'Google Maps';
+        const isInsta = src.toLowerCase().includes('instagram');
+        const isManual = src.toLowerCase() !== 'google maps';
+        sourceBadge.innerHTML = `<span style="background: ${isInsta ? 'rgba(225, 48, 108, 0.15)' : (isManual ? 'rgba(157, 78, 221, 0.15)' : 'rgba(0, 210, 255, 0.12)')}; color: ${isInsta ? '#ff75a0' : (isManual ? 'var(--neon-purple)' : 'var(--neon-cyan)')}; border: 1px solid currentColor; font-size: 11px; padding: 2px 8px; border-radius: 12px; font-weight: 700; display:inline-flex; align-items:center; gap:4px;"><i class="${isInsta ? 'fab fa-instagram' : (isManual ? 'fas fa-user-edit' : 'fas fa-map-marker-alt')}"></i> Origem: ${escapeHtml(src)}</span>`;
+    }
+
     document.getElementById('modal-lead-address').textContent = lead.address || 'Não informado';
     document.getElementById('modal-lead-phone').textContent = lead.phone || 'Não informado';
     document.getElementById('modal-lead-whatsapp').textContent = lead.whatsapp || 'Não detectado';
@@ -1853,7 +1880,8 @@ async function loadCampaignsView() {
                 (l.name && l.name.toLowerCase().includes(searchTerm)) ||
                 (l.phone && l.phone.toLowerCase().includes(searchTerm)) ||
                 (l.address && l.address.toLowerCase().includes(searchTerm)) ||
-                (l.assigned_to && l.assigned_to.toLowerCase().includes(searchTerm))
+                (l.assigned_to && l.assigned_to.toLowerCase().includes(searchTerm)) ||
+                (l.source && l.source.toLowerCase().includes(searchTerm))
             );
         }
         if (selectedOp && selectedOp !== 'all') {
@@ -1932,7 +1960,10 @@ async function loadCampaignsView() {
                         <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:4px; gap:8px;">
                             <div style="display:flex; align-items:center; gap:6px; flex:1; min-width:0;">
                                 <i class="fas fa-grip-vertical" style="color:var(--text-secondary); cursor:grab; font-size:12px; flex-shrink:0;" title="Arrastar card"></i>
-                                <div style="font-weight:700; font-size:13.5px; line-height:1.3; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(lead.name)}</div>
+                                <div style="font-weight:700; font-size:13.5px; line-height:1.3; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                                    ${escapeHtml(lead.name)}
+                                    ${lead.source && lead.source.toLowerCase() !== 'google maps' ? `<span style="font-size:9.5px; font-weight:700; padding:1px 5px; border-radius:4px; background:rgba(157, 78, 221, 0.18); border:1px solid rgba(157, 78, 221, 0.4); color:var(--neon-purple); margin-left:4px; display:inline-flex; align-items:center; gap:2px;"><i class="${lead.source.toLowerCase() === 'instagram' ? 'fab fa-instagram' : 'fas fa-user-edit'}" style="font-size:9px;"></i> ${escapeHtml(lead.source)}</span>` : ''}
+                                </div>
                             </div>
                             <div style="display:flex; align-items:center; gap:4px; flex-shrink:0;">
                                 ${(lead.whatsapp || lead.phone) ? `
@@ -2489,7 +2520,8 @@ function buildPersonalizedMessage(lead, customTemplate = null, options = {}) {
     res = res.replace(/\[\{\s*primeiro_nome\s*\}\]/gi, primeiroNome)
              .replace(/\{\{\s*primeiro_nome\s*\}\}/gi, primeiroNome)
              .replace(/\{\s*primeiro_nome\s*\}/gi, primeiroNome)
-             .replace(/\[\s*primeiro_nome\s*\]/gi, primeiroNome);
+             .replace(/\[\s*primeiro_nome\s*\]/gi, primeiroNome)
+             .replace(/\{\s*nome\s*\}/gi, primeiroNome);
 
     // [NOME_DA_EMPRESA]
     res = res.replace(/\[\s*NOME_DA_EMPRESA\s*\]/gi, myCompany)
@@ -3113,61 +3145,113 @@ window.handleKanbanWAClick = function(event, leadId) {
 /**
  * Seleção em massa na Tabela
  */
+window.toggleLeadSelection = function(leadId, isChecked) {
+    const id = parseInt(leadId);
+    if (isNaN(id)) return;
+    if (isChecked) {
+        selectedLeadIds.add(id);
+    } else {
+        selectedLeadIds.delete(id);
+    }
+    // Sincroniza todos os checkboxes para esse lead (desktop e mobile)
+    document.querySelectorAll(`.lead-select-checkbox[value="${id}"]`).forEach(cb => {
+        cb.checked = isChecked;
+    });
+    updateSelectedLeadsCount();
+    
+    // Se o filtro ativo for "Selecionados" e o usuário desmarcar um lead, atualiza a exibição
+    if (activeFilter === 'selected' && !isChecked) {
+        applyFiltersAndRender();
+    }
+};
+
 window.updateSelectedLeadsCount = function() {
-    const checkedBoxes = document.querySelectorAll('.lead-select-checkbox:checked');
-    const count = checkedBoxes.length;
+    const count = selectedLeadIds.size;
 
     const badge = document.getElementById('selected-leads-count');
     const bulkBtnCount = document.getElementById('bulk-btn-count');
     const bulkEnrichCount = document.getElementById('bulk-enrich-count');
     const bulkDeleteCount = document.getElementById('bulk-delete-count');
+    const filterSelectedBadge = document.getElementById('filter-selected-badge');
+    const modalSelectedCount = document.getElementById('b2b-modal-selected-count');
+
     if (badge) badge.textContent = count;
     if (bulkBtnCount) bulkBtnCount.textContent = count;
     if (bulkEnrichCount) bulkEnrichCount.textContent = count;
     if (bulkDeleteCount) bulkDeleteCount.textContent = count;
+    if (filterSelectedBadge) filterSelectedBadge.textContent = count;
+    if (modalSelectedCount) modalSelectedCount.textContent = count;
 
     const masterCb = document.getElementById('th-select-all');
-    const allBoxes = document.querySelectorAll('.lead-select-checkbox');
-    if (masterCb && allBoxes.length > 0) {
-        masterCb.checked = (checkedBoxes.length === allBoxes.length);
+    const allTableBoxes = document.querySelectorAll('#leads-table-body .lead-select-checkbox');
+    if (masterCb && allTableBoxes.length > 0) {
+        const visibleChecked = document.querySelectorAll('#leads-table-body .lead-select-checkbox:checked');
+        masterCb.checked = (visibleChecked.length === allTableBoxes.length && allTableBoxes.length > 0);
     }
 
-    updateBulkAudienceCount();
+    if (typeof updateBulkAudienceCount === 'function') {
+        updateBulkAudienceCount();
+    }
 };
 
 window.toggleSelectAllRows = function(masterCb) {
-    document.querySelectorAll('.lead-select-checkbox').forEach(cb => {
-        cb.checked = masterCb.checked;
+    const isChecked = masterCb.checked;
+    document.querySelectorAll('#leads-table-body .lead-select-checkbox').forEach(cb => {
+        const id = parseInt(cb.value);
+        if (!isNaN(id)) {
+            cb.checked = isChecked;
+            if (isChecked) selectedLeadIds.add(id);
+            else selectedLeadIds.delete(id);
+        }
+    });
+    document.querySelectorAll('#leads-mobile-cards .lead-select-checkbox').forEach(cb => {
+        const id = parseInt(cb.value);
+        if (!isNaN(id)) {
+            cb.checked = isChecked;
+        }
     });
     updateSelectedLeadsCount();
+    if (activeFilter === 'selected' && !isChecked) {
+        applyFiltersAndRender();
+    }
 };
 
 window.selectAllLeads = function(selectAll) {
-    document.querySelectorAll('.lead-select-checkbox').forEach(cb => {
-        cb.checked = selectAll;
-    });
+    if (selectAll) {
+        currentLeads.forEach(l => {
+            if (l.id) selectedLeadIds.add(l.id);
+        });
+        document.querySelectorAll('.lead-select-checkbox').forEach(cb => {
+            cb.checked = true;
+        });
+    } else {
+        selectedLeadIds.clear();
+        document.querySelectorAll('.lead-select-checkbox').forEach(cb => {
+            cb.checked = false;
+        });
+    }
     const masterCb = document.getElementById('th-select-all');
     if (masterCb) masterCb.checked = selectAll;
     updateSelectedLeadsCount();
+    if (activeFilter === 'selected') {
+        applyFiltersAndRender();
+    }
 };
 
 // EXCLUSÃO EM LOTE DOS LEADS SELECIONADOS
 window.handleBulkDeleteSelected = async function() {
-    const checkedBoxes = document.querySelectorAll('.lead-select-checkbox:checked');
-    const ids = Array.from(checkedBoxes)
-        .map(cb => parseInt(cb.value))
-        .filter(id => !isNaN(id) && id > 0);
+    const ids = Array.from(selectedLeadIds);
 
     if (ids.length === 0) {
         if (typeof showToast === 'function') {
-            showToast("Nenhum lead selecionado. Marque os leads que deseja excluir.", "warning");
+            showToast("Nenhum lead selecionado. Marque os leads que deseja apagar.", "warning");
         } else {
-            alert("Nenhum lead selecionado. Marque os leads que deseja excluir.");
+            alert("Nenhum lead selecionado. Marque os leads que deseja apagar.");
         }
         return;
     }
 
-    const confirmMsg = `Tem certeza que deseja excluir permanentemente ${ids.length} lead(s) selecionado(s)?\n\nEssa ação apagará esses contatos do banco de dados e de todas as abas.`;
+    const confirmMsg = `Tem certeza que deseja apagar permanentemente os ${ids.length} lead(s) selecionado(s)?\n\nEssa ação apagará esses contatos do banco de dados e de todas as abas.`;
     if (!confirm(confirmMsg)) {
         return;
     }
@@ -3176,7 +3260,7 @@ window.handleBulkDeleteSelected = async function() {
     try {
         if (btn) {
             btn.disabled = true;
-            btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Excluindo...`;
+            btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Apagando...`;
         }
 
         const res = await fetch('/api/leads/bulk-delete', {
@@ -3189,6 +3273,7 @@ window.handleBulkDeleteSelected = async function() {
         if (res.ok && data.success) {
             const idSet = new Set(ids);
             currentLeads = currentLeads.filter(l => !idSet.has(l.id));
+            selectedLeadIds.clear();
 
             applyFiltersAndRender();
             loadDashboardStats();
@@ -3198,9 +3283,9 @@ window.handleBulkDeleteSelected = async function() {
             }
 
             if (typeof showToast === 'function') {
-                showToast(`${data.deleted_count || ids.length} lead(s) excluído(s) com sucesso!`, "success");
+                showToast(`${data.deleted_count || ids.length} lead(s) apagado(s) com sucesso!`, "success");
             } else {
-                alert(`${data.deleted_count || ids.length} lead(s) excluído(s) com sucesso!`);
+                alert(`${data.deleted_count || ids.length} lead(s) apagado(s) com sucesso!`);
             }
         } else {
             const errorMsg = data.error || data.detail || "Erro ao excluir leads.";
@@ -3220,9 +3305,268 @@ window.handleBulkDeleteSelected = async function() {
     } finally {
         if (btn) {
             btn.disabled = false;
-            btn.innerHTML = `<i class="fas fa-trash-alt"></i> Excluir Selecionados (<span id="bulk-delete-count">0</span>)`;
+            btn.innerHTML = `<i class="fas fa-trash-alt"></i> Apagar Selecionados (<span id="bulk-delete-count">0</span>)`;
         }
         updateSelectedLeadsCount();
+    }
+};
+
+// DISPARO RÁPIDO PARA SELECIONADOS NA PROSPECÇÃO B2B
+const B2B_TEMPLATES = {
+    contato: `Olá {nome}, tudo bem? Vi o perfil de vocês no Google Maps e achei excelente o projeto da {empresa}!
+
+Trabalho ajudando empresas da região a atraírem mais clientes com presença digital profissional e sites modernos no Google. Quem costuma cuidar dessa parte comercial ou de marketing por aí?`,
+    follow1: `Olá {nome}, tudo bem?
+
+Passando para compartilhar uma proposta prática: analisamos o posicionamento da {empresa} e preparamos um estudo com informações de estrutura para um site moderno, rápido e otimizado para o Google.
+
+O melhor de tudo: esse diagnóstico e a prévia do projeto são 100% sem custo e sem compromisso nenhum! Posso te enviar os detalhes aqui por WhatsApp?`,
+    follow2: `Oi {nome}, tudo bom?
+
+Passando rapidinho só para saber se você conseguiu ver minha mensagem anterior sobre a proposta para a {empresa}.
+
+Posso te enviar uma prévia visual de como ficaria a presença digital de vocês no celular e no Google? Leva menos de 2 minutos para dar uma olhada e você já consegue ver na prática! Me avisa se fizer sentido.`,
+    custom: `Olá {nome}, tudo bem? Notei a presença da {empresa} no Google Maps em {cidade}. Gostaria de compartilhar uma oportunidade sem custo para o posicionamento de vocês!`
+};
+
+window.openB2BQuickDispatchModal = function() {
+    if (selectedLeadIds.size === 0) {
+        if (typeof showToast === 'function') {
+            showToast("Nenhum lead selecionado. Marque as caixas de seleção na tabela antes de disparar.", "warning");
+        } else {
+            alert("Nenhum lead selecionado. Marque as caixas de seleção na tabela antes de disparar.");
+        }
+        return;
+    }
+
+    const targets = currentLeads.filter(l => selectedLeadIds.has(l.id));
+    const countSpan = document.getElementById('b2b-modal-selected-count');
+    if (countSpan) countSpan.textContent = targets.length;
+
+    const previewContainer = document.getElementById('b2b-modal-recipient-preview');
+    if (previewContainer) {
+        previewContainer.innerHTML = targets.map(l => {
+            if (!l.whatsapp && l.phone) l.whatsapp = l.phone;
+            const num = l.whatsapp || l.phone || '';
+            return `
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:3px 0; border-bottom:1px solid rgba(255,255,255,0.05);">
+                    <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:65%;">
+                        <strong style="color:#fff;">${escapeHtml(l.name)}</strong> 
+                        <small style="color:var(--text-muted); font-size:11px;">(${escapeHtml(l.address || 'Local')})</small>
+                    </span>
+                    <span style="font-family:var(--font-mono); font-size:11.5px; color:${num ? 'var(--neon-green)' : '#ff5b73'};">
+                        ${num ? `<i class="fab fa-whatsapp"></i> ${escapeHtml(num)}` : '<i class="fas fa-times-circle"></i> Sem telefone'}
+                    </span>
+                </div>
+            `;
+        }).join('');
+    }
+
+    selectB2BTemplate('contato');
+
+    const progressPanel = document.getElementById('b2b-dispatch-progress-panel');
+    if (progressPanel) progressPanel.style.display = 'none';
+
+    const startBtn = document.getElementById('btn-b2b-start-dispatch');
+    if (startBtn) {
+        startBtn.disabled = false;
+        startBtn.style.display = 'inline-flex';
+        startBtn.innerHTML = `<i class="fas fa-paper-plane"></i> Iniciar Disparo para Selecionados`;
+    }
+    const stopBtn = document.getElementById('btn-b2b-stop-dispatch');
+    if (stopBtn) stopBtn.style.display = 'none';
+
+    const modal = document.getElementById('modal-b2b-quick-dispatch');
+    if (modal) modal.classList.add('active');
+};
+
+window.closeB2BQuickDispatchModal = function() {
+    const modal = document.getElementById('modal-b2b-quick-dispatch');
+    if (modal) modal.classList.remove('active');
+};
+
+window.selectB2BTemplate = function(step) {
+    currentB2BTemplate = step;
+    document.querySelectorAll('.b2b-template-pill').forEach(btn => {
+        btn.classList.remove('active');
+        btn.style.borderColor = '';
+        btn.style.color = '';
+        btn.style.fontWeight = 'normal';
+    });
+
+    const activeBtn = document.getElementById(`btn-tpl-${step}`);
+    if (activeBtn) {
+        activeBtn.classList.add('active');
+        activeBtn.style.borderColor = 'var(--neon-green)';
+        activeBtn.style.color = 'var(--neon-green)';
+        activeBtn.style.fontWeight = '700';
+    }
+
+    const textarea = document.getElementById('b2b-modal-message-text');
+    if (textarea) {
+        textarea.value = B2B_TEMPLATES[step] || '';
+    }
+};
+
+window.startB2BQuickDispatch = async function() {
+    const targets = currentLeads.filter(l => selectedLeadIds.has(l.id));
+    if (targets.length === 0) {
+        alert("Nenhum lead selecionado.");
+        return;
+    }
+
+    const textarea = document.getElementById('b2b-modal-message-text');
+    const templateText = textarea ? textarea.value.trim() : '';
+    if (!templateText) {
+        alert("Por favor, preencha o conteúdo da mensagem antes de iniciar o disparo.");
+        return;
+    }
+
+    const minDelayInput = document.getElementById('b2b-delay-min');
+    const maxDelayInput = document.getElementById('b2b-delay-max');
+    let delayMin = parseInt(minDelayInput ? minDelayInput.value : 15) || 15;
+    let delayMax = parseInt(maxDelayInput ? maxDelayInput.value : 35) || 35;
+    if (delayMin < 5) delayMin = 5;
+    if (delayMax < delayMin) delayMax = delayMin + 5;
+
+    b2bDispatchStopRequested = false;
+
+    const startBtn = document.getElementById('btn-b2b-start-dispatch');
+    const stopBtn = document.getElementById('btn-b2b-stop-dispatch');
+    const progressPanel = document.getElementById('b2b-dispatch-progress-panel');
+    const progressBar = document.getElementById('b2b-dispatch-progress-bar');
+    const pctText = document.getElementById('b2b-dispatch-pct-text');
+    const statusText = document.getElementById('b2b-dispatch-status-text');
+    const logBox = document.getElementById('b2b-dispatch-log-box');
+
+    if (startBtn) startBtn.style.display = 'none';
+    if (stopBtn) stopBtn.style.display = 'inline-flex';
+    if (progressPanel) progressPanel.style.display = 'block';
+    if (logBox) logBox.innerHTML = '';
+    if (progressBar) progressBar.style.width = '0%';
+    if (pctText) pctText.textContent = '0%';
+
+    function appendB2BLog(msg, type = 'info') {
+        if (!logBox) return;
+        const line = document.createElement('div');
+        const color = type === 'error' ? '#ff5b73' : (type === 'success' ? '#00ff88' : (type === 'warn' ? '#ffaa00' : '#a7f3d0'));
+        line.style.color = color;
+        line.style.marginBottom = '2px';
+        line.innerHTML = `[${new Date().toLocaleTimeString()}] ${msg}`;
+        logBox.appendChild(line);
+        logBox.scrollTop = logBox.scrollHeight;
+    }
+
+    appendB2BLog(`Iniciando disparo para ${targets.length} leads selecionados (Etapa: ${currentB2BTemplate})...`);
+
+    let sentCount = 0;
+    let skippedCount = 0;
+
+    for (let i = 0; i < targets.length; i++) {
+        if (b2bDispatchStopRequested) {
+            appendB2BLog("⚠️ Disparo interrompido pelo operador.", 'warn');
+            break;
+        }
+
+        const lead = targets[i];
+        if (!lead.whatsapp && lead.phone) lead.whatsapp = lead.phone;
+        const rawPhone = lead.whatsapp || lead.phone;
+        const chatId = typeof formatWhatsAppChatId === 'function' ? formatWhatsAppChatId(rawPhone) : null;
+
+        if (!chatId) {
+            appendB2BLog(`Pulado: "${lead.name}" não possui telefone válido.`, 'warn');
+            skippedCount++;
+            continue;
+        }
+
+        if (statusText) {
+            statusText.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Enviando (${i + 1}/${targets.length}): <strong>${escapeHtml(lead.name)}</strong>...`;
+        }
+
+        const personalizedMsg = typeof buildPersonalizedMessage === 'function'
+            ? buildPersonalizedMessage(lead, templateText, { includeOptOut: false })
+            : templateText.replace(/\{nome\}/gi, lead.name ? lead.name.split(' ')[0] : 'amigo')
+                          .replace(/\{empresa\}/gi, lead.name || 'sua empresa')
+                          .replace(/\{cidade\}/gi, lead.address || 'sua região');
+
+        try {
+            const payload = {
+                chatId: chatId,
+                text: personalizedMsg,
+                lead_id: lead.id || null,
+                follow_stage: currentB2BTemplate
+            };
+
+            const res = await fetch('/api/waha/send', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await res.json();
+
+            if (res.ok && data.success) {
+                sentCount++;
+                lead.campaign_status = 'contatado';
+                lead.follow_stage = currentB2BTemplate;
+                appendB2BLog(`✅ Enviado para "${lead.name}" (${chatId})`, 'success');
+            } else {
+                if (data.qr_required && typeof openWahaQrModal === 'function') {
+                    openWahaQrModal();
+                }
+                appendB2BLog(`❌ Falha em "${lead.name}": ${data.error || 'Erro no WAHA'}`, 'error');
+            }
+        } catch (err) {
+            appendB2BLog(`❌ Erro de rede para "${lead.name}": ${err.message}`, 'error');
+        }
+
+        const pct = Math.round(((i + 1) / targets.length) * 100);
+        if (progressBar) progressBar.style.width = `${pct}%`;
+        if (pctText) pctText.textContent = `${pct}%`;
+
+        // Delay anti-ban entre disparos
+        if (i < targets.length - 1 && !b2bDispatchStopRequested) {
+            const delaySec = Math.floor(Math.random() * (delayMax - delayMin + 1)) + delayMin;
+            for (let s = delaySec; s > 0; s--) {
+                if (b2bDispatchStopRequested) break;
+                if (statusText) {
+                    statusText.innerHTML = `<i class="fas fa-shield-alt" style="color:var(--neon-green)"></i> Delay Anti-Ban: aguardando <strong>${s}s</strong> antes do próximo...`;
+                }
+                await new Promise(r => setTimeout(r, 1000));
+            }
+        }
+    }
+
+    if (statusText) {
+        statusText.innerHTML = `<i class="fas fa-check-circle" style="color:var(--neon-green)"></i> Disparo Concluído! <strong>${sentCount}</strong> enviadas, <strong>${skippedCount}</strong> puladas.`;
+    }
+    if (startBtn) {
+        startBtn.style.display = 'inline-flex';
+        startBtn.innerHTML = `<i class="fas fa-check"></i> Disparo Finalizado (${sentCount}/${targets.length})`;
+    }
+    if (stopBtn) stopBtn.style.display = 'none';
+
+    if (typeof showToast === 'function') {
+        showToast(`Disparo B2B finalizado! ${sentCount} mensagens enviadas.`, 'success');
+    }
+
+    loadDashboardStats();
+    applyFiltersAndRender();
+};
+
+window.stopB2BQuickDispatch = function() {
+    b2bDispatchStopRequested = true;
+    const stopBtn = document.getElementById('btn-b2b-stop-dispatch');
+    const startBtn = document.getElementById('btn-b2b-start-dispatch');
+    const statusText = document.getElementById('b2b-dispatch-status-text');
+
+    if (stopBtn) stopBtn.style.display = 'none';
+    if (startBtn) {
+        startBtn.style.display = 'inline-flex';
+        startBtn.innerHTML = `<i class="fas fa-paper-plane"></i> Iniciar Disparo para Selecionados`;
+    }
+    if (statusText) {
+        statusText.innerHTML = `<i class="fas fa-pause-circle" style="color:#ffaa00"></i> Disparo interrompido pelo operador.`;
     }
 };
 
@@ -7133,7 +7477,230 @@ window.handleDisparadorTestSend = async function() {
     }
 };
 
+/* ========================================================
+   CADASTRO MANUAL DE LEADS (INSTAGRAM / OUTRAS FONTES)
+   ======================================================== */
 
+window.openManualLeadModal = function() {
+    const modal = document.getElementById('modal-manual-lead');
+    if (!modal) return;
 
+    // Reset formulário
+    const form = document.getElementById('form-manual-lead');
+    if (form) form.reset();
 
+    // Reset indicador de oportunidade
+    const oppIndicator = document.getElementById('mlead-opp-indicator');
+    if (oppIndicator) {
+        oppIndicator.textContent = "Alta Oportunidade: 95/100 (Sem Site)";
+        oppIndicator.style.background = "rgba(0, 255, 136, 0.15)";
+        oppIndicator.style.borderColor = "var(--neon-green)";
+        oppIndicator.style.color = "var(--neon-green)";
+    }
+    const oppScoreInput = document.getElementById('mlead-opp-score');
+    if (oppScoreInput) oppScoreInput.value = "95";
 
+    // Preenche operadores caso haja lista de usuários
+    const assignedSelect = document.getElementById('mlead-assigned-to');
+    if (assignedSelect) {
+        assignedSelect.innerHTML = `<option value="">Não atribuído</option>`;
+        if (Array.isArray(systemUsers) && systemUsers.length > 0) {
+            systemUsers.forEach(u => {
+                const opt = document.createElement('option');
+                opt.value = u.name;
+                opt.textContent = `${u.name} (${u.role || 'Operador'})`;
+                assignedSelect.appendChild(opt);
+            });
+        } else {
+            const opt1 = document.createElement('option');
+            opt1.value = 'Operador 1';
+            opt1.textContent = 'Operador 1';
+            const opt2 = document.createElement('option');
+            opt2.value = 'Operador 2';
+            opt2.textContent = 'Operador 2';
+            assignedSelect.appendChild(opt1);
+            assignedSelect.appendChild(opt2);
+        }
+        if (currentUser && currentUser.name) {
+            assignedSelect.value = currentUser.name;
+        } else {
+            assignedSelect.value = 'Operador 1';
+        }
+    }
+
+    modal.classList.add('active');
+
+    // Fechar ao clicar fora
+    modal.onclick = function(e) {
+        if (e.target === modal) closeManualLeadModal();
+    };
+
+    setTimeout(() => {
+        const nameInput = document.getElementById('mlead-name');
+        if (nameInput) nameInput.focus();
+    }, 100);
+};
+
+window.closeManualLeadModal = function() {
+    const modal = document.getElementById('modal-manual-lead');
+    if (modal) modal.classList.remove('active');
+};
+
+window.onManualPhoneInput = function(input) {
+    if (!input) return;
+    let v = input.value.replace(/\D/g, '');
+    if (v.length > 11) v = v.substring(0, 11);
+
+    // Máscara (XX) XXXXX-XXXX ou (XX) XXXX-XXXX
+    let formatted = '';
+    if (v.length > 6) {
+        formatted = `(${v.substring(0, 2)}) ${v.substring(2, v.length > 10 ? 7 : 6)}-${v.substring(v.length > 10 ? 7 : 6)}`;
+    } else if (v.length > 2) {
+        formatted = `(${v.substring(0, 2)}) ${v.substring(2)}`;
+    } else if (v.length > 0) {
+        formatted = `(${v}`;
+    }
+    input.value = formatted;
+
+    // Sincroniza automaticamente o campo de WhatsApp se não tiver sido editado manualmente
+    const waInput = document.getElementById('mlead-whatsapp');
+    if (waInput && (!waInput.value || waInput.dataset.autofilled === 'true')) {
+        if (v.length >= 10) {
+            waInput.value = `55${v}`;
+            waInput.dataset.autofilled = 'true';
+        } else {
+            waInput.value = '';
+            waInput.dataset.autofilled = 'true';
+        }
+    }
+};
+
+window.onManualWebsiteInput = function(input) {
+    const url = input ? input.value.trim() : '';
+    const oppIndicator = document.getElementById('mlead-opp-indicator');
+    const oppScoreInput = document.getElementById('mlead-opp-score');
+
+    if (url.length > 3) {
+        if (oppIndicator) {
+            oppIndicator.textContent = "Oportunidade Média: 50/100 (Com Site)";
+            oppIndicator.style.background = "rgba(0, 210, 255, 0.15)";
+            oppIndicator.style.borderColor = "var(--neon-cyan)";
+            oppIndicator.style.color = "var(--neon-cyan)";
+        }
+        if (oppScoreInput) oppScoreInput.value = "50";
+    } else {
+        if (oppIndicator) {
+            oppIndicator.textContent = "Alta Oportunidade: 95/100 (Sem Site)";
+            oppIndicator.style.background = "rgba(0, 255, 136, 0.15)";
+            oppIndicator.style.borderColor = "var(--neon-green)";
+            oppIndicator.style.color = "var(--neon-green)";
+        }
+        if (oppScoreInput) oppScoreInput.value = "95";
+    }
+};
+
+window.handleCreateManualLead = async function(event) {
+    if (event) event.preventDefault();
+
+    const nameInput = document.getElementById('mlead-name');
+    const name = nameInput ? nameInput.value.trim() : '';
+    if (!name) {
+        alert("O nome da empresa ou contato é obrigatório.");
+        if (nameInput) nameInput.focus();
+        return;
+    }
+
+    const source = document.getElementById('mlead-source')?.value || 'Instagram';
+    const category = document.getElementById('mlead-category')?.value?.trim() || 'Geral';
+    const phone = document.getElementById('mlead-phone')?.value?.trim() || '';
+    const whatsapp = document.getElementById('mlead-whatsapp')?.value?.trim() || '';
+    const instagram = document.getElementById('mlead-instagram')?.value?.trim() || '';
+    const email = document.getElementById('mlead-email')?.value?.trim() || '';
+    const address = document.getElementById('mlead-address')?.value?.trim() || '';
+    const website = document.getElementById('mlead-website')?.value?.trim() || '';
+    const oppScore = parseInt(document.getElementById('mlead-opp-score')?.value || (website ? 50 : 95));
+    const stage = document.getElementById('mlead-stage')?.value || 'contato';
+    const assignedTo = document.getElementById('mlead-assigned-to')?.value || '';
+    const dealValueRaw = document.getElementById('mlead-deal-value')?.value || '0';
+    const dealValue = parseFloat(dealValueRaw) || 0.0;
+    const notes = document.getElementById('mlead-notes')?.value?.trim() || '';
+
+    let campaignStatus = 'novo';
+    if (stage === 'fechado') campaignStatus = 'fechado';
+    else if (stage === 'proposta') campaignStatus = 'proposta';
+    else if (stage === 'perdido') campaignStatus = 'perdido';
+    else if (stage === 'follow1' || stage === 'follow2' || stage === 'contato') campaignStatus = 'contatado';
+
+    const saveBtn = document.getElementById('btn-save-manual-lead');
+    const origBtnHtml = saveBtn ? saveBtn.innerHTML : '';
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Cadastrando Lead...`;
+    }
+
+    try {
+        const payload = {
+            name: name,
+            source: source,
+            category: category,
+            phone: phone,
+            whatsapp: whatsapp,
+            instagram: instagram,
+            email: email,
+            address: address,
+            website: website,
+            opportunity_score: oppScore,
+            follow_stage: stage,
+            campaign_status: campaignStatus,
+            assigned_to: assignedTo,
+            deal_value: dealValue,
+            notes: notes
+        };
+
+        const res = await fetch('/api/leads/manual', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+
+        if (res.ok && data.success && data.lead) {
+            closeManualLeadModal();
+
+            // Adiciona o novo lead no início da lista local
+            if (Array.isArray(currentLeads)) {
+                currentLeads.unshift(data.lead);
+            } else {
+                currentLeads = [data.lead];
+            }
+
+            // Notificação de sucesso
+            if (typeof showToast === 'function') {
+                showToast(`Lead "${data.lead.name}" (${source}) cadastrado com sucesso!`, 'success');
+            }
+
+            // Atualiza views
+            if (typeof applyFiltersAndRender === 'function') applyFiltersAndRender();
+            if (typeof loadDashboardStats === 'function') loadDashboardStats();
+            if (typeof loadCampaignsView === 'function') loadCampaignsView();
+            if (typeof updateDisparadorAudienceCount === 'function') updateDisparadorAudienceCount();
+
+            // Abre a ficha completa do lead criado
+            if (typeof openLeadModal === 'function' && data.lead.id) {
+                setTimeout(() => openLeadModal(data.lead.id), 200);
+            }
+        } else {
+            const err = data.detail || data.error || 'Erro ao cadastrar lead.';
+            alert("Erro: " + err);
+        }
+    } catch (err) {
+        console.error("Erro ao salvar lead manual:", err);
+        alert("Erro de conexão ao salvar lead: " + err.message);
+    } finally {
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = origBtnHtml;
+        }
+    }
+};

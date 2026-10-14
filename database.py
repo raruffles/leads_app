@@ -116,6 +116,11 @@ def init_db():
     except sqlite3.OperationalError:
         pass
 
+    try:
+        cursor.execute("ALTER TABLE leads ADD COLUMN source TEXT DEFAULT 'Google Maps'")
+    except sqlite3.OperationalError:
+        pass
+
     # Tabela de usuários para modo online e colaboração de 2 operadores
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS users (
@@ -664,6 +669,109 @@ def save_leads(scan_id: int, leads: List[Dict[str, Any]]) -> List[int]:
     conn.commit()
     conn.close()
     return inserted_ids
+
+def get_or_create_manual_scan() -> int:
+    """Busca ou cria uma varredura para agrupar leads adicionados manualmente"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id FROM scans WHERE niche = 'Entrada Manual' LIMIT 1")
+    row = cursor.fetchone()
+    if row:
+        scan_id = row[0]
+    else:
+        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        cursor.execute("""
+            INSERT INTO scans (niche, location, total_found, no_website_count, status, created_at)
+            VALUES ('Entrada Manual', 'Instagram / Outras Fontes', 0, 0, 'completed', ?)
+        """, (now_str,))
+        scan_id = cursor.lastrowid
+        conn.commit()
+    conn.close()
+    return scan_id
+
+def create_manual_lead(lead_data: Dict[str, Any]) -> Dict[str, Any]:
+    """Cria um lead manualmente (vindo do Instagram, indicação, WhatsApp ou prospecção direta)"""
+    from scraper import clean_phone, format_whatsapp_number
+    from enrichment_service import clean_instagram_handle
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    created_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    name = (lead_data.get("name") or "Novo Lead").strip()
+    phone_raw = (lead_data.get("phone") or "").strip()
+    phone = clean_phone(phone_raw)
+    
+    whatsapp_raw = (lead_data.get("whatsapp") or "").strip()
+    if not whatsapp_raw and phone:
+        whatsapp = format_whatsapp_number(phone)
+    elif whatsapp_raw:
+        whatsapp = format_whatsapp_number(whatsapp_raw)
+    else:
+        whatsapp = ""
+
+    email = (lead_data.get("email") or "").strip().lower()
+    website = (lead_data.get("website") or "").strip()
+    has_website = 1 if website else 0
+    address = (lead_data.get("address") or "").strip()
+    category = (lead_data.get("category") or "Geral").strip()
+
+    raw_insta = (lead_data.get("instagram") or "").strip()
+    if raw_insta:
+        clean_insta = clean_instagram_handle(raw_insta)
+        instagram = clean_insta if clean_insta else (f"@{raw_insta.lstrip('@')}" if len(raw_insta) > 1 else "")
+    else:
+        instagram = ""
+
+    opp_score = int(lead_data.get("opportunity_score") or (95 if not website else 50))
+    campaign_status = lead_data.get("campaign_status") or "novo"
+    follow_stage = lead_data.get("follow_stage") or "contato"
+    notes = (lead_data.get("notes") or "").strip()
+    source = lead_data.get("source") or "Instagram"
+    deal_value = float(lead_data.get("deal_value") or 0.0)
+    assigned_to = lead_data.get("assigned_to") or ""
+    closed_at = lead_data.get("closed_at") or (created_at if campaign_status == "fechado" else "")
+
+    scan_id = lead_data.get("scan_id")
+    if not scan_id:
+        scan_id = get_or_create_manual_scan()
+
+    maps_url = lead_data.get("maps_url", "")
+    if not maps_url:
+        query_part = f"{name} {address}".strip()
+        maps_url = f"https://www.google.com/maps/search/?api=1&query={urllib.parse.quote_plus(query_part)}"
+
+    google_url = lead_data.get("google_url", "")
+    if not google_url:
+        query_part = f"{name} {address}".strip()
+        google_url = f"https://www.google.com/search?q={urllib.parse.quote_plus(query_part)}"
+
+    cursor.execute("""
+        INSERT INTO leads (
+            scan_id, name, phone, whatsapp, email, website, has_website,
+            address, category, instagram, opportunity_score, campaign_status,
+            follow_stage, notes, deal_value, assigned_to, closed_at, created_at,
+            photos, maps_url, google_url, source
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        scan_id, name, phone, whatsapp, email, website, has_website,
+        address, category, instagram, opp_score, campaign_status,
+        follow_stage, notes, deal_value, assigned_to, closed_at, created_at,
+        "[]", maps_url, google_url, source
+    ))
+    lead_id = cursor.lastrowid
+
+    try:
+        cursor.execute("UPDATE scans SET total_found = total_found + 1 WHERE id = ?", (scan_id,))
+        if not website:
+            cursor.execute("UPDATE scans SET no_website_count = no_website_count + 1 WHERE id = ?", (scan_id,))
+    except Exception:
+        pass
+
+    conn.commit()
+    conn.close()
+
+    return get_lead_by_id(lead_id)
 
 def clear_leads_data(scan_id: Optional[int] = None) -> bool:
     """Limpa todos os leads e varreduras, ou somente da varredura especificada"""
