@@ -516,6 +516,9 @@ async def api_bulk_delete_leads(payload: BulkDeletePayload):
 class SaveInstagramPayload(BaseModel):
     instagram: str
 
+class SaveWebsitePayload(BaseModel):
+    website: str
+
 class BatchEnrichPayload(BaseModel):
     lead_ids: Optional[List[int]] = None
     limit: Optional[int] = 10
@@ -539,6 +542,12 @@ async def api_save_instagram(lead_id: int, payload: SaveInstagramPayload):
     database.update_lead_contacts(lead_id=lead_id, instagram=clean_h)
     lead = database.get_lead_by_id(lead_id)
     return {"success": True, "instagram": clean_h, "lead": lead}
+
+@app.post("/api/leads/{lead_id}/save-website")
+async def api_save_website(lead_id: int, payload: SaveWebsitePayload):
+    import enrichment_service
+    res = enrichment_service.update_lead_website(lead_id, payload.website)
+    return res
 
 @app.post("/api/leads/enrich-batch")
 async def api_enrich_batch(payload: BatchEnrichPayload):

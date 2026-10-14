@@ -22,6 +22,25 @@ def normalize_signature(text: str) -> str:
     cleaned = "".join(c for c in nfkd if not unicodedata.combining(c)).lower()
     return re.sub(r'[^a-z0-9]+', ' ', cleaned).strip()
 
+def clean_and_decode_website(url: str) -> str:
+    """Extrai e decodifica URLs reais do Google Maps removendo redirecionamentos google.com/url?q="""
+    if not url:
+        return ""
+    url = url.strip()
+    if "google.com/url?" in url:
+        m = re.search(r'google\.com/url\?(?:q|url)=([^&]+)', url)
+        if m:
+            url = urllib.parse.unquote(m.group(1))
+    elif "uddg=" in url:
+        url = urllib.parse.unquote(url.split("uddg=")[-1].split("&")[0])
+    
+    url = url.strip()
+    if not url:
+        return ""
+    if url.startswith("http://") or url.startswith("https://"):
+        return url
+    return f"https://{url}"
+
 async def scrape_google_maps_real(
     query: str, 
     limit: int = 15, 
@@ -215,11 +234,25 @@ async def scrape_google_maps_real(
                                     whatsapp = f"55{wa_digits}"
 
                         # 2. Website oficial
-                        site_el = await scope.query_selector('a[data-item-id="authority"], a[aria-label*="site" i], a[aria-label*="website" i]')
+                        site_el = await scope.query_selector(
+                            'a[data-item-id="authority"], a[aria-label*="site" i], a[aria-label*="website" i], '
+                            'button[data-item-id="authority"], a[data-tooltip*="site" i], a[data-tooltip*="website" i], '
+                            'a[data-value="Site"], a[data-attribution-url]'
+                        )
                         if not site_el:
-                            site_el = await page.query_selector('a[data-item-id="authority"], a[aria-label*="site" i], a[aria-label*="website" i]')
+                            site_el = await page.query_selector(
+                                'a[data-item-id="authority"], a[aria-label*="site" i], a[aria-label*="website" i], '
+                                'button[data-item-id="authority"], a[data-tooltip*="site" i], a[data-tooltip*="website" i], '
+                                'a[data-value="Site"], a[data-attribution-url]'
+                            )
                         if site_el:
-                            website = await site_el.get_attribute("href") or ""
+                            raw_href = await site_el.get_attribute("href") or await site_el.get_attribute("data-attribution-url") or ""
+                            if not raw_href:
+                                aria_lbl = await site_el.get_attribute("aria-label") or ""
+                                m_url = re.search(r'(?:site|website):\s*([a-zA-Z0-9\-\._~:/\?#\[\]@!$&\'\(\)\*\+,;=%]+)', aria_lbl, re.IGNORECASE)
+                                if m_url:
+                                    raw_href = m_url.group(1)
+                            website = clean_and_decode_website(raw_href)
 
                         # 3. Endereço oficial
                         addr_el = await scope.query_selector('button[data-item-id="address"], button[aria-label*="Endereço" i]')
@@ -248,15 +281,10 @@ async def scrape_google_maps_real(
 
                     # Fallbacks para Website a partir do card
                     if not website:
-                        site_btn = await card.query_selector('a[data-value="Site"], a[aria-label*="site" i]')
+                        site_btn = await card.query_selector('a[data-value="Site"], a[aria-label*="site" i], a[data-tooltip*="site" i], button[data-value="Site"]')
                         if site_btn:
-                            href_site = await site_btn.get_attribute("href") or ""
-                            if "google.com/url?q=" in href_site:
-                                match_url = re.search(r'google\.com/url\?q=([^&]+)', href_site)
-                                if match_url:
-                                    website = urllib.parse.unquote(match_url.group(1))
-                            elif href_site.startswith("http"):
-                                website = href_site
+                            href_site = await site_btn.get_attribute("href") or await site_btn.get_attribute("data-attribution-url") or ""
+                            website = clean_and_decode_website(href_site)
 
                     # Filtro de Presença Web (com/sem site)
                     if website_filter in ("no_site", "has_site"):

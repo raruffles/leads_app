@@ -18,6 +18,25 @@ USER_AGENTS = [
 
 EMAIL_EXCLUDE_EXTS = ('.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.css', '.js', 'sentry.io', 'wixpress.com', 'schema.org', 'w3.org')
 
+def clean_and_decode_website(url: str) -> str:
+    """Extrai e decodifica URLs reais do Google Maps removendo redirecionamentos google.com/url?q="""
+    if not url:
+        return ""
+    url = url.strip()
+    if "google.com/url?" in url:
+        m = re.search(r'google\.com/url\?(?:q|url)=([^&]+)', url)
+        if m:
+            url = urllib.parse.unquote(m.group(1))
+    elif "uddg=" in url:
+        url = urllib.parse.unquote(url.split("uddg=")[-1].split("&")[0])
+    
+    url = url.strip()
+    if not url:
+        return ""
+    if url.startswith("http://") or url.startswith("https://"):
+        return url
+    return f"https://{url}"
+
 CITY_INFO_MAP = {
     "sao jose dos campos": {
         "cidade": "São José dos Campos",
@@ -741,7 +760,7 @@ class LeadScraper:
         for idx, item in enumerate(candidates):
             current_progress = 60 + int(((idx + 1) / total_found) * 35)
             name = item.get("name", "Empresa")
-            site = item.get("website", "").strip()
+            site = clean_and_decode_website(item.get("website", ""))
 
             # REGRA MANDATÓRIA: Ignora grandes redes e franquias corporativas (SmartFit, Skyfit, Nubank, Panobianco, etc.)
             if is_major_brand_or_chain(name, site):
@@ -766,10 +785,10 @@ class LeadScraper:
                 phone = clean_phone(phone_raw)
             instagram = item.get("instagram", "")
             
-            # Verificar se a URL informada como site é na verdade rede social ou link de WhatsApp/Linktree
+            # Verificar se a URL informada como site é na verdade rede social ou link de WhatsApp
             if site:
                 site_lower = site.lower()
-                if any(s in site_lower for s in ["instagram.com", "facebook.com", "linktr.ee", "wa.me", "api.whatsapp.com", "bit.ly"]):
+                if any(s in site_lower for s in ["instagram.com", "facebook.com", "wa.me", "api.whatsapp.com", "bit.ly"]):
                     if "instagram.com" in site_lower and not instagram:
                         insta_match = re.search(r'instagram\.com/([a-zA-Z0-9_\.]+)', site)
                         if insta_match and insta_match.group(1) not in ['p', 'reel', 'stories', 'explore']:
@@ -778,8 +797,9 @@ class LeadScraper:
                         wa_digits = re.sub(r'\D', '', site)
                         if wa_digits and not whatsapp:
                             whatsapp = format_whatsapp_number(wa_digits)
-                    # Como não é um site próprio profissional, conta como SEM SITE (alta oportunidade de venda!)
-                    site = ""
+                    # Se não possui um domínio web próprio e é apenas rede social, conta como sem site institucional próprio
+                    if not any(domain_part in site_lower for domain_part in [".com.br", ".com", ".net", ".org", ".ind.br", ".app.br", ".site", ".online"]):
+                        site = ""
             
             if site:
                 html_content = self.fetch_website_content(site)
@@ -795,9 +815,10 @@ class LeadScraper:
                         instagram = deep_info["instagram"]
                     opp_score = 40
                 else:
-                    site = ""
-                    opp_score = 94
-                    no_website_count += 1
+                    # PRESERVA O SITE! A empresa possui site oficial cadastrado no Google Meu Negócio.
+                    # Falha de carregamento técnico (timeout, WAF, Cloudflare ou SSL) é oportunidade de melhoria técnica,
+                    # mas o lead NÃO é "sem site"! A URL do site é preservada integralmente.
+                    opp_score = 65
             else:
                 opp_score = 98
                 no_website_count += 1

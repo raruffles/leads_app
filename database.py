@@ -1010,7 +1010,8 @@ def update_lead_contacts(
     website: Optional[str] = None,
     address: Optional[str] = None,
     maps_url: Optional[str] = None,
-    has_website: Optional[int] = None
+    has_website: Optional[int] = None,
+    opportunity_score: Optional[int] = None
 ) -> bool:
     conn = get_connection()
     cursor = conn.cursor()
@@ -1040,6 +1041,9 @@ def update_lead_contacts(
     if has_website is not None:
         fields.append("has_website = ?")
         params.append(has_website)
+    if opportunity_score is not None:
+        fields.append("opportunity_score = ?")
+        params.append(int(opportunity_score))
     if fields:
         params.append(lead_id)
         cursor.execute(f"UPDATE leads SET {', '.join(fields)} WHERE id = ?", params)

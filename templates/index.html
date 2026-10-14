@@ -3150,10 +3150,13 @@ Se preferir não receber mensagens, é só me avisar.</textarea>
 
             <div style="display: flex; flex-direction: column; gap: 16px;">
                 <!-- STATUS DO SITE & OPORTUNIDADE -->
-                <div style="background: rgba(17, 14, 36, 0.9); padding: 14px; border-radius: 10px; border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
-                    <div>
-                        <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Diagnóstico de Presença Web:</div>
-                        <div id="modal-site-status"></div>
+                <div style="background: rgba(17, 14, 36, 0.9); padding: 14px; border-radius: 10px; border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                    <div style="flex: 1; min-width: 260px;">
+                        <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 6px; display:flex; align-items:center; gap:8px;">
+                            <i class="fas fa-globe" style="color:var(--neon-cyan);"></i>
+                            <span>Presença Web & Site Oficial:</span>
+                        </div>
+                        <div id="modal-site-status" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;"></div>
                     </div>
                     <div style="text-align: right;">
                         <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Índice de Oportunidade:</div>
@@ -3196,8 +3199,8 @@ Se preferir não receber mensagens, é só me avisar.</textarea>
                         <div id="modal-lead-instagram-container" style="display: flex; flex-direction: column; gap: 6px;">
                             <div id="modal-lead-instagram" style="font-weight:600; font-size:13.5px; color:#ffffff;">Não detectado</div>
                             <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin-top:2px;">
-                                <button type="button" id="modal-search-insta-btn" class="btn btn-instagram btn-sm" onclick="handleModalSearchInstagram()" title="Buscar perfil comercial no Instagram">
-                                    <i class="fab fa-instagram"></i> Buscar Instagram
+                                <button type="button" id="modal-search-insta-btn" class="btn btn-instagram btn-sm" onclick="handleModalSearchInstagram()" title="Buscar perfil da empresa no Google">
+                                    <i class="fab fa-google"></i> Buscar no Google
                                 </button>
                                 <button type="button" class="btn btn-secondary btn-sm" onclick="handleModalEditInstagram()" title="Editar ou definir @manualmente" style="padding:3px 6px; font-size:10px;">
                                     <i class="fas fa-pen"></i>

@@ -7,7 +7,7 @@ import httpx
 from bs4 import BeautifulSoup
 
 import database
-from scraper import clean_phone, format_whatsapp_number, extract_contacts_from_html
+from scraper import clean_phone, format_whatsapp_number, extract_contacts_from_html, clean_and_decode_website
 
 USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
@@ -121,17 +121,25 @@ async def _resolve_maps_playwright_async(name: str, location: str = "") -> Dict[
                     result["address"] = clean_unicode_text(await addr_el.inner_text())
 
             # Site
-            site_el = await scope.query_selector('a[data-item-id="authority"], a[aria-label*="site" i]')
+            site_el = await scope.query_selector(
+                'a[data-item-id="authority"], a[aria-label*="site" i], a[aria-label*="website" i], '
+                'button[data-item-id="authority"], a[data-tooltip*="site" i], a[data-tooltip*="website" i], '
+                'a[data-value="Site"], a[data-attribution-url]'
+            )
             if not site_el:
-                site_el = await page.query_selector('a[data-item-id="authority"], a[aria-label*="site" i]')
+                site_el = await page.query_selector(
+                    'a[data-item-id="authority"], a[aria-label*="site" i], a[aria-label*="website" i], '
+                    'button[data-item-id="authority"], a[data-tooltip*="site" i], a[data-tooltip*="website" i], '
+                    'a[data-value="Site"], a[data-attribution-url]'
+                )
             if site_el:
-                href = await site_el.get_attribute("href") or ""
-                if "google.com/url?q=" in href:
-                    m_u = re.search(r'google\.com/url\?q=([^&]+)', href)
-                    if m_u:
-                        result["website"] = urllib.parse.unquote(m_u.group(1))
-                elif href.startswith("http"):
-                    result["website"] = href
+                raw_href = await site_el.get_attribute("href") or await site_el.get_attribute("data-attribution-url") or ""
+                if not raw_href:
+                    aria_lbl = await site_el.get_attribute("aria-label") or ""
+                    m_url = re.search(r'(?:site|website):\s*([a-zA-Z0-9\-\._~:/\?#\[\]@!$&\'\(\)\*\+,;=%]+)', aria_lbl, re.IGNORECASE)
+                    if m_url:
+                        raw_href = m_url.group(1)
+                result["website"] = clean_and_decode_website(raw_href)
 
             # WhatsApp se for celular
             if result["phone"] and not result["whatsapp"]:
@@ -462,7 +470,7 @@ def find_instagram_for_lead(lead_id: int) -> Dict[str, Any]:
     if not found_handle:
         found_handle = search_instagram_for_lead(clean_name, loc_hint)
 
-    search_explore_url = f"https://www.instagram.com/explore/search/keyword/?q={urllib.parse.quote_plus(clean_name)}"
+    google_search_url = f"https://www.google.com/search?q={urllib.parse.quote_plus(f'{clean_name} {loc_hint} instagram')}"
 
     if found_handle:
         database.update_lead_contacts(lead_id=lead_id, instagram=found_handle)
@@ -471,15 +479,17 @@ def find_instagram_for_lead(lead_id: int) -> Dict[str, Any]:
             "instagram": found_handle,
             "saved": True,
             "instagram_url": f"https://instagram.com/{found_handle.replace('@', '')}",
-            "search_url": search_explore_url
+            "search_url": google_search_url,
+            "google_search_url": google_search_url
         }
 
     return {
         "success": False,
         "instagram": "",
         "saved": False,
-        "search_url": search_explore_url,
-        "message": f"Não foi possível confirmar o Instagram de '{name}' automaticamente. Abrimos a busca direta no Instagram para você conferir."
+        "search_url": google_search_url,
+        "google_search_url": google_search_url,
+        "message": f"Abrindo busca no Google para conferir o perfil de '{name}' no Instagram."
     }
 
 def enrich_batch_leads(lead_ids: Optional[List[int]] = None, limit: int = 10) -> Dict[str, Any]:
@@ -502,4 +512,30 @@ def enrich_batch_leads(lead_ids: Optional[List[int]] = None, limit: int = 10) ->
         "success": True,
         "total_enriched": len(updated),
         "leads": updated
+    }
+
+def update_lead_website(lead_id: int, website: str) -> Dict[str, Any]:
+    """Salva e atualiza o website de um lead manualmente ou via detecção"""
+    lead = database.get_lead_by_id(lead_id)
+    if not lead:
+        return {"success": False, "error": f"Lead #{lead_id} não encontrado."}
+    
+    clean_site = clean_and_decode_website(website)
+    has_web = 1 if (clean_site and clean_site.strip()) else 0
+    opp_score = 45 if has_web else 95
+    
+    database.update_lead_contacts(
+        lead_id=lead_id,
+        website=clean_site,
+        has_website=has_web,
+        opportunity_score=opp_score
+    )
+    
+    updated = database.get_lead_by_id(lead_id)
+    return {
+        "success": True,
+        "lead": updated,
+        "website": clean_site,
+        "has_website": has_web,
+        "opportunity_score": opp_score
     }

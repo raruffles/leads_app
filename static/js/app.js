@@ -836,15 +836,15 @@ function getInstagramButtonHtml(lead) {
                 <a href="https://instagram.com/${cleanH}" target="_blank" rel="noopener noreferrer" class="btn btn-instagram btn-sm" title="Abrir Instagram de ${escapeHtml(lead.name)} (@${cleanH})" style="text-decoration:none;">
                     <i class="fab fa-instagram"></i> ${escapeHtml(handle)}
                 </a>
-                <button type="button" class="btn btn-secondary btn-sm" onclick="handleSearchInstagram(event, ${lead.id})" title="Rebuscar perfil no Instagram" style="padding:4px 6px; font-size:10px; color:#ff7eb3;">
-                    <i class="fas fa-sync-alt"></i>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="handleSearchInstagram(event, ${lead.id})" title="Buscar Instagram no Google" style="padding:4px 6px; font-size:10px; color:#ff7eb3;">
+                    <i class="fab fa-google"></i>
                 </button>
             </div>
         `;
     } else {
         return `
-            <button type="button" class="btn btn-instagram-search btn-sm" onclick="handleSearchInstagram(event, ${lead.id})" title="Buscar perfil do Instagram para ${escapeHtml(lead.name)}">
-                <i class="fab fa-instagram"></i> Buscar Insta
+            <button type="button" class="btn btn-instagram-search btn-sm" onclick="handleSearchInstagram(event, ${lead.id})" title="Buscar Instagram de ${escapeHtml(lead.name)} no Google">
+                <i class="fab fa-google"></i> Buscar Insta
             </button>
         `;
     }
@@ -1163,10 +1163,10 @@ window.openLeadModal = function(leadId) {
             const h = lead.instagram.trim();
             const cleanH = h.replace('@', '');
             instaElem.innerHTML = `<a href="https://instagram.com/${cleanH}" target="_blank" rel="noopener noreferrer" class="badge-instagram" style="font-size:13px; padding:4px 10px;"><i class="fab fa-instagram"></i> ${escapeHtml(h)}</a>`;
-            if (instaBtn) instaBtn.innerHTML = `<i class="fas fa-sync-alt"></i> Rebuscar Instagram`;
+            if (instaBtn) instaBtn.innerHTML = `<i class="fab fa-google"></i> Buscar no Google`;
         } else {
             instaElem.innerHTML = `<span style="color:var(--text-secondary); font-size:13px; font-weight:500;">Não detectado</span>`;
-            if (instaBtn) instaBtn.innerHTML = `<i class="fab fa-instagram"></i> Buscar Instagram`;
+            if (instaBtn) instaBtn.innerHTML = `<i class="fab fa-google"></i> Buscar no Google`;
         }
     }
 
@@ -1202,12 +1202,7 @@ window.openLeadModal = function(leadId) {
     }
     
     // Status do site no modal
-    const siteStatusElem = document.getElementById('modal-site-status');
-    if (!lead.has_website || !lead.website) {
-        siteStatusElem.innerHTML = `<span class="badge-no-site"><i class="fas fa-exclamation-triangle"></i> SEM SITE CADASTRADO (Lead Prioritário)</span>`;
-    } else {
-        siteStatusElem.innerHTML = `<a href="${lead.website}" target="_blank" class="badge-has-site"><i class="fas fa-globe"></i> ${lead.website}</a>`;
-    }
+    renderModalSiteStatus(lead);
 
     // Opportunity Score
     const scoreVal = lead.opportunity_score || (!lead.has_website ? 95 : 45);
@@ -3742,8 +3737,13 @@ window.handleSearchInstagram = async function(event, leadId) {
     if (event) event.stopPropagation();
     const lead = currentLeads.find(l => l.id === leadId);
     const leadName = lead ? lead.name : `Lead #${leadId}`;
+    const location = lead ? (lead.address || '') : '';
+    const googleQuery = `${leadName} ${location} instagram`.replace(/\s+/g, ' ').trim();
+    const googleUrl = `https://www.google.com/search?q=${encodeURIComponent(googleQuery)}`;
     
-    showToast(`Buscando Instagram para "${leadName}"...`, "info");
+    // Abre a pesquisa no Google imediatamente na nova aba
+    window.open(googleUrl, '_blank');
+    showToast(`Pesquisando Instagram de "${leadName}" no Google...`, "info");
     
     try {
         const res = await fetch(`/api/leads/${leadId}/find-instagram`, { method: 'POST' });
@@ -3757,23 +3757,21 @@ window.handleSearchInstagram = async function(event, leadId) {
                 activeLeadForModal.instagram = data.instagram;
                 openLeadModal(leadId);
             }
-            window.open(`https://instagram.com/${data.instagram.replace('@', '')}`, '_blank');
-        } else {
-            showToast(`Instagram não detectado automaticamente. Abrindo busca no Instagram...`, "info");
-            const searchUrl = data.search_url || `https://www.instagram.com/explore/search/keyword/?q=${encodeURIComponent(leadName)}`;
-            window.open(searchUrl, '_blank');
-            
-            setTimeout(async () => {
-                const manual = prompt(`Instagram de "${leadName}":\nAbrimos a pesquisa na outra aba. Se encontrou o perfil correto, digite o @usuario aqui para salvar:`, lead && lead.instagram ? lead.instagram : '');
-                if (manual && manual.trim()) {
-                    await handleSaveManualInstagram(leadId, manual.trim());
-                }
-            }, 800);
+            return;
         }
     } catch (err) {
-        console.error("Erro ao buscar Instagram:", err);
-        showToast("Erro ao conectar ao buscador de Instagram.", "error");
+        console.warn("Verificação automática em background:", err);
     }
+
+    setTimeout(async () => {
+        const manual = prompt(
+            `Buscar Instagram no Google:\nAbrimos a pesquisa do Google para "${leadName}".\n\nEncontrou o perfil correto no Google? Digite ou cole o @usuario aqui para salvar no Lead:`,
+            lead && lead.instagram ? lead.instagram : ''
+        );
+        if (manual && manual.trim()) {
+            await handleSaveManualInstagram(leadId, manual.trim());
+        }
+    }, 700);
 };
 
 window.handleSaveManualInstagram = async function(leadId, rawHandle) {
@@ -3874,6 +3872,78 @@ window.handleModalEditInstagram = async function() {
     const manual = prompt(`Definir Instagram para "${activeLeadForModal.name}":`, current);
     if (manual !== null) {
         await handleSaveManualInstagram(activeLeadForModal.id, manual.trim());
+    }
+};
+
+function renderModalSiteStatus(lead) {
+    const siteStatusElem = document.getElementById('modal-site-status');
+    if (!siteStatusElem) return;
+    
+    const hasWeb = Boolean(lead && lead.has_website && lead.website && lead.website.trim());
+    if (hasWeb) {
+        siteStatusElem.innerHTML = `
+            <a href="${escapeHtml(lead.website)}" target="_blank" rel="noopener noreferrer" class="badge-has-site" style="font-size:12px; padding:5px 10px; max-width:320px; text-overflow:ellipsis; overflow:hidden; white-space:nowrap; display:inline-flex; align-items:center; gap:6px;" title="Abrir site em nova aba: ${escapeHtml(lead.website)}">
+                <i class="fas fa-globe"></i> <span>${escapeHtml(truncateUrl(lead.website))}</span>
+            </a>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="handleModalEditWebsite()" style="padding:4px 8px; font-size:11px;" title="Editar URL do site">
+                <i class="fas fa-pen"></i> Editar
+            </button>
+        `;
+    } else {
+        siteStatusElem.innerHTML = `
+            <span class="badge-no-site" style="font-size:11.5px; padding:5px 9px; display:inline-flex; align-items:center; gap:5px;">
+                <i class="fas fa-exclamation-triangle"></i> Sem Site no Google Meu Negócio
+            </span>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="handleModalEditWebsite()" style="padding:4px 9px; font-size:11px; color:var(--neon-cyan); border-color:rgba(0,210,255,0.4);" title="Informar URL do site manualmente">
+                <i class="fas fa-plus"></i> Inserir Site
+            </button>
+        `;
+    }
+}
+
+window.handleModalEditWebsite = async function() {
+    if (typeof activeLeadForModal === 'undefined' || !activeLeadForModal) return;
+    const currentSite = activeLeadForModal.website || '';
+    const newSite = prompt(`Informar ou alterar site para "${activeLeadForModal.name}":\n(Deixe vazio se a empresa realmente não possuir site)`, currentSite);
+    if (newSite === null) return;
+    
+    try {
+        const resp = await fetch(`/api/leads/${activeLeadForModal.id}/save-website`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ website: newSite.trim() })
+        });
+        const res = await resp.json();
+        if (res.success && res.lead) {
+            activeLeadForModal.website = res.lead.website;
+            activeLeadForModal.has_website = res.lead.has_website;
+            activeLeadForModal.opportunity_score = res.lead.opportunity_score;
+            
+            const target = currentLeads.find(l => l.id === activeLeadForModal.id);
+            if (target) {
+                target.website = res.lead.website;
+                target.has_website = res.lead.has_website;
+                target.opportunity_score = res.lead.opportunity_score;
+            }
+            
+            renderModalSiteStatus(activeLeadForModal);
+            
+            const scoreVal = activeLeadForModal.opportunity_score || (!activeLeadForModal.has_website ? 95 : 45);
+            const scoreBadge = document.getElementById('modal-opp-score');
+            if (scoreBadge) {
+                scoreBadge.textContent = `${scoreVal}/100`;
+                scoreBadge.className = `opp-badge ${scoreVal > 80 ? 'opp-high' : (scoreVal > 50 ? 'opp-med' : 'opp-low')}`;
+            }
+            
+            applyFiltersAndRender();
+            if (typeof showToast === 'function') {
+                showToast(res.lead.website ? `Site "${res.lead.website}" salvo com sucesso!` : 'Lead definido como sem site.', 'success');
+            }
+        } else {
+            alert(res.error || "Erro ao salvar site.");
+        }
+    } catch (err) {
+        alert("Erro de comunicação ao salvar site: " + err.message);
     }
 };
 
