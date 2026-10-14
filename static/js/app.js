@@ -2437,12 +2437,16 @@ function showToast(message, type = 'info', duration = 4500) {
 /**
  * Formata telefone para o padrão WAHA: 55... e sufixo @c.us
  */
-function formatWhatsAppChatId(rawPhone) {
+function formatWhatsAppChatId(rawPhone, fallbackDdd = '12') {
     if (!rawPhone) return null;
     let clean = rawPhone.toString().replace(/\D/g, '');
     if (!clean) return null;
     if (clean.startsWith('0')) clean = clean.substring(1);
-    if (!clean.startsWith('55') && (clean.length === 10 || clean.length === 11)) {
+
+    // Se tiver 8 ou 9 dígitos (número local sem DDD)
+    if (clean.length === 8 || clean.length === 9) {
+        clean = `55${fallbackDdd}${clean}`;
+    } else if (!clean.startsWith('55') && (clean.length === 10 || clean.length === 11)) {
         clean = `55${clean}`;
     }
     return `${clean}@c.us`;
@@ -3078,14 +3082,22 @@ window.handleWahaSessionAction = async function(action) {
  * Disparo Individual usando o Proxy Backend (/api/waha/send)
  */
 async function sendSingleWhatsApp(lead, customMessage = null, nextStage = null) {
-    if (window.wahaCurrentStatus && window.wahaCurrentStatus !== 'WORKING') {
+    if (window.wahaCurrentStatus === 'SCAN_QR_CODE') {
         showToast("WhatsApp não conectado. Aponte a câmera no QR Code para conectar antes de disparar.", "warning");
         if (typeof openWahaQrModal === 'function') openWahaQrModal();
         return false;
     }
 
     const rawNumber = lead.whatsapp || lead.phone;
-    const chatId = formatWhatsAppChatId(rawNumber);
+    let fallbackDdd = '12';
+    if (lead.address || lead.city) {
+        const addrText = `${lead.city || ''} ${lead.address || ''}`.toLowerCase();
+        if (/são paulo|capital|osasco|guarulhos|santo andré|são bernardo|\bsp\b/i.test(addrText)) fallbackDdd = '11';
+        else if (/campinas|americana|sumaré/i.test(addrText)) fallbackDdd = '19';
+        else if (/santos|praia grande|guarujá/i.test(addrText)) fallbackDdd = '13';
+        else if (/rio de janeiro|\brj\b|niterói/i.test(addrText)) fallbackDdd = '21';
+    }
+    const chatId = formatWhatsAppChatId(rawNumber, fallbackDdd);
 
     if (!chatId) {
         showToast(`Lead "${lead.name}" não possui telefone válido para envio.`, 'warning');
@@ -3117,12 +3129,22 @@ async function sendSingleWhatsApp(lead, customMessage = null, nextStage = null) 
             if (data.qr_required && typeof openWahaQrModal === 'function') {
                 openWahaQrModal();
             }
+            if (data.not_registered) {
+                appendWahaLog(`⚠️ "${lead.name}" (${chatId}) não possui conta de WhatsApp ativa.`, 'warn');
+            }
             const errDesc = data.error || `Erro HTTP ${res.status}`;
             throw new Error(errDesc);
         }
 
+        const deliveredChatId = data.used_chat_id || chatId;
         showToast(`Mensagem enviada com sucesso para ${lead.name}!`, 'success');
-        appendWahaLog(`✅ Mensagem entregue com sucesso para ${lead.name} (${chatId})`, 'success');
+        appendWahaLog(`✅ Mensagem entregue com sucesso para ${lead.name} (${deliveredChatId})`, 'success');
+
+        // Se o número que respondeu no WAHA for uma variante (ex: com ou sem 9º dígito), atualiza no lead
+        if (data.used_chat_id) {
+            const cleanNum = data.used_chat_id.replace('@c.us', '');
+            lead.whatsapp = cleanNum;
+        }
 
         // Atualiza status local do lead para 'contatado' e nova etapa do funil
         lead.campaign_status = 'contatado';
@@ -3597,7 +3619,15 @@ window.startB2BQuickDispatch = async function() {
         const lead = targets[i];
         if (!lead.whatsapp && lead.phone) lead.whatsapp = lead.phone;
         const rawPhone = lead.whatsapp || lead.phone;
-        const chatId = typeof formatWhatsAppChatId === 'function' ? formatWhatsAppChatId(rawPhone) : null;
+        let fallbackDdd = '12';
+        if (lead.address || lead.city) {
+            const addrText = `${lead.city || ''} ${lead.address || ''}`.toLowerCase();
+            if (/são paulo|capital|osasco|guarulhos|santo andré|são bernardo|\bsp\b/i.test(addrText)) fallbackDdd = '11';
+            else if (/campinas|americana|sumaré/i.test(addrText)) fallbackDdd = '19';
+            else if (/santos|praia grande|guarujá/i.test(addrText)) fallbackDdd = '13';
+            else if (/rio de janeiro|\brj\b|niterói/i.test(addrText)) fallbackDdd = '21';
+        }
+        const chatId = typeof formatWhatsAppChatId === 'function' ? formatWhatsAppChatId(rawPhone, fallbackDdd) : null;
 
         if (!chatId) {
             appendB2BLog(`Pulado: "${lead.name}" não possui telefone válido.`, 'warn');
@@ -3641,12 +3671,22 @@ window.startB2BQuickDispatch = async function() {
                 if (!firstSentLeadId) firstSentLeadId = lead.id;
                 lead.campaign_status = 'contatado';
                 lead.follow_stage = currentB2BTemplate;
-                appendB2BLog(`✅ Enviado para "${lead.name}" (${chatId})`, 'success');
+                if (data.used_chat_id) {
+                    lead.whatsapp = data.used_chat_id.replace('@c.us', '');
+                }
+                const deliveredChatId = data.used_chat_id || chatId;
+                appendB2BLog(`✅ Enviado para "${lead.name}" (${deliveredChatId})`, 'success');
             } else {
                 if (data.qr_required && typeof openWahaQrModal === 'function') {
                     openWahaQrModal();
+                    appendB2BLog(`🛑 Disparo interrompido: WhatsApp desconectado (QR Code necessário).`, 'warn');
+                    break;
                 }
-                appendB2BLog(`❌ Falha em "${lead.name}": ${data.error || 'Erro no WAHA'}`, 'error');
+                if (data.not_registered) {
+                    appendB2BLog(`⚠️ "${lead.name}" (${chatId}) não possui conta de WhatsApp ativa.`, 'warn');
+                } else {
+                    appendB2BLog(`❌ Falha em "${lead.name}": ${data.error || 'Erro no WAHA'}`, 'error');
+                }
             }
         } catch (err) {
             appendB2BLog(`❌ Erro de rede para "${lead.name}": ${err.message}`, 'error');
@@ -4173,8 +4213,15 @@ async function sendBulkWhatsApp(leadsList, triggerButton = null) {
             const message = buildPersonalizedMessage(lead, customTemplate);
             const success = await sendSingleWhatsApp(lead, message);
 
-            if (success) successCount++;
-            else failCount++;
+            if (success) {
+                successCount++;
+            } else {
+                failCount++;
+                if (window.wahaCurrentStatus === 'SCAN_QR_CODE') {
+                    appendWahaLog("🛑 Campanha pausada: WhatsApp desconectado. Aponte a câmera no QR Code para retomar.", "warn");
+                    break;
+                }
+            }
 
             // Se não for o último lead e a campanha continuar ativa, aguarda o delay humano
             if (i < total - 1 && isBulkCampaignActive) {
@@ -5339,7 +5386,7 @@ window.sendChatMessage = async function() {
     let recipient = '';
 
     if (activeChatChannel === 'whatsapp') {
-        if (window.wahaCurrentStatus && window.wahaCurrentStatus !== 'WORKING') {
+        if (window.wahaCurrentStatus === 'SCAN_QR_CODE') {
             if (typeof showToast === 'function') {
                 showToast("WhatsApp não conectado. Aponte a câmera no QR Code para conectar antes de enviar.", "warning");
             } else {
@@ -7193,12 +7240,13 @@ window.loadDisparadorView = async function() {
     const wahaBadge = document.getElementById('disp-waha-badge');
     const wahaText = document.getElementById('disp-waha-status-text');
     if (wahaBadge && wahaText) {
-        if (typeof wahaCurrentStatus !== 'undefined' && wahaCurrentStatus === 'WORKING') {
+        const st = window.wahaCurrentStatus;
+        if (st === 'WORKING') {
             wahaBadge.style.borderColor = 'var(--neon-green)';
             wahaBadge.style.color = 'var(--neon-green)';
             wahaBadge.style.background = 'rgba(0,255,136,0.12)';
             wahaText.textContent = 'ONLINE';
-        } else if (typeof wahaCurrentStatus !== 'undefined' && wahaCurrentStatus === 'SCAN_QR_CODE') {
+        } else if (st === 'SCAN_QR_CODE') {
             wahaBadge.style.borderColor = 'var(--alert-orange)';
             wahaBadge.style.color = 'var(--alert-orange)';
             wahaBadge.style.background = 'rgba(255,179,0,0.12)';
@@ -7612,7 +7660,11 @@ window.handleStartDisparador = async function() {
                 appendDisparadorLog(`✅ Enviado para "${lead.name}" (${lead.whatsapp || lead.phone}) -> Avançado para [${nextStage}]`, 'success');
             } else {
                 failCount++;
-                appendDisparadorLog(`❌ Falha no envio para "${lead.name}"`, 'error');
+                appendDisparadorLog(`❌ Falha no envio para "${lead.name}" (${lead.whatsapp || lead.phone || 'Sem número'})`, 'error');
+                if (window.wahaCurrentStatus === 'SCAN_QR_CODE') {
+                    appendDisparadorLog(`🛑 Disparo interrompido: WhatsApp desconectado. Aponte a câmera no QR Code para reconectar.`, 'warn');
+                    break;
+                }
             }
 
             // Aguarda delay humano se houver próximo
@@ -7676,7 +7728,7 @@ window.handleStopDisparador = function() {
 };
 
 window.handleDisparadorTestSend = async function() {
-    if (window.wahaCurrentStatus && window.wahaCurrentStatus !== 'WORKING') {
+    if (window.wahaCurrentStatus === 'SCAN_QR_CODE') {
         showToast("WhatsApp não conectado. Aponte a câmera no QR Code para conectar antes de testar.", "warning");
         if (typeof openWahaQrModal === 'function') openWahaQrModal();
         return;
@@ -7737,8 +7789,9 @@ window.handleDisparadorTestSend = async function() {
         });
         const data = await res.json();
         if (data.success) {
+            const delivered = data.used_chat_id || chatId;
             showToast("✅ Mensagem de teste entregue com sucesso no WhatsApp!", "success");
-            appendDisparadorLog(`✅ Teste entregue com sucesso para ${chatId}!`, 'success');
+            appendDisparadorLog(`✅ Teste entregue com sucesso para ${delivered}!`, 'success');
         } else {
             if (data.qr_required && typeof openWahaQrModal === 'function') {
                 openWahaQrModal();

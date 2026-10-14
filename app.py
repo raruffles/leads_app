@@ -601,9 +601,9 @@ def get_waha_headers(settings: dict, extra: Optional[dict] = None) -> dict:
         headers.update(extra)
     return headers
 
-# Timeout estrito para chamadas ao WAHA (evita travamento do event loop/workers)
-WAHA_HTTP_TIMEOUT = httpx.Timeout(5.0, connect=3.0)
-WAHA_SEND_TIMEOUT = httpx.Timeout(6.0, connect=3.0)
+# Timeout otimizado para chamadas ao WAHA (garante tempo para envio real no WhatsApp Web)
+WAHA_HTTP_TIMEOUT = httpx.Timeout(10.0, connect=4.0)
+WAHA_SEND_TIMEOUT = httpx.Timeout(30.0, connect=5.0)
 
 @app.get("/api/waha/status")
 async def api_waha_status():
@@ -885,105 +885,258 @@ async def api_waha_session_action(action: str):
         except Exception as e:
             return {"success": False, "error": str(e)}
 
+def build_waha_chat_id_variants(raw_chat_id: str, default_ddd: str = "12") -> List[str]:
+    """
+    Retorna variantes de chatId para números brasileiros para garantir entrega
+    mesmo quando o WhatsApp registrou a conta com ou sem o 9º dígito.
+    """
+    raw = (raw_chat_id or "").strip()
+    if "@g.us" in raw:
+        return [raw]
+    if "@c.us" in raw:
+        raw_digits = raw.replace("@c.us", "")
+    else:
+        raw_digits = re.sub(r'\D', '', raw)
+
+    if not raw_digits:
+        return [raw] if "@" in raw else [f"{raw}@c.us"]
+
+    if raw_digits.startswith("0"):
+        raw_digits = raw_digits[1:]
+
+    # Se tiver 8 ou 9 dígitos (sem DDD), prefixa o DDD padrão
+    if len(raw_digits) in (8, 9):
+        raw_digits = f"{default_ddd}{raw_digits}"
+
+    # Se não tiver 55 (DDI do Brasil) e tiver 10 ou 11 dígitos, prefixa 55
+    if not raw_digits.startswith("55") and len(raw_digits) in (10, 11):
+        raw_digits = f"55{raw_digits}"
+
+    variants = [f"{raw_digits}@c.us"]
+
+    # Formato brasileiro com 13 dígitos: 55 + DD (2) + 9 (1) + 8 dígitos (celular padrão atual)
+    # Variante alternativa sem o 9º dígito (contas antigas ou fixo): 12 dígitos
+    if raw_digits.startswith("55") and len(raw_digits) == 13 and raw_digits[4] == '9':
+        alt_no_9 = f"{raw_digits[:4]}{raw_digits[5:]}@c.us"
+        if alt_no_9 not in variants:
+            variants.append(alt_no_9)
+
+    # Formato brasileiro com 12 dígitos: 55 + DD (2) + 8 dígitos
+    # Se o primeiro dígito após DDD for 6, 7, 8 ou 9, pode ser celular que exige o 9º dígito no WhatsApp
+    elif raw_digits.startswith("55") and len(raw_digits) == 12:
+        if raw_digits[4] in ('6', '7', '8', '9'):
+            alt_with_9 = f"{raw_digits[:4]}9{raw_digits[4:]}@c.us"
+            if alt_with_9 not in variants:
+                variants.append(alt_with_9)
+
+    return variants
+
+def resolve_spintax(text: str) -> str:
+    """
+    Resolve variações de Spintax no formato {Opção 1|Opção 2|Opção 3}.
+    Suporta repetições e blocos aninhados, garantindo que variações como
+    '{Oi, tudo bem?|Olá, tudo certo?|Boa tarde, tudo bem?}' sejam sorteadas aleatoriamente
+    e nunca enviadas como texto literal com chaves e pipes ao cliente.
+    Preserva tags normais como {empresa} ou {nome} quando não contêm '|'.
+    """
+    if not text or "{" not in text or "}" not in text:
+        return text or ""
+    
+    pattern = re.compile(r'\{([^{}]+)\}')
+    iterations = 0
+    current = text
+    while "{" in current and "}" in current and iterations < 15:
+        has_spin = False
+        def _replace_spin(match):
+            nonlocal has_spin
+            content = match.group(1)
+            if '|' in content:
+                has_spin = True
+                choices = [c.strip() for c in content.split('|')]
+                valid_choices = [c for c in choices if c]
+                return random.choice(valid_choices if valid_choices else choices)
+            return match.group(0)
+
+        new_text = pattern.sub(_replace_spin, current)
+        if new_text == current or not has_spin:
+            break
+        current = new_text
+        iterations += 1
+
+    return current
+
 @app.post("/api/waha/send")
 async def api_waha_send(payload: WahaSendRequest):
+    # Failsafe de Spintax: garante que qualquer texto com {a|b|c} seja resolvido antes do envio
+    payload.text = resolve_spintax(payload.text)
+
     settings = database.get_settings()
     base_url = settings.get("waha_base_url", "http://localhost:3000").rstrip("/")
     session_name = payload.session or settings.get("waha_session", "default").strip() or "default"
     headers = get_waha_headers(settings)
 
-    raw_chat_id = payload.chatId.strip()
-    if "@" not in raw_chat_id:
-        digits = "".join(c for c in raw_chat_id if c.isdigit())
-        if len(digits) in (10, 11) and not digits.startswith("55"):
-            digits = f"55{digits}"
-        chat_id = f"{digits}@c.us"
-    else:
-        chat_id = raw_chat_id
+    # Obter DDD de fallback com base no lead (se disponível)
+    fallback_ddd = "12"
+    if payload.lead_id:
+        target_lead = database.get_lead_by_id(payload.lead_id)
+        if target_lead:
+            addr = ((target_lead.get("address") or "") + " " + (target_lead.get("notes") or "")).lower()
+            if any(c in addr for c in ["são paulo", "capital", "osasco", "guarulhos", "santo andré", "são bernardo", "sp -"]):
+                fallback_ddd = "11"
+            elif any(c in addr for c in ["campinas", "americana", "sumaré"]):
+                fallback_ddd = "19"
+            elif any(c in addr for c in ["santos", "praia grande", "guarujá"]):
+                fallback_ddd = "13"
+            elif any(c in addr for c in ["rio de janeiro", "rj", "niterói"]):
+                fallback_ddd = "21"
 
-    # Pré-validação do status da sessão WAHA
+    chat_id_variants = build_waha_chat_id_variants(payload.chatId, default_ddd=fallback_ddd)
+
+    # Pré-validação leve da sessão WAHA
     async with httpx.AsyncClient(timeout=WAHA_HTTP_TIMEOUT) as client:
         try:
             chk = await client.get(f"{base_url}/api/sessions/{session_name}", headers=headers)
             if chk.status_code == 200:
-                s_status = chk.json().get("status")
-                if s_status != "WORKING":
-                    # Se inativa ou expirada, força restart para renovar QR
-                    if s_status in ("FAILED", "STOPPED"):
-                        try:
-                            await client.post(f"{base_url}/api/sessions/{session_name}/restart", headers=headers, json={})
-                        except Exception:
-                            pass
+                s_status = (chk.json().get("status") or "").upper()
+                if s_status == "SCAN_QR_CODE":
                     return {
                         "success": False,
                         "qr_required": True,
                         "status": s_status,
-                        "error": f"WhatsApp não conectado (Status: {s_status}). Por favor, escaneie o QR Code exibido na tela com seu celular para autenticar o WhatsApp."
+                        "error": "WhatsApp não autenticado (Aguardando QR Code). Aponte a câmera do WhatsApp para conectar."
                     }
+                elif s_status in ("FAILED", "STOPPED"):
+                    try:
+                        await client.post(f"{base_url}/api/sessions/{session_name}/start", headers=headers, json={})
+                    except Exception:
+                        pass
         except httpx.ConnectError:
             return {"success": False, "error": f"Servidor WAHA offline em {base_url}. Inicie o contêiner WAHA para enviar."}
         except Exception:
             pass
 
-    waha_body = {
-        "session": session_name,
-        "chatId": chat_id,
-        "text": payload.text
-    }
+    last_error = ""
+    is_not_registered = False
 
     async with httpx.AsyncClient(timeout=WAHA_SEND_TIMEOUT) as client:
-        try:
-            resp = await client.post(f"{base_url}/api/sendText", headers=headers, json=waha_body)
-            if resp.is_success:
-                resp_json = resp.json() if resp.headers.get("content-type", "").startswith("application/json") else {}
-                waha_msg_id = resp_json.get("id")
-                # Salvar no histórico de mensagens unificado
-                database.save_message(
-                    lead_id=payload.lead_id,
-                    channel="whatsapp",
-                    direction="outgoing",
-                    sender="Operador",
-                    recipient=payload.chatId,
-                    body=payload.text,
-                    status="sent",
-                    waha_message_id=waha_msg_id
-                )
-                # Atualizar CRM automaticamente quando lead_id for fornecido
-                if payload.lead_id:
-                    database.update_lead_status(
-                        lead_id=payload.lead_id, 
-                        status="contatado", 
-                        follow_stage=payload.follow_stage,
-                        notes=f"Disparo de abordagem ({payload.follow_stage or 'geral'}) realizado com sucesso via WAHA."
+        for attempt_idx, candidate_chat_id in enumerate(chat_id_variants):
+            waha_body = {
+                "session": session_name,
+                "chatId": candidate_chat_id,
+                "text": payload.text
+            }
+            try:
+                resp = await client.post(f"{base_url}/api/sendText", headers=headers, json=waha_body)
+                if resp.is_success:
+                    resp_json = resp.json() if resp.headers.get("content-type", "").startswith("application/json") else {}
+                    waha_msg_id = resp_json.get("id")
+
+                    # Salvar no histórico de mensagens unificado
+                    database.save_message(
+                        lead_id=payload.lead_id,
+                        channel="whatsapp",
+                        direction="outgoing",
+                        sender="Operador",
+                        recipient=candidate_chat_id,
+                        body=payload.text,
+                        status="sent",
+                        waha_message_id=waha_msg_id
                     )
-                return {
-                    "success": True,
-                    "data": resp_json,
-                    "message": "Mensagem enviada com sucesso via WAHA!"
-                }
-            else:
-                err_text = resp.text
-                try:
-                    err_json = resp.json()
-                    st = err_json.get("status")
-                    if resp.status_code == 422:
-                        try:
-                            await client.post(f"{base_url}/api/sessions/{session_name}/restart", headers=headers, json={})
-                        except Exception:
-                            pass
+
+                    # Atualizar CRM automaticamente quando lead_id for fornecido
+                    if payload.lead_id:
+                        # Se funcionou com variante alternativa, atualiza o whatsapp do lead para o número que funcionou
+                        clean_num = candidate_chat_id.replace("@c.us", "")
+                        database.update_lead_contacts(lead_id=payload.lead_id, whatsapp=clean_num)
+                        database.update_lead_status(
+                            lead_id=payload.lead_id, 
+                            status="contatado", 
+                            follow_stage=payload.follow_stage,
+                            notes=f"Disparo de abordagem ({payload.follow_stage or 'geral'}) realizado com sucesso via WAHA ({candidate_chat_id})."
+                        )
+                    return {
+                        "success": True,
+                        "data": resp_json,
+                        "used_chat_id": candidate_chat_id,
+                        "message": "Mensagem enviada com sucesso via WAHA!"
+                    }
+                else:
+                    err_text = resp.text
+                    err_json = {}
+                    try:
+                        err_json = resp.json()
+                    except Exception:
+                        pass
+
+                    raw_err_msg = str(err_json.get("message") or err_json.get("error") or err_text)
+                    last_error = raw_err_msg
+
+                    # Verificar se o erro é de número não registrado
+                    is_number_unregistered = any(phrase in raw_err_msg.lower() for phrase in [
+                        "not registered", "not found", "invalid chat", "no account exists", "is not on whatsapp", "failed to find"
+                    ])
+
+                    # Se o erro for de sessão/QR Code desautenticado (e NÃO de número não cadastrado):
+                    is_session_unauth = ("qr" in raw_err_msg.lower() or "session" in raw_err_msg.lower() or "unauthorized" in raw_err_msg.lower()) and not is_number_unregistered
+
+                    if is_session_unauth and resp.status_code == 422:
                         return {
                             "success": False,
                             "qr_required": True,
-                            "error": f"WhatsApp não conectado (Estado: {st or 'Aguardando QR Code'}). O QR Code foi atualizado na tela; aponte o WhatsApp do celular para conectar."
+                            "error": "WhatsApp desconectado. Por favor, aponte a câmera no QR Code para reconectar."
                         }
-                    err_msg = err_json.get("message") or err_json.get("error") or err_text
-                except Exception:
-                    err_msg = err_text
-                return {"success": False, "error": f"WAHA ({resp.status_code}): {err_msg}"}
-        except httpx.ConnectError:
-            return {"success": False, "error": f"Servidor WAHA offline em {base_url}. Inicie o contêiner WAHA para enviar."}
-        except Exception as e:
-            return {"success": False, "error": f"Falha de comunicação com o WAHA: {str(e)}"}
+
+                    if is_number_unregistered:
+                        is_not_registered = True
+                        # Tenta a próxima variante do número (com ou sem 9º dígito)
+                        continue
+                    else:
+                        # Se for outro erro HTTP temporário e houver apenas 1 variante, tenta um retry rápido
+                        if attempt_idx == 0 and len(chat_id_variants) == 1:
+                            await asyncio.sleep(1.5)
+                            retry_resp = await client.post(f"{base_url}/api/sendText", headers=headers, json=waha_body)
+                            if retry_resp.is_success:
+                                retry_json = retry_resp.json() if retry_resp.headers.get("content-type", "").startswith("application/json") else {}
+                                waha_msg_id = retry_json.get("id")
+                                database.save_message(
+                                    lead_id=payload.lead_id,
+                                    channel="whatsapp",
+                                    direction="outgoing",
+                                    sender="Operador",
+                                    recipient=candidate_chat_id,
+                                    body=payload.text,
+                                    status="sent",
+                                    waha_message_id=waha_msg_id
+                                )
+                                return {
+                                    "success": True,
+                                    "data": retry_json,
+                                    "used_chat_id": candidate_chat_id,
+                                    "message": "Mensagem enviada com sucesso após retry!"
+                                }
+
+            except httpx.TimeoutException:
+                last_error = f"Tempo limite ({WAHA_SEND_TIMEOUT.read}s) esgotado no WAHA."
+                # Tenta uma segunda vez se for timeout temporário
+                if attempt_idx == 0:
+                    await asyncio.sleep(1.0)
+                    continue
+            except httpx.ConnectError:
+                return {"success": False, "error": f"Servidor WAHA offline em {base_url}. Inicie o contêiner WAHA para enviar."}
+            except Exception as e:
+                last_error = f"Falha de comunicação: {str(e)}"
+
+    # Se chegou aqui, nenhuma variante conseguiu entregar
+    if is_not_registered:
+        return {
+            "success": False,
+            "not_registered": True,
+            "error": f"O número ({payload.chatId}) não possui conta de WhatsApp ativa."
+        }
+    return {
+        "success": False,
+        "error": f"WAHA: {last_error or 'Falha ao entregar mensagem.'}"
+    }
 
 # ==========================================
 # CENTRAL DE ATENDIMENTO MULTI-CANAL & CHAT
@@ -1203,92 +1356,150 @@ async def api_chat_send(payload: ChatSendPayload):
         if not target_number:
             return {"success": False, "error": "Número de WhatsApp não informado para este contato."}
         
-        digits = "".join(c for c in target_number if c.isdigit())
-        if len(digits) in (10, 11) and not digits.startswith("55"):
-            digits = f"55{digits}"
-        chat_id = f"{digits}@c.us" if "@" not in digits else digits
+        fallback_ddd = "12"
+        if lead:
+            addr = ((lead.get("address") or "") + " " + (lead.get("notes") or "")).lower()
+            if any(c in addr for c in ["são paulo", "capital", "osasco", "guarulhos", "santo andré", "são bernardo", "sp -"]):
+                fallback_ddd = "11"
+            elif any(c in addr for c in ["campinas", "americana", "sumaré"]):
+                fallback_ddd = "19"
+            elif any(c in addr for c in ["santos", "praia grande", "guarujá"]):
+                fallback_ddd = "13"
+            elif any(c in addr for c in ["rio de janeiro", "rj", "niterói"]):
+                fallback_ddd = "21"
+
+        chat_id_variants = build_waha_chat_id_variants(target_number, default_ddd=fallback_ddd)
 
         base_url = settings.get("waha_base_url", "http://localhost:3000").rstrip("/")
         session_name = settings.get("waha_session", "default").strip() or "default"
         headers = get_waha_headers(settings)
 
-        # Pré-validação do status da sessão WAHA
+        # Pré-validação leve do status da sessão WAHA
         async with httpx.AsyncClient(timeout=WAHA_HTTP_TIMEOUT) as client:
             try:
                 chk = await client.get(f"{base_url}/api/sessions/{session_name}", headers=headers)
                 if chk.status_code == 200:
-                    s_status = chk.json().get("status")
-                    if s_status != "WORKING":
-                        if s_status in ("FAILED", "STOPPED"):
-                            try:
-                                await client.post(f"{base_url}/api/sessions/{session_name}/restart", headers=headers, json={})
-                            except Exception:
-                                pass
+                    s_status = (chk.json().get("status") or "").upper()
+                    if s_status == "SCAN_QR_CODE":
                         return {
                             "success": False,
                             "qr_required": True,
                             "status": s_status,
-                            "error": f"WhatsApp não conectado (Status: {s_status}). Por favor, escaneie o QR Code exibido na tela com seu celular para autenticar o WhatsApp."
+                            "error": "WhatsApp não autenticado (Aguardando QR Code). Aponte a câmera do WhatsApp para conectar."
                         }
+                    elif s_status in ("FAILED", "STOPPED"):
+                        try:
+                            await client.post(f"{base_url}/api/sessions/{session_name}/start", headers=headers, json={})
+                        except Exception:
+                            pass
             except httpx.ConnectError:
                 return {"success": False, "error": f"Servidor WAHA offline em {base_url}. Inicie o contêiner WAHA para enviar."}
             except Exception:
                 pass
 
-        waha_body = {"session": session_name, "chatId": chat_id, "text": payload.text}
+        last_error = ""
+        is_not_registered = False
+
         async with httpx.AsyncClient(timeout=WAHA_SEND_TIMEOUT) as client:
-            try:
-                resp = await client.post(f"{base_url}/api/sendText", headers=headers, json=waha_body)
-                if resp.is_success:
-                    resp_json = resp.json() if resp.headers.get("content-type", "").startswith("application/json") else {}
-                    waha_msg_id = resp_json.get("id")
-                    msg_id = database.save_message(
-                        lead_id=payload.lead_id,
-                        channel="whatsapp",
-                        direction="outgoing",
-                        sender="Operador",
-                        recipient=chat_id,
-                        body=payload.text,
-                        status="sent",
-                        waha_message_id=waha_msg_id
-                    )
-                    if payload.lead_id:
-                        database.update_lead_status(
-                            lead_id=payload.lead_id, 
-                            status="contatado", 
-                            follow_stage=payload.follow_stage,
-                            notes=f"Mensagem enviada via WhatsApp Web (WAHA) - Etapa: {payload.follow_stage or 'Chat'}."
+            for attempt_idx, candidate_chat_id in enumerate(chat_id_variants):
+                waha_body = {"session": session_name, "chatId": candidate_chat_id, "text": payload.text}
+                try:
+                    resp = await client.post(f"{base_url}/api/sendText", headers=headers, json=waha_body)
+                    if resp.is_success:
+                        resp_json = resp.json() if resp.headers.get("content-type", "").startswith("application/json") else {}
+                        waha_msg_id = resp_json.get("id")
+                        msg_id = database.save_message(
+                            lead_id=payload.lead_id,
+                            channel="whatsapp",
+                            direction="outgoing",
+                            sender="Operador",
+                            recipient=candidate_chat_id,
+                            body=payload.text,
+                            status="sent",
+                            waha_message_id=waha_msg_id
                         )
-                    return {
-                        "success": True,
-                        "message_id": msg_id,
-                        "channel": "whatsapp",
-                        "recipient": chat_id,
-                        "message": "Mensagem enviada com sucesso no WhatsApp!"
-                    }
-                else:
-                    err_msg = resp.text
-                    try:
-                        err_json = resp.json()
-                        st = err_json.get("status")
-                        if resp.status_code == 422:
-                            try:
-                                await client.post(f"{base_url}/api/sessions/{session_name}/restart", headers=headers, json={})
-                            except Exception:
-                                pass
+                        if payload.lead_id:
+                            clean_num = candidate_chat_id.replace("@c.us", "")
+                            database.update_lead_contacts(lead_id=payload.lead_id, whatsapp=clean_num)
+                            database.update_lead_status(
+                                lead_id=payload.lead_id, 
+                                status="contatado", 
+                                follow_stage=payload.follow_stage,
+                                notes=f"Mensagem enviada via WhatsApp Web (WAHA) - Etapa: {payload.follow_stage or 'Chat'} ({candidate_chat_id})."
+                            )
+                        return {
+                            "success": True,
+                            "message_id": msg_id,
+                            "channel": "whatsapp",
+                            "recipient": candidate_chat_id,
+                            "message": "Mensagem enviada com sucesso no WhatsApp!"
+                        }
+                    else:
+                        err_text = resp.text
+                        err_json = {}
+                        try:
+                            err_json = resp.json()
+                        except Exception:
+                            pass
+                        raw_err_msg = str(err_json.get("message") or err_json.get("error") or err_text)
+                        last_error = raw_err_msg
+
+                        is_number_unregistered = any(phrase in raw_err_msg.lower() for phrase in [
+                            "not registered", "not found", "invalid chat", "no account exists", "is not on whatsapp", "failed to find"
+                        ])
+                        is_session_unauth = ("qr" in raw_err_msg.lower() or "session" in raw_err_msg.lower() or "unauthorized" in raw_err_msg.lower()) and not is_number_unregistered
+
+                        if is_session_unauth and resp.status_code == 422:
                             return {
                                 "success": False,
                                 "qr_required": True,
-                                "error": f"WhatsApp não conectado (Estado: {st or 'Aguardando QR Code'}). O QR Code foi atualizado na tela; aponte o WhatsApp do celular para conectar."
+                                "error": "WhatsApp desconectado. Por favor, aponte a câmera no QR Code para reconectar."
                             }
-                        err_msg = err_json.get("message") or err_msg
-                    except Exception:
-                        pass
-                    return {"success": False, "error": f"Erro do WAHA ({resp.status_code}): {err_msg}"}
-            except httpx.ConnectError:
-                return {"success": False, "error": f"Servidor WAHA offline em {base_url}. Inicie o contêiner WAHA para enviar."}
-            except Exception as e:
-                return {"success": False, "error": f"Falha de comunicação com o WAHA: {str(e)}"}
+
+                        if is_number_unregistered:
+                            is_not_registered = True
+                            continue
+                        else:
+                            if attempt_idx == 0 and len(chat_id_variants) == 1:
+                                await asyncio.sleep(1.5)
+                                retry_resp = await client.post(f"{base_url}/api/sendText", headers=headers, json=waha_body)
+                                if retry_resp.is_success:
+                                    retry_json = retry_resp.json() if retry_resp.headers.get("content-type", "").startswith("application/json") else {}
+                                    waha_msg_id = retry_json.get("id")
+                                    msg_id = database.save_message(
+                                        lead_id=payload.lead_id,
+                                        channel="whatsapp",
+                                        direction="outgoing",
+                                        sender="Operador",
+                                        recipient=candidate_chat_id,
+                                        body=payload.text,
+                                        status="sent",
+                                        waha_message_id=waha_msg_id
+                                    )
+                                    return {
+                                        "success": True,
+                                        "message_id": msg_id,
+                                        "channel": "whatsapp",
+                                        "recipient": candidate_chat_id,
+                                        "message": "Mensagem enviada com sucesso após retry!"
+                                    }
+                except httpx.TimeoutException:
+                    last_error = f"Tempo limite ({WAHA_SEND_TIMEOUT.read}s) esgotado no WAHA."
+                    if attempt_idx == 0:
+                        await asyncio.sleep(1.0)
+                        continue
+                except httpx.ConnectError:
+                    return {"success": False, "error": f"Servidor WAHA offline em {base_url}. Inicie o contêiner WAHA para enviar."}
+                except Exception as e:
+                    last_error = f"Falha de comunicação com o WAHA: {str(e)}"
+
+        if is_not_registered:
+            return {
+                "success": False,
+                "not_registered": True,
+                "error": f"O número ({target_number}) não possui conta de WhatsApp ativa."
+            }
+        return {"success": False, "error": f"Erro do WAHA: {last_error or 'Falha ao entregar mensagem.'}"}
 
     elif channel == "email":
         to_email = (payload.recipient or (lead.get("email") if lead else "")).strip()
