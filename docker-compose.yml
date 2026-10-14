@@ -1,0 +1,38 @@
+services:
+  app:
+    build: .
+    container_name: leads_app
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - AUTH_REQUIRED=false
+      - WAHA_BASE_URL=http://waha:3000
+      - WAHA_API_KEY=2b5d16deb67241efa1cffa371e1f354b
+    volumes:
+      - ./leads.db:/app/leads.db
+    depends_on:
+      - waha
+
+  waha:
+    image: devlikeapro/waha
+    container_name: waha
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - WAHA_LOG_FORMAT=JSON
+      - WAHA_LOG_LEVEL=INFO
+      - WAHA_DEBUG_MODE=false
+      - WAHA_WEBHOOKS_ENABLED=false
+      - WAHA_CORS_ORIGIN=*
+      - WAHA_PRINT_QR=true
+      - WHATSAPP_START_SESSION=default
+      - WHATSAPP_RESTART_ALL_SESSIONS=true
+      - WHATSAPP_DEFAULT_ENGINE=NOWEB
+      - WAHA_API_KEY=2b5d16deb67241efa1cffa371e1f354b
+      - WAHA_DASHBOARD_USERNAME=admin
+      - WAHA_DASHBOARD_PASSWORD=admin
+    volumes:
+      - ./waha-sessions:/app/.sessions

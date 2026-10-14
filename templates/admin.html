@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal do Gerente // Gestão de Operadores - KAPTADOR</title>
+    <link rel="icon" type="image/svg+xml" href="/static/img/kaptador-logo.svg">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        .admin-page-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 30px 20px 80px 20px;
+        }
+        .admin-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-bottom: 24px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(157, 78, 221, 0.2);
+        }
+        .admin-title-box {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .admin-badge {
+            background: rgba(0, 210, 255, 0.1);
+            color: var(--neon-cyan);
+            border: 1px solid rgba(0, 210, 255, 0.3);
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .op-avatar {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--purple-accent), var(--neon-cyan));
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 15px;
+            box-shadow: 0 0 10px rgba(0, 210, 255, 0.3);
+        }
+        .op-row:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+        .role-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .role-operador {
+            background: rgba(0, 210, 255, 0.1);
+            color: var(--neon-cyan);
+            border: 1px solid rgba(0, 210, 255, 0.25);
+        }
+        .role-gerente {
+            background: rgba(0, 255, 136, 0.1);
+            color: var(--neon-green);
+            border: 1px solid rgba(0, 255, 136, 0.3);
+        }
+        /* TELA DE LOGIN / BLOQUEIO POR SENHA */
+        .admin-lock-screen {
+            max-width: 440px;
+            margin: 60px auto;
+            background: rgba(18, 14, 38, 0.95);
+            border: 1px solid rgba(0, 210, 255, 0.3);
+            border-radius: 14px;
+            padding: 36px 30px;
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(10px);
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-page-container">
+
+    {% if is_authenticated %}
+        <!-- 2. PAINEL PRINCIPAL DO GERENTE (LIBERADO APÓS SENHA) -->
+        <div id="admin-main-panel">
+            <!-- CABEÇALHO -->
+            <header class="admin-header">
+                <div class="admin-title-box">
+                    <img src="/static/img/kaptador-logo.svg" alt="KAPTADOR Logo" style="width: 44px; height: 44px; filter: drop-shadow(0 0 10px rgba(0, 210, 255, 0.4));">
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <h1 style="font-size: 22px; font-weight: 800; color: #fff; letter-spacing: -0.5px;">Portal do Gerente // KAPTADOR</h1>
+                            <span class="admin-badge">Área Restrita (/admin)</span>
+                        </div>
+                        <p style="font-size: 13px; color: var(--text-secondary); margin-top: 3px;">
+                            Gerencie os operadores, defina seus nomes e acompanhe o desempenho individual no KAPTADOR.
+                        </p>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                    <a href="/" class="btn btn-secondary">
+                        <i class="fas fa-columns"></i> Acessar CRM & Varredura
+                    </a>
+                    <button type="button" class="btn btn-neon" onclick="openAddOperatorModal()">
+                        <i class="fas fa-user-plus"></i> Novo Operador
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="handleAdminLogout()" title="Bloquear painel e sair" style="color:var(--alert-red); border-color:rgba(255,91,115,0.3);">
+                        <i class="fas fa-lock"></i> Sair / Bloquear
+                    </button>
+                </div>
+            </header>
+
+            <!-- CARDS DE RESUMO DO GERENTE -->
+            <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); margin-bottom: 24px;">
+                <div class="stat-card">
+                    <div class="stat-card-header">
+                        <span class="stat-label">Operadores Ativos</span>
+                        <div class="stat-icon cyan"><i class="fas fa-users-cog"></i></div>
+                    </div>
+                    <div class="stat-value" id="kpi-total-operators" style="color:var(--neon-cyan);">0</div>
+                    <div class="stat-desc">Membros cadastrados na equipe</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-card-header">
+                        <span class="stat-label">Leads em Atendimento</span>
+                        <div class="stat-icon purple"><i class="fas fa-briefcase"></i></div>
+                    </div>
+                    <div class="stat-value" id="kpi-total-assigned" style="color:var(--purple-light);">0</div>
+                    <div class="stat-desc">Distribuídos entre os operadores</div>
+                </div>
+
+                <div class="stat-card" style="border-color: rgba(0, 255, 136, 0.4); box-shadow: 0 0 15px rgba(0, 255, 136, 0.1);">
+                    <div class="stat-card-header">
+                        <span class="stat-label" style="color:var(--neon-green);">Faturamento da Equipe</span>
+                        <div class="stat-icon green"><i class="fas fa-trophy"></i></div>
+                    </div>
+                    <div class="stat-value" id="kpi-total-revenue" style="color:var(--neon-green);">R$ 0,00</div>
+                    <div class="stat-desc"><span id="kpi-total-closed">0</span> contratos fechados</div>
+                </div>
+            </div>
+
+            <!-- TABELA DE GESTÃO DE OPERADORES -->
+            <div class="card">
+                <div class="card-header" style="flex-wrap: wrap; gap: 12px;">
+                    <div>
+                        <div class="card-title">
+                            <i class="fas fa-id-card-clip"></i> Operadores da Equipe de Vendas
+                        </div>
+                        <span style="font-size: 13px; color: var(--text-secondary);">
+                            Defina o nome de cada pessoa (ex: "Mariana", "Lucas"), gerencie senhas e atribuições.
+                        </span>
+                    </div>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="loadOperatorsList()">
+                        <i class="fas fa-sync-alt"></i> Atualizar Lista
+                    </button>
+                </div>
+
+                <div style="overflow-x: auto;">
+                    <table class="leads-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;"></th>
+                                <th>Nome do Operador</th>
+                                <th>Usuário de Acesso</th>
+                                <th>Cargo / Nível</th>
+                                <th>Leads Atribuídos</th>
+                                <th>Contratos Fechados (R$)</th>
+                                <th style="text-align: right; width: 220px;">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="operators-table-body">
+                            <tr>
+                                <td colspan="7" style="text-align: center; padding: 40px; color: var(--text-secondary); font-size: 13.5px; font-weight: 500;">
+                                    <i class="fas fa-spinner fa-spin fa-2x"></i>
+                                    <div style="margin-top: 10px;">Carregando operadores...</div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <!-- 1. TELA DE BLOQUEIO POR SENHA DO GERENTE (ADMIN) -->
+        <div id="admin-auth-gate" class="admin-lock-screen">
+            <div style="text-align: center; margin-bottom: 24px;">
+                <div class="logo-icon" style="width: 58px; height: 58px; font-size: 24px; margin: 0 auto 16px auto; box-shadow: 0 0 25px rgba(0, 210, 255, 0.35);">
+                    <i class="fas fa-lock"></i>
+                </div>
+                <h2 style="font-size: 21px; font-weight: 800; color: #fff; letter-spacing: -0.5px;">Portal do Gerente</h2>
+                <p style="font-size: 13px; color: var(--text-secondary); margin-top: 6px;">
+                    Esta área é restrita ao administrador da equipe de vendas. Digite a senha para continuar.
+                </p>
+            </div>
+
+            <form id="admin-login-form" onsubmit="handleAdminLogin(event)">
+                <div class="form-group" style="margin-bottom: 14px;">
+                    <label class="form-label" style="font-size: 12.5px;">Usuário de Acesso</label>
+                    <input type="text" id="gate-username" class="form-control" value="admin" required>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label class="form-label" style="font-size: 12.5px;">
+                        <i class="fas fa-key" style="color:var(--neon-green);"></i> Senha do Gerente
+                    </label>
+                    <input type="password" id="gate-password" class="form-control" placeholder="Digite a senha..." autofocus required>
+                    <div id="gate-error-msg" style="color: var(--alert-red); font-size: 12px; margin-top: 6px; display: none;"></div>
+                </div>
+
+                <button type="submit" id="btn-gate-submit" class="btn btn-neon" style="width: 100%; justify-content: center; padding: 12px; font-weight: 800;">
+                    <i class="fas fa-unlock"></i> Desbloquear Interface
+                </button>
+            </form>
+
+            <div style="text-align: center; margin-top: 22px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.08);">
+                <a href="/" style="color: var(--neon-cyan); font-size: 13px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+                    <i class="fas fa-arrow-left"></i> Voltar para o CRM de Vendas
+                </a>
+            </div>
+        </div>
+    {% endif %}
+
+    </div>
+
+    {% if is_authenticated %}
+    <!-- MODAL PARA DAR NOME / EDITAR OPERADOR -->
+    <div id="edit-operator-modal" class="modal-overlay">
+        <div class="modal-container" style="max-width: 500px;">
+            <div class="modal-header">
+                <div>
+                    <h2 style="font-size: 18px; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-user-pen" style="color:var(--neon-cyan);"></i> Dar Nome / Editar Operador
+                    </h2>
+                    <span style="font-size: 12px; color: var(--text-secondary);">Atualize o nome de exibição e credenciais</span>
+                </div>
+                <button type="button" class="modal-close" onclick="closeEditModal()"><i class="fas fa-times"></i></button>
+            </div>
+
+            <form id="edit-operator-form" onsubmit="handleSaveOperator(event)">
+                <input type="hidden" id="edit-operator-id">
+                
+                <div style="display: flex; flex-direction: column; gap: 14px; padding: 12px 0;">
+                    <div class="form-group">
+                        <label class="form-label" style="font-size: 12.5px;">
+                            <i class="fas fa-signature" style="color:var(--neon-green);"></i> Nome da Pessoa / Operador:
+                        </label>
+                        <input type="text" id="edit-operator-name" class="form-control" placeholder="ex: Mariana Silva, Lucas Santos" required>
+                        <small style="color: var(--text-secondary); font-size: 12px; margin-top: 4px; display:block; font-weight: 500;">
+                            Este nome aparecerá nos leads, no CRM e nas estatísticas da equipe.
+                        </small>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div class="form-group">
+                            <label class="form-label" style="font-size: 12.5px;">Login (@username):</label>
+                            <input type="text" id="edit-operator-username" class="form-control" placeholder="ex: mariana" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" style="font-size: 12.5px;">Cargo:</label>
+                            <select id="edit-operator-role" class="form-control">
+                                <option value="operador">Operador de Vendas</option>
+                                <option value="gerente">Gerente / Administrador</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" style="font-size: 12.5px;">
+                            <i class="fas fa-key"></i> Nova Senha (Opcional):
+                        </label>
+                        <input type="password" id="edit-operator-password" class="form-control" placeholder="Deixe em branco para manter a atual">
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 14px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 14px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Cancelar</button>
+                    <button type="submit" class="btn btn-neon">
+                        <i class="fas fa-save"></i> Salvar Alterações
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL PARA CADASTRAR NOVO OPERADOR -->
+    <div id="add-operator-modal" class="modal-overlay">
+        <div class="modal-container" style="max-width: 500px;">
+            <div class="modal-header">
+                <div>
+                    <h2 style="font-size: 18px; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-user-plus" style="color:var(--neon-green);"></i> Cadastrar Novo Operador
+                    </h2>
+                    <span style="font-size: 12px; color: var(--text-secondary);">Adicione um novo membro para gerenciar leads no CRM</span>
+                </div>
+                <button type="button" class="modal-close" onclick="closeAddModal()"><i class="fas fa-times"></i></button>
+            </div>
+
+            <form id="add-operator-form" onsubmit="handleCreateOperator(event)">
+                <div style="display: flex; flex-direction: column; gap: 14px; padding: 12px 0;">
+                    <div class="form-group">
+                        <label class="form-label" style="font-size: 12.5px;">
+                            <i class="fas fa-signature" style="color:var(--neon-green);"></i> Nome Completo / Nome de Exibição:
+                        </label>
+                        <input type="text" id="add-operator-name" class="form-control" placeholder="ex: Lucas Santos" required>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div class="form-group">
+                            <label class="form-label" style="font-size: 12.5px;">Usuário de Acesso (@login):</label>
+                            <input type="text" id="add-operator-username" class="form-control" placeholder="ex: lucas" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" style="font-size: 12.5px;">Cargo:</label>
+                            <select id="add-operator-role" class="form-control">
+                                <option value="operador" selected>Operador de Vendas</option>
+                                <option value="gerente">Gerente / Administrador</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" style="font-size: 12.5px;">Senha de Acesso:</label>
+                        <input type="password" id="add-operator-password" class="form-control" value="senha123" placeholder="Senha do operador" required>
+                        <small style="color: var(--text-secondary); font-size: 12px; font-weight: 500;">Senha inicial padrão: <code>senha123</code></small>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 14px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 14px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeAddModal()">Cancelar</button>
+                    <button type="submit" class="btn btn-neon">
+                        <i class="fas fa-check"></i> Cadastrar Operador
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Script de Gestão do Gerente & Autenticação Akali -->
+    <script>
+        const IS_AUTHENTICATED = {{ 'true' if is_authenticated else 'false' }};
+        let operatorsList = [];
+
+        function formatBRL(value) {
+            const num = parseFloat(value) || 0;
+            return num.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (IS_AUTHENTICATED) {
+                loadOperatorsList();
+            } else {
+                const pwdInput = document.getElementById('gate-password');
+                if (pwdInput) pwdInput.focus();
+            }
+        });
+
+        // 1. CARREGAMENTO DOS OPERADORES (COM TRATAMENTO DE AUTENTICAÇÃO)
+        async function loadOperatorsList() {
+            try {
+                const res = await fetch('/api/admin/operators');
+                
+                if (res.status === 401 || res.status === 403) {
+                    window.location.reload();
+                    return;
+                }
+
+                const data = await res.json();
+                if (data.unauthorized) {
+                    window.location.reload();
+                    return;
+                }
+
+                operatorsList = Array.isArray(data) ? data : [];
+                renderOperatorsTable();
+                updateKpis();
+            } catch (err) {
+                console.error("Erro ao carregar operadores:", err);
+            }
+        }
+
+        // 2. LOGIN DO GERENTE COM ADMIN / AKALI
+        async function handleAdminLogin(e) {
+            e.preventDefault();
+            const u = document.getElementById('gate-username').value.trim();
+            const p = document.getElementById('gate-password').value;
+            const errorDiv = document.getElementById('gate-error-msg');
+            const submitBtn = document.getElementById('btn-gate-submit');
+
+            errorDiv.style.display = 'none';
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Validando acesso...`;
+
+            try {
+                const res = await fetch('/api/admin/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: u, password: p })
+                });
+                const data = await res.json();
+
+                if (res.ok && data.success) {
+                    window.location.reload();
+                } else {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = `<i class="fas fa-unlock"></i> Desbloquear Interface`;
+                    errorDiv.textContent = data.error || "Senha incorreta. Verifique suas credenciais de gerente.";
+                    errorDiv.style.display = 'block';
+                    document.getElementById('gate-password').focus();
+                }
+            } catch (err) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = `<i class="fas fa-unlock"></i> Desbloquear Interface`;
+                errorDiv.textContent = "Erro de conexão: " + err.message;
+                errorDiv.style.display = 'block';
+            }
+        }
+
+        async function handleAdminLogout() {
+            try {
+                await fetch('/api/admin/logout', { method: 'POST' });
+            } catch (e) {}
+            window.location.reload();
+        }
+
+        function updateKpis() {
+            const totalOps = operatorsList.length;
+            const totalAssigned = operatorsList.reduce((acc, u) => acc + (u.leads_count || 0), 0);
+            const totalRevenue = operatorsList.reduce((acc, u) => acc + (u.closed_value || 0), 0);
+            const totalClosed = operatorsList.reduce((acc, u) => acc + (u.closed_count || 0), 0);
+
+            if (document.getElementById('kpi-total-operators')) {
+                document.getElementById('kpi-total-operators').textContent = totalOps;
+            }
+            if (document.getElementById('kpi-total-assigned')) {
+                document.getElementById('kpi-total-assigned').textContent = totalAssigned;
+            }
+            if (document.getElementById('kpi-total-revenue')) {
+                document.getElementById('kpi-total-revenue').textContent = formatBRL(totalRevenue);
+            }
+            if (document.getElementById('kpi-total-closed')) {
+                document.getElementById('kpi-total-closed').textContent = totalClosed;
+            }
+        }
+
+        function renderOperatorsTable() {
+            const tbody = document.getElementById('operators-table-body');
+            if (!tbody) return;
+
+            if (operatorsList.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" style="text-align:center; padding:30px; color:var(--text-secondary); font-size:13.5px; font-weight:500;">
+                            Nenhum operador cadastrado. Clique no botão acima para adicionar.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = operatorsList.map(op => {
+                const initial = (op.name || op.username || 'O').charAt(0).toUpperCase();
+                const isGerente = op.role === 'admin' || op.role === 'gerente';
+                const roleClass = isGerente ? 'role-gerente' : 'role-operador';
+                const roleText = isGerente ? 'Gerente Geral' : 'Operador';
+                const closedVal = op.closed_value || 0;
+                const closedCount = op.closed_count || 0;
+
+                return `
+                    <tr class="op-row">
+                        <td>
+                            <div class="op-avatar">${initial}</div>
+                        </td>
+                        <td>
+                            <div style="font-weight: 700; color: #fff; font-size: 14px;">${escapeHtml(op.name)}</div>
+                            <small style="color: var(--text-secondary); font-size: 11.5px; font-weight: 500;">ID #${op.id} &bull; Criado em ${escapeHtml(op.created_at || 'recente')}</small>
+                        </td>
+                        <td>
+                            <span style="font-family: var(--font-mono); font-size: 13px; color: var(--neon-cyan);">@${escapeHtml(op.username)}</span>
+                        </td>
+                        <td>
+                            <span class="role-pill ${roleClass}">
+                                <i class="${isGerente ? 'fas fa-shield-alt' : 'fas fa-user'}"></i> ${roleText}
+                            </span>
+                        </td>
+                        <td>
+                            <strong style="color: #fff; font-size: 13.5px;">${op.leads_count || 0}</strong>
+                            <span style="color: var(--text-secondary); font-size: 12px; font-weight: 500;"> leads</span>
+                        </td>
+                        <td>
+                            <div style="font-weight: 700; color: var(--neon-green); font-size: 13.5px; font-family: var(--font-mono);">
+                                ${formatBRL(closedVal)}
+                            </div>
+                            <small style="color: var(--text-secondary); font-size: 11.5px; font-weight: 500;">${closedCount} contratos fechados</small>
+                        </td>
+                        <td style="text-align: right;">
+                            <div style="display: flex; gap: 6px; justify-content: flex-end;">
+                                <button type="button" class="btn btn-secondary btn-sm" onclick="openEditModal(${op.id})" title="Dar nome ou alterar dados">
+                                    <i class="fas fa-edit"></i> Dar Nome
+                                </button>
+                                <button type="button" class="btn btn-secondary btn-sm" style="color:#ff5b73; border-color:rgba(255,91,115,0.3);" onclick="confirmDeleteOperator(${op.id}, '${escapeHtml(op.name)}')" title="Excluir operador">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // MODAL DE EDIÇÃO / DAR NOME
+        function openEditModal(opId) {
+            const op = operatorsList.find(x => x.id === opId);
+            if (!op) return;
+
+            document.getElementById('edit-operator-id').value = op.id;
+            document.getElementById('edit-operator-name').value = op.name || '';
+            document.getElementById('edit-operator-username').value = op.username || '';
+            document.getElementById('edit-operator-role').value = (op.role === 'admin' || op.role === 'gerente') ? 'gerente' : 'operador';
+            document.getElementById('edit-operator-password').value = '';
+
+            document.getElementById('edit-operator-modal').classList.add('active');
+        }
+
+        function closeEditModal() {
+            document.getElementById('edit-operator-modal').classList.remove('active');
+        }
+
+        async function handleSaveOperator(e) {
+            e.preventDefault();
+            const id = document.getElementById('edit-operator-id').value;
+            const name = document.getElementById('edit-operator-name').value.trim();
+            const username = document.getElementById('edit-operator-username').value.trim();
+            const role = document.getElementById('edit-operator-role').value;
+            const pwd = document.getElementById('edit-operator-password').value;
+
+            const payload = { name, username, role };
+            if (pwd && pwd.trim().length > 0) payload.password = pwd.trim();
+
+            try {
+                const res = await fetch(`/api/admin/operators/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (data.success) {
+                    closeEditModal();
+                    alert(`Operador atualizado com sucesso! Nome definido para "${name}".`);
+                    loadOperatorsList();
+                } else {
+                    alert(data.error || "Erro ao salvar alterações.");
+                }
+            } catch (err) {
+                alert("Erro ao conectar com o servidor: " + err.message);
+            }
+        }
+
+        // MODAL DE CADASTRO
+        function openAddOperatorModal() {
+            document.getElementById('add-operator-name').value = '';
+            document.getElementById('add-operator-username').value = '';
+            document.getElementById('add-operator-password').value = 'senha123';
+            document.getElementById('add-operator-role').value = 'operador';
+            document.getElementById('add-operator-modal').classList.add('active');
+        }
+
+        function closeAddModal() {
+            document.getElementById('add-operator-modal').classList.remove('active');
+        }
+
+        async function handleCreateOperator(e) {
+            e.preventDefault();
+            const name = document.getElementById('add-operator-name').value.trim();
+            const username = document.getElementById('add-operator-username').value.trim();
+            const role = document.getElementById('add-operator-role').value;
+            const password = document.getElementById('add-operator-password').value.trim();
+
+            try {
+                const res = await fetch('/api/admin/operators', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, username, role, password })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    closeAddModal();
+                    alert(`Operador "${name}" cadastrado com sucesso!`);
+                    loadOperatorsList();
+                } else {
+                    alert(data.error || "Erro ao cadastrar operador.");
+                }
+            } catch (err) {
+                alert("Erro ao conectar com o servidor: " + err.message);
+            }
+        }
+
+        // EXCLUSÃO
+        async function confirmDeleteOperator(opId, name) {
+            if (!confirm(`Tem certeza que deseja excluir o operador "${name}"?\nOs leads que estavam atribuídos a ele serão liberados como 'Sem responsável'.`)) {
+                return;
+            }
+
+            try {
+                const res = await fetch(`/api/admin/operators/${opId}`, {
+                    method: 'DELETE'
+                });
+                const data = await res.json();
+                if (data.success) {
+                    alert(`Operador "${name}" excluído.`);
+                    loadOperatorsList();
+                } else {
+                    alert(data.error || "Não foi possível excluir o operador.");
+                }
+            } catch (err) {
+                alert("Erro ao excluir operador: " + err.message);
+            }
+        }
+    </script>
+</body>
+</html>

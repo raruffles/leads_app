@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: leads-app
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app:app --host 0.0.0.0 --port $PORT
+    plan: free
+    autoDeploy: true
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: AUTH_REQUIRED
+        value: "false"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: WAHA_BASE_URL
+        value: "http://localhost:3000"
+      - key: WAHA_API_KEY
+        value: "2b5d16deb67241efa1cffa371e1f354b"

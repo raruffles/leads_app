@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <defs>
+    <!-- Gradiente Neon Principal (Cyan para Emerald) -->
+    <linearGradient id="kaptador-cyan-green" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00d2ff" />
+      <stop offset="50%" stop-color="#00f2fe" />
+      <stop offset="100%" stop-color="#00ff88" />
+    </linearGradient>
+
+    <!-- Gradiente Roxo / Violeta Profundo de Fundo -->
+    <linearGradient id="kaptador-bg-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#140e36" />
+      <stop offset="50%" stop-color="#0f1938" />
+      <stop offset="100%" stop-color="#080c1f" />
+    </linearGradient>
+
+    <!-- Gradiente de Borda Tech -->
+    <linearGradient id="kaptador-border-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00d2ff" stop-opacity="0.8" />
+      <stop offset="50%" stop-color="#7928ca" stop-opacity="0.3" />
+      <stop offset="100%" stop-color="#00ff88" stop-opacity="0.8" />
+    </linearGradient>
+
+    <!-- Brilho Neon Filtro -->
+    <filter id="neon-glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3.5" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+
+    <filter id="subtle-shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.6"/>
+    </filter>
+  </defs>
+
+  <!-- Base / Container Squircle Futurista -->
+  <rect x="4" y="4" width="92" height="92" rx="22" ry="22" 
+        fill="url(#kaptador-bg-grad)" 
+        stroke="url(#kaptador-border-grad)" 
+        stroke-width="2" 
+        filter="url(#subtle-shadow)" />
+
+  <!-- Radar Concéntrico Sutil de Fundo -->
+  <circle cx="50" cy="50" r="34" fill="none" stroke="#00d2ff" stroke-width="0.8" stroke-opacity="0.15" stroke-dasharray="3, 3" />
+  <circle cx="50" cy="50" r="22" fill="none" stroke="#00ff88" stroke-width="0.8" stroke-opacity="0.2" stroke-dasharray="2, 4" />
+  <circle cx="50" cy="50" r="10" fill="none" stroke="#7928ca" stroke-width="0.8" stroke-opacity="0.3" />
+
+  <!-- Linha de Mira / Mira Laser -->
+  <line x1="50" y1="14" x2="50" y2="22" stroke="#00d2ff" stroke-width="1.5" stroke-linecap="round" opacity="0.6" />
+  <line x1="50" y1="78" x2="50" y2="86" stroke="#00ff88" stroke-width="1.5" stroke-linecap="round" opacity="0.6" />
+  <line x1="14" y1="50" x2="22" y2="50" stroke="#00d2ff" stroke-width="1.5" stroke-linecap="round" opacity="0.6" />
+  <line x1="78" y1="50" x2="86" y2="50" stroke="#00ff88" stroke-width="1.5" stroke-linecap="round" opacity="0.6" />
+
+  <!-- SÍMBOLO 'K' HIGH-TECH CAPTADOR (COM BRILHO NEON) -->
+  <g filter="url(#neon-glow)">
+    <!-- Barra Vertical do 'K' -->
+    <path d="M 31 24 
+             C 31 21.8, 32.8 20, 35 20 
+             C 37.2 20, 39 21.8, 39 24 
+             L 39 76 
+             C 39 78.2, 37.2 80, 35 80 
+             C 32.8 80, 31 78.2, 31 76 
+             Z" 
+          fill="url(#kaptador-cyan-green)" />
+
+    <!-- Braço Superior do 'K' (Flecha / Radar Beam para cima) -->
+    <path d="M 44 48 
+             L 67 25 
+             C 68.6 23.4, 71.2 23.4, 72.8 25 
+             C 74.4 26.6, 74.4 29.2, 72.8 30.8 
+             L 53 50.5 
+             Z" 
+          fill="url(#kaptador-cyan-green)" />
+
+    <!-- Braço Inferior do 'K' (Flecha / Radar Beam para baixo com cauda rápida) -->
+    <path d="M 46 51 
+             L 68 73.2 
+             C 69.6 74.8, 69.6 77.4, 68 79 
+             C 66.4 80.6, 63.8 80.6, 62.2 79 
+             L 41 57.5 
+             Z" 
+          fill="url(#kaptador-cyan-green)" />
+
+    <!-- Núcleo de Foco / Retículo de Captura Central -->
+    <circle cx="50" cy="50" r="3.5" fill="#ffffff" />
+    <circle cx="73" cy="27" r="2" fill="#00ff88" />
+    <circle cx="67" cy="77" r="2" fill="#00d2ff" />
+  </g>
+</svg>

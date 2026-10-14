@@ -1,0 +1,1841 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>KAPTADOR | B2B Lead Harvester & Web Sales Engine</title>
+    <link rel="icon" type="image/svg+xml" href="/static/img/kaptador-logo.svg">
+    <!-- FontAwesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Folha de estilo personalizada -->
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+    <!-- BARRA LATERAL DE NAVEGAÇÃO -->
+    <aside class="sidebar">
+        <div class="brand">
+            <img src="/static/img/kaptador-logo.svg" alt="Logo KAPTADOR" class="brand-logo-img">
+            <div class="brand-info">
+                <h1>KAPTADOR</h1>
+                <span class="brand-badge"><i class="fas fa-crosshairs"></i> LEAD RADAR B2B</span>
+            </div>
+        </div>
+
+        <ul class="nav-menu">
+            <li class="nav-item active" data-tab="dashboard">
+                <i class="fas fa-chart-line"></i>
+                <span>Dashboard</span>
+            </li>
+            <li class="nav-item" data-tab="scraper">
+                <i class="fas fa-satellite-dish"></i>
+                <span>Varredura de Leads</span>
+            </li>
+            <li class="nav-item" data-tab="campaigns">
+                <i class="fas fa-bullhorn"></i>
+                <span>Campanhas & CRM</span>
+            </li>
+            <li class="nav-item" data-tab="chat">
+                <i class="fas fa-comments" style="color:var(--neon-green);"></i>
+                <span>WhatsApp Web (Chat)</span>
+                <span id="chat-nav-badge" style="display:none; margin-left:auto; background:var(--neon-green); color:#000; font-size:10px; font-weight:800; border-radius:10px; padding:1px 6px;">0</span>
+            </li>
+            <li class="nav-item" data-tab="whatsapp">
+                <i class="fab fa-whatsapp" style="color:var(--neon-green);"></i>
+                <span>Conexão WAHA</span>
+            </li>
+            <li class="nav-item" data-tab="settings">
+                <i class="fas fa-sliders-h"></i>
+                <span>Configurações</span>
+            </li>
+            <li style="margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(157,78,221,0.15);">
+                <a href="/admin" style="display:flex; align-items:center; gap:12px; padding:10px 14px; color:var(--neon-cyan); text-decoration:none; border-radius:8px; font-weight:700; font-size:12.5px; background:rgba(0,210,255,0.06); border:1px solid rgba(0,210,255,0.2); transition:all 0.2s;" onmouseover="this.style.background='rgba(0,210,255,0.12)'" onmouseout="this.style.background='rgba(0,210,255,0.06)'">
+                    <i class="fas fa-user-shield" style="font-size:15px;"></i>
+                    <span>Portal do Gerente</span>
+                    <span style="margin-left:auto; font-size:10px; background:var(--neon-cyan); color:#000; padding:1px 5px; border-radius:4px; font-weight:800;">/admin</span>
+                </a>
+            </li>
+        </ul>
+
+        <div class="sidebar-status">
+            <div class="status-row">
+                <span style="color:var(--text-secondary);"><span class="status-dot"></span> Scraper Engine</span>
+                <strong style="color:var(--neon-green);">ONLINE</strong>
+            </div>
+            <div class="status-row">
+                <span style="color:var(--text-secondary);"><span class="status-dot" id="waha-sidebar-dot" style="background:#ff3b57;"></span> WAHA API</span>
+                <strong id="waha-sidebar-status" style="color:var(--text-secondary); font-size:11.5px; font-weight:600;">OFFLINE</strong>
+            </div>
+            <div class="status-row">
+                <span style="color:var(--text-secondary);">Deep Scraping</span>
+                <span style="color:var(--neon-cyan);">Ativo</span>
+            </div>
+            <div class="status-row">
+                <span style="color:var(--text-secondary);">Proteção Anti-block</span>
+                <span style="color:var(--neon-green);">Ativa</span>
+            </div>
+        </div>
+    </aside>
+
+    <!-- WRAPPER PRINCIPAL -->
+    <div class="main-wrapper">
+        
+        <!-- TOPBAR -->
+        <header class="topbar">
+            <div class="page-title">
+                <i class="fas fa-terminal"></i>
+                <span id="page-title-text">Visão Geral & Métricas</span>
+            </div>
+
+            <div class="topbar-actions" style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                <!-- LINK DIRETO PARA O PORTAL DO GERENTE (/admin) -->
+                <a href="/admin" class="btn btn-secondary btn-sm" style="color:var(--neon-cyan); border-color:rgba(0,210,255,0.35); font-weight:700;" title="Acessar Interface do Gerente para gerenciar pessoas e operadores">
+                    <i class="fas fa-user-shield"></i> Gerência (/admin)
+                </a>
+
+                <!-- PILULA DE OPERADOR ATIVO (CONTA DE USUÁRIO) -->
+                <div class="user-pill" id="topbar-user-pill" onclick="openLoginModal()" title="Conta de Operador Ativa (Clique para alternar operador ou alterar senha)">
+                    <i class="fas fa-user-circle" style="color:var(--neon-cyan); font-size:15px;"></i>
+                    <span id="topbar-user-name">Operador 1</span>
+                    <span class="user-status-dot" title="Sessão Ativa"></span>
+                </div>
+
+                <!-- DROPDOWN DE EXPORTAÇÃO -->
+                <div class="dropdown-container">
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="toggleDropdown('export-top-dropdown')">
+                        <i class="fas fa-file-export"></i> Exportar <i class="fas fa-chevron-down" style="font-size:10px; margin-left:3px;"></i>
+                    </button>
+                    <div id="export-top-dropdown" class="dropdown-content">
+                        <button type="button" class="dropdown-item" onclick="exportLeads('excel'); closeAllDropdowns();">
+                            <i class="fas fa-file-excel" style="color:var(--neon-green);"></i> Exportar Tudo (.xlsx)
+                        </button>
+                        <button type="button" class="dropdown-item" onclick="exportLeads('csv'); closeAllDropdowns();">
+                            <i class="fas fa-file-csv" style="color:var(--neon-cyan);"></i> Exportar Tudo (.csv)
+                        </button>
+                        <div style="border-top:1px solid rgba(255,255,255,0.08); margin:4px 0;"></div>
+                        <button type="button" class="dropdown-item success" onclick="exportClosedLeads('excel'); closeAllDropdowns();">
+                            <i class="fas fa-trophy" style="color:var(--neon-green);"></i> <strong>Exportar Fechados (.xlsx)</strong>
+                        </button>
+                        <button type="button" class="dropdown-item success" onclick="exportClosedLeads('csv'); closeAllDropdowns();">
+                            <i class="fas fa-trophy" style="color:var(--neon-cyan);"></i> <strong>Exportar Fechados (.csv)</strong>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- DROPDOWN DE GESTÃO E LIMPEZA DE BASE -->
+                <div class="dropdown-container">
+                    <button type="button" class="btn btn-secondary btn-sm" style="color:#ffaa00; border-color:rgba(255,170,0,0.4);" onclick="toggleDropdown('cleanup-top-dropdown')">
+                        <i class="fas fa-filter-circle-xmark"></i> Base de Leads <i class="fas fa-chevron-down" style="font-size:10px; margin-left:3px;"></i>
+                    </button>
+                    <div id="cleanup-top-dropdown" class="dropdown-content">
+                        <button type="button" class="dropdown-item success" onclick="openCleanupModal('keep_closed'); closeAllDropdowns();">
+                            <i class="fas fa-shield-alt" style="color:var(--neon-green);"></i> <strong>Salvar Só Fechados</strong> (Limpar outros)
+                        </button>
+                        <button type="button" class="dropdown-item" onclick="openCleanupModal('keep_new'); closeAllDropdowns();">
+                            <i class="fas fa-sparkles" style="color:var(--neon-cyan);"></i> <strong>Manter Apenas Novos</strong>
+                        </button>
+                        <div style="border-top:1px solid rgba(255,255,255,0.08); margin:4px 0;"></div>
+                        <button type="button" class="dropdown-item danger" onclick="openCleanupModal('all'); closeAllDropdowns();">
+                            <i class="fas fa-trash-alt" style="color:#ff5b73;"></i> Limpar Todos os Leads
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- CONTAINER PRINCIPAL DAS TELAS -->
+        <main class="content-container">
+
+            <!-- 1. ABA DASHBOARD -->
+            <section id="tab-dashboard" class="tab-content active">
+                <!-- GRID DE MÉTRICAS -->
+                <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));">
+                    <div class="stat-card">
+                        <div class="stat-card-header">
+                            <span class="stat-label">Total de Leads Capturados</span>
+                            <div class="stat-icon purple"><i class="fas fa-users"></i></div>
+                        </div>
+                        <div class="stat-value" id="stat-total-leads">0</div>
+                        <div class="stat-desc">Empresas indexadas no sistema</div>
+                    </div>
+
+                    <!-- CARD DE VALOR DOS FECHADOS / FATURAMENTO -->
+                    <div class="stat-card" style="border-color: rgba(0, 255, 136, 0.4); box-shadow: 0 0 15px rgba(0, 255, 136, 0.1);">
+                        <div class="stat-card-header">
+                            <span class="stat-label" style="color:var(--neon-green);">Valor Fechado (Vendas)</span>
+                            <div class="stat-icon green"><i class="fas fa-trophy"></i></div>
+                        </div>
+                        <div class="stat-value" id="stat-total-fechado-valor" style="color:var(--neon-green); font-size: 24px;">R$ 0,00</div>
+                        <div class="stat-desc">
+                            <span id="stat-leads-fechado-count">0</span> clientes convertidos
+                        </div>
+                    </div>
+
+                    <!-- CARD DE PIPELINE EM PROPOSTA -->
+                    <div class="stat-card" style="border-color: rgba(255, 123, 0, 0.4); box-shadow: 0 0 15px rgba(255, 123, 0, 0.1);">
+                        <div class="stat-card-header">
+                            <span class="stat-label" style="color:var(--alert-orange);">Pipeline em Proposta</span>
+                            <div class="stat-icon red" style="background: rgba(255, 123, 0, 0.1); border-color: rgba(255, 123, 0, 0.3);"><i class="fas fa-file-invoice-dollar" style="color:var(--alert-orange);"></i></div>
+                        </div>
+                        <div class="stat-value" id="stat-total-proposta-valor" style="color:var(--alert-orange); font-size: 24px;">R$ 0,00</div>
+                        <div class="stat-desc">
+                            <span id="stat-leads-proposta-count">0</span> propostas em negociação
+                        </div>
+                    </div>
+
+                    <!-- TAXA DE CONVERSÃO & TICKET MÉDIO -->
+                    <div class="stat-card">
+                        <div class="stat-card-header">
+                            <span class="stat-label">Conversão & Ticket Médio</span>
+                            <div class="stat-icon cyan"><i class="fas fa-chart-pie"></i></div>
+                        </div>
+                        <div class="stat-value" id="stat-conversion-rate" style="color:var(--neon-cyan); font-size: 24px;">0%</div>
+                        <div class="stat-desc">
+                            Ticket Médio: <strong id="stat-avg-ticket" style="color:#fff;">R$ 0,00</strong>
+                        </div>
+                    </div>
+
+                    <div class="stat-card" style="border-color: rgba(255, 59, 87, 0.4); box-shadow: 0 0 15px rgba(255, 59, 87, 0.1);">
+                        <div class="stat-card-header">
+                            <span class="stat-label" style="color:#ff8598;">Sem Site / Ouro</span>
+                            <div class="stat-icon red"><i class="fas fa-exclamation-triangle"></i></div>
+                        </div>
+                        <div class="stat-value" id="stat-no-website" style="color:#ff5b73;">0</div>
+                        <div class="stat-desc">Leads prioritários para venda de sites</div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-card-header">
+                            <span class="stat-label">Com WhatsApp</span>
+                            <div class="stat-icon green"><i class="fab fa-whatsapp"></i></div>
+                        </div>
+                        <div class="stat-value" id="stat-with-whatsapp" style="color:var(--neon-green);">0</div>
+                        <div class="stat-desc">Validados com link direto</div>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1.4fr 1fr; gap: 24px;">
+                    <!-- HISTÓRICO DE VARREDURAS -->
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <i class="fas fa-history"></i> Histórico de Varreduras Recentes
+                            </div>
+                        </div>
+                        <div id="recent-scans-list">
+                            <!-- Injetado via JS -->
+                        </div>
+                    </div>
+
+                    <!-- CARD DE ORIENTAÇÃO DE PROSPECÇÃO -->
+                    <div class="card" style="background: linear-gradient(145deg, rgba(22, 14, 52, 0.8), rgba(11, 21, 45, 0.8)); border-color: rgba(0, 255, 136, 0.3);">
+                        <div class="card-header">
+                            <div class="card-title" style="color: var(--neon-green);">
+                                <i class="fas fa-lightbulb"></i> Estratégia de Prospecção
+                            </div>
+                        </div>
+                        <p style="font-size: 13.5px; line-height: 1.6; color: var(--text-secondary); margin-bottom: 14px;">
+                            Empresas identificadas com a tag <span class="badge-no-site" style="font-size:10px; padding:2px 6px;">Sem Site / Precisa de Site</span> possuem a maior taxa de conversão para vendas de desenvolvimento web.
+                        </p>
+                        <ul style="font-size: 13px; color: var(--text-secondary); line-height: 1.8; padding-left: 20px;">
+                            <li>Aborde pelo WhatsApp com uma mensagem consultiva e objetiva.</li>
+                            <li>Ofereça um modelo visual ou protótipo demonstrativo personalizado.</li>
+                            <li>Destaque a perda de clientes na região pela falta de presença no Google.</li>
+                        </ul>
+                        <div style="margin-top: 18px;">
+                            <button class="btn btn-neon btn-sm" onclick="document.querySelector('[data-tab=\'scraper\']').click()">
+                                <i class="fas fa-search"></i> Iniciar Nova Varredura Agora
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RADAR DE LEADS & ACESSO RÁPIDO AO PIPELINE (ARRASTAR PARA O CRM / GERENCIAR / REMOVER) -->
+                <div class="card" style="margin-top: 24px;">
+                    <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                        <div>
+                            <div class="card-title">
+                                <i class="fas fa-crosshairs" style="color:var(--neon-cyan);"></i> Radar de Leads & Oportunidades
+                            </div>
+                            <span style="font-size: 12.5px; color: var(--text-secondary);">
+                                Arraste um lead até a aba <strong>Campanhas & CRM</strong> para abrir no Pipeline, ou gerencie/remova diretamente aqui.
+                            </span>
+                        </div>
+                        <div style="display:flex; gap:8px; align-items:center;">
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="switchTab('campaigns')" style="color:var(--neon-green); border-color:rgba(0,255,136,0.3);">
+                                <i class="fas fa-columns"></i> Abrir CRM Pipeline
+                            </button>
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="switchTab('scraper')">
+                                <i class="fas fa-list"></i> Ver Base Completa
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="dashboard-leads-grid" class="dashboard-leads-container">
+                        <!-- Injetado dinamicamente via JS -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- 2. ABA VARREDURA DE LEADS -->
+            <section id="tab-scraper" class="tab-content">
+                <!-- FORMULÁRIO DE BUSCA -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <i class="fas fa-crosshairs"></i> Configuração da Varredura de Mercado
+                        </div>
+                        <span style="font-size: 12px; color: var(--neon-green); font-family: var(--font-mono);">
+                            <i class="fas fa-network-wired"></i> Deep Scraping Ativo
+                        </span>
+                    </div>
+
+                    <form id="scan-form">
+                        <div class="search-form-grid" style="grid-template-columns: 1fr 140px 1.1fr 110px 160px;">
+                            <div class="form-group">
+                                <label class="form-label" for="niche-input">
+                                    <i class="fas fa-tag"></i> Nicho de Mercado
+                                </label>
+                                <input type="text" id="niche-input" class="form-control" placeholder="ex: Academias, Clínicas, Advogados" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label" for="cep-input">
+                                    <i class="fas fa-mail-bulk" style="color:var(--neon-cyan);"></i> CEP (Opcional)
+                                </label>
+                                <input type="text" id="cep-input" class="form-control" placeholder="12245-000" maxlength="9" inputmode="numeric" pattern="[0-9]*">
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label" for="location-input">
+                                    <i class="fas fa-map-marker-alt"></i> Cidade / Estado
+                                </label>
+                                <input type="text" id="location-input" class="form-control" placeholder="ex: São José dos Campos - SP" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label" for="max-leads-select">
+                                    <i class="fas fa-list-ol"></i> Qtd.
+                                </label>
+                                <select id="max-leads-select" class="form-control">
+                                    <option value="10">10</option>
+                                    <option value="15" selected>15</option>
+                                    <option value="25">25</option>
+                                    <option value="40">40</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <button type="submit" id="start-scan-btn" class="btn btn-neon" style="height: 45px; width: 100%;">
+                                    <i class="fas fa-bolt"></i> VARREDURA
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- BADGE DE RESOLUÇÃO DO CEP / CIDADE -->
+                        <div id="cep-resolved-badge" style="display:none; margin-top: 12px; padding: 8px 12px; background: rgba(0, 255, 136, 0.1); border: 1px solid rgba(0, 255, 136, 0.3); border-radius: 8px; font-size: 12.5px; color: var(--neon-green);">
+                            <i class="fas fa-check-circle"></i> <span id="cep-resolved-text"></span>
+                        </div>
+                    </form>
+
+                    <!-- OPÇÃO DE IMPORTAR DIRETO DO INSTANT DATA SCRAPER -->
+                    <div style="margin-top: 14px; padding-top: 12px; border-top: 1px dashed rgba(157, 78, 221, 0.2); display: flex; align-items: center; justify-content: space-between;">
+                        <span style="font-size: 12.5px; color: var(--text-secondary);">
+                            <i class="fas fa-file-import" style="color:var(--neon-cyan);"></i> Já raspou no Chrome com o <strong>Instant Data Scraper</strong>?
+                        </span>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="openImportModal()">
+                            <i class="fas fa-paste"></i> Colar ou Importar CSV do Instant Data Scraper
+                        </button>
+                    </div>
+
+                    <!-- PAINEL DE PROGRESSO EM TEMPO REAL -->
+                    <div id="progress-panel" class="progress-panel">
+                        <div class="progress-header">
+                            <div id="progress-status-text" class="progress-status-text">
+                                <i class="fas fa-satellite-dish fa-spin"></i> Inicializando radar de varredura...
+                            </div>
+                            <div id="progress-percent-text" class="progress-percent">0%</div>
+                        </div>
+
+                        <div class="progress-bar-container">
+                            <div id="progress-bar-fill" class="progress-bar-fill"></div>
+                        </div>
+
+                        <!-- TERMINAL DE LOGS -->
+                        <div id="terminal-logs" class="terminal-console">
+                            <!-- Linhas inseridas pelo SSE -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TABELA DE RESULTADOS DOS LEADS -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <i class="fas fa-table"></i> Leads Capturados
+                            <span id="table-count-badge" class="brand-badge" style="margin-left: 8px;">0 encontrados</span>
+                        </div>
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                            <button class="btn btn-secondary btn-sm" style="color:var(--neon-cyan); border-color: rgba(0, 210, 255, 0.4);" onclick="openExecutiveReportModal()">
+                                <i class="fas fa-file-invoice"></i> Relatório Executivo
+                            </button>
+                            <button class="btn btn-secondary btn-sm" style="color:var(--neon-green); border-color: rgba(0, 255, 136, 0.4);" onclick="exportClosedLeads('excel')">
+                                <i class="fas fa-trophy"></i> Exportar Fechados
+                            </button>
+                            <button class="btn btn-secondary btn-sm" onclick="exportLeads('excel')">
+                                <i class="fas fa-file-excel"></i> Exportar Tudo
+                            </button>
+                            <button class="btn btn-secondary btn-sm" style="color:#ffaa00; border-color: rgba(255, 170, 0, 0.4);" onclick="openCleanupModal('keep_closed')">
+                                <i class="fas fa-shield-alt"></i> Salvar Só Fechados
+                            </button>
+                            <button class="btn btn-secondary btn-sm" style="color:#ff5b73; border-color: rgba(255, 91, 115, 0.4);" onclick="openCleanupModal('all')">
+                                <i class="fas fa-trash-alt"></i> Limpar Dados
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- BARRA DE FILTROS E PESQUISA -->
+                    <div class="table-filters-bar">
+                        <div class="filter-buttons" style="flex-wrap: wrap;">
+                            <button class="filter-btn active" data-filter="all">Todos os Leads</button>
+                            <button class="filter-btn" data-filter="no-site" style="border-color: rgba(255, 59, 87, 0.4);">
+                                <i class="fas fa-fire" style="color:var(--alert-red);"></i> Sem Site
+                            </button>
+                            <button class="filter-btn" data-filter="whatsapp">
+                                <i class="fab fa-whatsapp" style="color:var(--neon-green);"></i> Com WhatsApp
+                            </button>
+                            <button class="filter-btn" data-filter="proposta" style="border-color: rgba(255, 123, 0, 0.4);">
+                                <i class="fas fa-file-invoice-dollar" style="color:var(--alert-orange);"></i> Em Proposta
+                            </button>
+                            <button class="filter-btn" data-filter="fechado" style="border-color: rgba(0, 255, 136, 0.4);">
+                                <i class="fas fa-trophy" style="color:var(--neon-green);"></i> Fechados
+                            </button>
+                            <button class="filter-btn" data-filter="my-leads" style="border-color: rgba(0, 210, 255, 0.4);">
+                                <i class="fas fa-user-check" style="color:var(--neon-cyan);"></i> Meus Leads
+                            </button>
+                            <button class="filter-btn" data-filter="photos">
+                                <i class="fas fa-camera" style="color:var(--neon-cyan);"></i> Com Fotos
+                            </button>
+                            <button class="filter-btn" data-filter="email">
+                                <i class="fas fa-envelope" style="color:var(--neon-cyan);"></i> Com E-mail
+                            </button>
+                            <select id="table-operator-filter" class="form-control" style="width: auto; padding: 4px 8px; font-size: 11.5px; height: 32px;" onchange="applyFiltersAndRender()">
+                                <option value="all">👤 Todos Operadores</option>
+                            </select>
+                        </div>
+
+                        <div class="search-box">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="table-search-input" placeholder="Filtrar por nome, telefone, valor ou operador...">
+                        </div>
+                    </div>
+
+                    <!-- BARRA DE AÇÕES EM MASSA -->
+                    <div id="table-bulk-bar" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; background: rgba(0, 255, 136, 0.05); border: 1px solid rgba(0, 255, 136, 0.2); border-radius: 8px; margin-bottom: 12px;">
+                        <div style="display: flex; align-items: center; gap: 12px; font-size: 13px;">
+                            <span style="color: var(--text-secondary);">Selecionados: <strong id="selected-leads-count" style="color: var(--neon-green); font-size: 14px;">0</strong></span>
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="selectAllLeads(true)">
+                                <i class="fas fa-check-square"></i> Marcar Todos
+                            </button>
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="selectAllLeads(false)">
+                                <i class="fas fa-square"></i> Desmarcar
+                            </button>
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <button type="button" id="btn-bulk-whatsapp" class="btn btn-neon btn-sm" onclick="handleBulkSendAction(this)">
+                                <i class="fab fa-whatsapp"></i> Disparar WhatsApp em Massa (<span id="bulk-btn-count">0</span>)
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- TABELA (DESKTOP) -->
+                    <div class="leads-table-container">
+                        <table class="leads-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 40px; text-align: center;">
+                                        <input type="checkbox" id="th-select-all" class="lead-select-checkbox" onchange="toggleSelectAllRows(this)" title="Selecionar Todos">
+                                    </th>
+                                    <th>Empresa</th>
+                                    <th>WhatsApp</th>
+                                    <th>Telefone</th>
+                                    <th>Valor (R$)</th>
+                                    <th>Responsável</th>
+                                    <th>Site Oficial</th>
+                                    <th>Google / Maps</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="leads-table-body">
+                                <!-- Injetado via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- CARDS DE LEADS PARA CELULAR (MOBILE) -->
+                    <div id="leads-mobile-cards" class="leads-mobile-cards-container">
+                        <!-- Injetado via JS no mobile -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- 3. ABA CAMPANHAS / CRM -->
+            <section id="tab-campaigns" class="tab-content">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <i class="fas fa-columns"></i> Pipeline de Prospecção & Vendas (CRM Kanban)
+                        </div>
+                        <span style="font-size: 13px; color: var(--text-secondary);">
+                            Gerencie valores de fechamento, propostas e atribuição de leads entre os 2 operadores.
+                        </span>
+                    </div>
+
+                    <!-- STRIP DE KPIS FINANCEIROS NO CRM KANBAN -->
+                    <div class="kanban-financial-strip">
+                        <div class="kanban-fin-card" style="border-left: 4px solid var(--neon-green);">
+                            <div>
+                                <div class="kanban-fin-label">Vendas Fechadas (Receita)</div>
+                                <div class="kanban-fin-val" id="kanban-total-fechado" style="color:var(--neon-green);">R$ 0,00</div>
+                            </div>
+                            <i class="fas fa-trophy" style="font-size: 24px; color: var(--neon-green); opacity: 0.8;"></i>
+                        </div>
+                        <div class="kanban-fin-card" style="border-left: 4px solid var(--alert-orange);">
+                            <div>
+                                <div class="kanban-fin-label">Pipeline em Proposta</div>
+                                <div class="kanban-fin-val" id="kanban-total-proposta" style="color:var(--alert-orange);">R$ 0,00</div>
+                            </div>
+                            <i class="fas fa-file-invoice-dollar" style="font-size: 24px; color: var(--alert-orange); opacity: 0.8;"></i>
+                        </div>
+                        <div class="kanban-fin-card" style="border-left: 4px solid var(--neon-cyan);">
+                            <div>
+                                <div class="kanban-fin-label">Ticket Médio dos Fechados</div>
+                                <div class="kanban-fin-val" id="kanban-avg-ticket" style="color:var(--neon-cyan);">R$ 0,00</div>
+                            </div>
+                            <i class="fas fa-calculator" style="font-size: 24px; color: var(--neon-cyan); opacity: 0.8;"></i>
+                        </div>
+                        <div class="kanban-fin-card" style="border-left: 4px solid var(--purple-light);">
+                            <div>
+                                <div class="kanban-fin-label">Taxa de Conversão</div>
+                                <div class="kanban-fin-val" id="kanban-conversion-rate" style="color:#c084fc;">0%</div>
+                            </div>
+                            <i class="fas fa-chart-line" style="font-size: 24px; color: var(--purple-light); opacity: 0.8;"></i>
+                        </div>
+                    </div>
+
+                    <!-- BARRA DE PESQUISA & FILTROS DO KANBAN -->
+                    <div style="display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-bottom: 14px;">
+                        <div style="display: flex; gap: 10px; align-items: center; flex: 1; min-width: 260px;">
+                            <div style="position: relative; flex: 1; max-width: 320px;">
+                                <i class="fas fa-search" style="position: absolute; left: 12px; top: 11px; color: var(--text-secondary); font-size: 13px;"></i>
+                                <input type="text" id="kanban-search-input" class="form-control" style="padding-left: 36px; font-size: 13px;" placeholder="Buscar empresa no Kanban..." oninput="filterKanbanCards()">
+                            </div>
+                            <select id="kanban-operator-filter" class="form-control" style="width: auto; font-size: 12.5px; padding: 7px 12px;" onchange="filterKanbanCards()">
+                                <option value="all">Todos os Operadores</option>
+                            </select>
+                            <button type="button" id="kanban-btn-no-site" class="btn btn-secondary btn-sm" onclick="toggleKanbanNoSiteFilter()" style="font-size: 12px;">
+                                <i class="fas fa-filter"></i> Só Sem Site
+                            </button>
+                        </div>
+                        <div style="font-size: 12px; color: var(--text-secondary); font-weight: 500; display: flex; align-items: center; gap: 6px;">
+                            <i class="fas fa-info-circle" style="color:var(--neon-cyan);"></i>
+                            <span>Arraste os cards entre as colunas do funil ou para a lixeira.</span>
+                        </div>
+                    </div>
+
+                    <!-- ZONA DE REMOÇÃO VIA DRAG AND DROP -->
+                    <div id="kanban-trash-dropzone" class="kanban-trash-zone" 
+                         ondragover="onTrashDragOver(event)" 
+                         ondragleave="onTrashDragLeave(event)" 
+                         ondrop="onTrashDrop(event)">
+                        <i class="fas fa-trash-alt"></i>
+                        <span>Arraste um lead até aqui para <strong>Remover da Lista</strong></span>
+                    </div>
+
+                    <div id="kanban-container" class="kanban-grid">
+                        <!-- Colunas injetadas via JS -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- 3.5. ABA WHATSAPP WEB & CENTRAL MULTI-CANAL -->
+            <section id="tab-chat" class="tab-content">
+                <div class="whatsapp-web-container">
+                    <!-- COLUNA LATERAL DE CONVERSAS (WHATSAPP WEB LIST) -->
+                    <aside class="chat-sidebar">
+                        <!-- BARRA SUPERIOR DO OPERADOR -->
+                        <div class="chat-sidebar-header">
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                <div class="chat-user-avatar">
+                                    <i class="fas fa-user-tie"></i>
+                                    <span class="chat-status-dot online" title="Operador Conectado"></span>
+                                </div>
+                                <div>
+                                    <div style="font-weight:700; font-size:13.5px; color:#fff;" id="chat-current-operator">Operador</div>
+                                    <div style="font-size:11px; color:var(--neon-green); display:flex; align-items:center; gap:4px;">
+                                        <span id="chat-waha-indicator">🟢 WAHA Pronto</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="display:flex; gap:6px; align-items:center;">
+                                <button type="button" class="btn btn-neon btn-sm" onclick="openNewChatModal()" title="Iniciar Conversa com Qualquer Número (Seu número, esposa, etc.)" style="font-weight:700; padding:6px 12px; font-size:12px;">
+                                    <i class="fas fa-plus"></i> Nova Conversa
+                                </button>
+                                <button type="button" class="btn btn-secondary btn-icon" onclick="loadChatConversations()" title="Recarregar Conversas" style="width:34px; height:34px; padding:0;">
+                                    <i class="fas fa-sync-alt"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- BARRA DE PESQUISA -->
+                        <div class="chat-search-bar">
+                            <div class="chat-search-input-wrapper">
+                                <i class="fas fa-search" style="color:var(--text-secondary);"></i>
+                                <input type="text" id="chat-search-input" placeholder="Buscar conversa, empresa ou número..." oninput="handleChatSearch(this.value)">
+                                <button type="button" id="chat-search-clear" onclick="clearChatSearch()" style="display:none; background:none; border:none; color:var(--text-secondary); cursor:pointer;"><i class="fas fa-times"></i></button>
+                            </div>
+                        </div>
+
+                        <!-- FILTROS RÁPIDOS EM PÍLULAS -->
+                        <div class="chat-filter-pills">
+                            <button type="button" class="chat-filter-pill active" onclick="setChatFilter('all', this)">Todos (<span id="chat-count-all">0</span>)</button>
+                            <button type="button" class="chat-filter-pill" onclick="setChatFilter('has_messages', this)">Conversas (<span id="chat-count-messages">0</span>)</button>
+                            <button type="button" class="chat-filter-pill" onclick="setChatFilter('whatsapp', this)"><i class="fab fa-whatsapp" style="color:var(--neon-green);"></i> WA</button>
+                            <button type="button" class="chat-filter-pill" onclick="setChatFilter('email', this)"><i class="fas fa-envelope" style="color:var(--neon-cyan);"></i> E-mail</button>
+                            <button type="button" class="chat-filter-pill" onclick="setChatFilter('clients', this)">🏆 Fechados</button>
+                        </div>
+
+                        <!-- LISTA DE CONVERSAS (SCROLLABLE) -->
+                        <div class="chat-conversation-list" id="chat-conversation-list">
+                            <!-- Injetado dinamicamente via JS -->
+                            <div style="text-align:center; padding:40px 10px; color:var(--text-secondary);">
+                                <i class="fas fa-spinner fa-spin" style="font-size:24px; color:var(--neon-green);"></i>
+                                <div style="margin-top:10px; font-size:13px;">Carregando conversas do CRM...</div>
+                            </div>
+                        </div>
+                    </aside>
+
+                    <!-- ÁREA PRINCIPAL DO CHAT -->
+                    <main class="chat-main-area">
+                        <!-- ESTADO VAZIO (NENHUM CHAT SELECIONADO) -->
+                        <div id="chat-empty-state" class="chat-empty-state">
+                            <div class="chat-empty-graphic">
+                                <div class="empty-icon-circle whatsapp"><i class="fab fa-whatsapp"></i></div>
+                                <div class="empty-icon-circle email"><i class="fas fa-envelope"></i></div>
+                                <div class="empty-icon-circle web"><i class="fas fa-globe"></i></div>
+                            </div>
+                            <h2 style="font-size:21px; font-weight:800; color:#fff; margin-bottom:8px;">WhatsApp Web & Central Multi-Canal</h2>
+                            <p style="color:var(--text-secondary); max-width:460px; font-size:13.5px; line-height:1.55; margin-bottom:20px;">
+                                Selecione um lead na coluna à esquerda para iniciar ou continuar o atendimento. Você pode alternar livremente entre <strong>WhatsApp Web</strong>, <strong>E-mail</strong> e <strong>Formulário do Site</strong>.
+                            </p>
+                            <div style="display:flex; gap:12px; flex-wrap:wrap; justify-content:center;">
+                                <button type="button" class="btn btn-whatsapp" onclick="focusFirstChat()">
+                                    <i class="fab fa-whatsapp"></i> Conversar com o 1º Lead
+                                </button>
+                                <button type="button" class="btn btn-secondary" onclick="openNewChatModal()">
+                                    <i class="fas fa-phone-alt"></i> Conversar com Qualquer Número
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- PAINEL DE CONVERSA ATIVA -->
+                        <div id="chat-active-panel" class="chat-active-panel" style="display:none;">
+                            <!-- CABEÇALHO DO CHAT -->
+                            <header class="chat-header">
+                                <div style="display:flex; align-items:center; gap:12px; min-width:0;">
+                                    <div class="chat-header-avatar" id="chat-lead-avatar">EA</div>
+                                    <div style="min-width:0;">
+                                        <div style="display:flex; align-items:center; gap:8px;">
+                                            <h3 id="chat-lead-name" style="font-size:15px; font-weight:700; color:#fff; margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Empresa</h3>
+                                            <span id="chat-lead-crm-badge" class="chat-crm-badge">Novo</span>
+                                        </div>
+                                        <div style="display:flex; align-items:center; gap:10px; font-size:12px; color:var(--text-secondary); margin-top:2px;">
+                                            <span id="chat-lead-phone" style="font-family:var(--font-mono); color:var(--neon-green); font-weight:600;"><i class="fab fa-whatsapp"></i> --</span>
+                                            <span id="chat-lead-category" style="color:var(--neon-cyan);">--</span>
+                                            <span id="chat-lead-deal" style="color:var(--neon-green); font-weight:700; display:none;"><i class="fas fa-coins"></i> R$ 0,00</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- AÇÕES DO CABEÇALHO -->
+                                <div style="display:flex; align-items:center; gap:8px; margin-left:auto;">
+                                    <button type="button" class="btn btn-secondary btn-sm" onclick="openLeadModalFromChat()" title="Ver ficha completa do Lead">
+                                        <i class="fas fa-id-card"></i> Ficha CRM
+                                    </button>
+                                    <button type="button" class="btn btn-secondary btn-sm" onclick="simulateClientReply()" title="Simular resposta de cliente (teste)" style="border-color:rgba(0,210,255,0.4); color:var(--neon-cyan);">
+                                        <i class="fas fa-reply"></i> Simular Resposta
+                                    </button>
+                                </div>
+                            </header>
+
+                            <!-- BARRA SELETORA DE CANAL DE ENVIO (CENTRAL MULTI-CANAL) -->
+                            <div class="channel-switcher-bar">
+                                <div class="channel-tabs-group">
+                                    <span class="channel-label"><i class="fas fa-exchange-alt"></i> Canal de Envio:</span>
+                                    <button type="button" class="channel-tab-btn active" id="channel-btn-whatsapp" onclick="setChatChannel('whatsapp')">
+                                        <i class="fab fa-whatsapp"></i> WhatsApp (WAHA)
+                                    </button>
+                                    <button type="button" class="channel-tab-btn" id="channel-btn-email" onclick="setChatChannel('email')">
+                                        <i class="fas fa-envelope"></i> E-mail (SMTP)
+                                    </button>
+                                    <button type="button" class="channel-tab-btn" id="channel-btn-site" onclick="setChatChannel('site')">
+                                        <i class="fas fa-globe"></i> Formulário do Site
+                                    </button>
+                                </div>
+                                <div class="channel-status-pill" id="chat-channel-status-pill">
+                                    <i class="fab fa-whatsapp" style="color:var(--neon-green);"></i> WAHA Ativo
+                                </div>
+                            </div>
+
+                            <!-- ÁREA DE HISTÓRICO DE MENSAGENS (WHATSAPP WEB THREAD) -->
+                            <div class="chat-thread-wrapper" id="chat-thread-wrapper">
+                                <div class="chat-messages-container" id="chat-messages-container">
+                                    <!-- Mensagens injetadas via JS -->
+                                </div>
+                            </div>
+
+                            <!-- BARRA DE SCRIPTS RÁPIDOS & VARIÁVEIS -->
+                            <div class="chat-scripts-bar">
+                                <div class="chat-vars-group">
+                                    <span style="font-size:11px; font-weight:700; color:var(--text-secondary); text-transform:uppercase;">Inserir:</span>
+                                    <button type="button" class="chat-var-tag" onclick="insertChatVar('{nome}')">{nome}</button>
+                                    <button type="button" class="chat-var-tag" onclick="insertChatVar('{empresa}')">{empresa}</button>
+                                    <button type="button" class="chat-var-tag" onclick="insertChatVar('{localizacao}')">{localizacao}</button>
+                                    <button type="button" class="chat-var-tag" onclick="insertChatVar('{nicho}')">{nicho}</button>
+                                </div>
+                                <div class="chat-templates-group">
+                                    <span style="font-size:11px; font-weight:700; color:var(--text-secondary); text-transform:uppercase;">Pitch:</span>
+                                    <button type="button" class="chat-template-btn" onclick="applyChatTemplate('contato')">1º Contato</button>
+                                    <button type="button" class="chat-template-btn" onclick="applyChatTemplate('follow1')">Follow 1</button>
+                                    <button type="button" class="chat-template-btn" onclick="applyChatTemplate('follow2')">Follow 2</button>
+                                    <button type="button" class="chat-template-btn" onclick="applyChatTemplate('proposta')">Proposta</button>
+                                </div>
+                            </div>
+
+                            <!-- COMPOSITOR MULTI-CANAL -->
+                            <div class="chat-composer-container">
+                                <!-- COMPOSITOR: WHATSAPP -->
+                                <div id="composer-whatsapp" class="composer-channel-view active">
+                                    <div class="composer-input-row">
+                                        <textarea id="chat-wa-input" class="chat-textarea" placeholder="Digite uma mensagem para enviar via WhatsApp Web (Enter envia, Shift+Enter quebra linha)..." rows="2" onkeydown="handleChatInputKey(event)"></textarea>
+                                        <button type="button" id="btn-send-wa" class="btn btn-whatsapp chat-send-btn" onclick="sendChatMessage()">
+                                            <i class="fab fa-whatsapp"></i> <span>Enviar</span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- COMPOSITOR: E-MAIL (SMTP) -->
+                                <div id="composer-email" class="composer-channel-view" style="display:none;">
+                                    <div style="display:grid; grid-template-columns: 2fr 1fr; gap:10px; margin-bottom:8px;">
+                                        <input type="text" id="chat-email-subject" class="form-control" placeholder="Assunto do E-mail (ex: Proposta para {empresa})...">
+                                        <input type="text" id="chat-email-recipient" class="form-control" placeholder="E-mail de destino...">
+                                    </div>
+                                    <div class="composer-input-row">
+                                        <textarea id="chat-email-body" class="chat-textarea" placeholder="Corpo do e-mail..." rows="3"></textarea>
+                                        <div style="display:flex; flex-direction:column; gap:6px;">
+                                            <button type="button" id="btn-send-email" class="btn btn-neon chat-send-btn" onclick="sendChatMessage()">
+                                                <i class="fas fa-paper-plane"></i> <span>Enviar SMTP</span>
+                                            </button>
+                                            <button type="button" class="btn btn-secondary btn-sm" onclick="openMailtoClient()" title="Abrir no cliente de e-mail local (Gmail / Outlook)">
+                                                <i class="fas fa-external-link-alt"></i> Mailto
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- COMPOSITOR: SITE & FORMULÁRIO -->
+                                <div id="composer-site" class="composer-channel-view" style="display:none;">
+                                    <div style="background:rgba(0,210,255,0.06); border:1px solid rgba(0,210,255,0.25); border-radius:8px; padding:10px 14px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                                        <div>
+                                            <span style="font-size:12px; color:var(--text-secondary);">Site Oficial do Lead:</span>
+                                            <strong id="chat-site-url-text" style="color:var(--neon-cyan); margin-left:6px; font-family:var(--font-mono); font-size:13px;">Não informado</strong>
+                                        </div>
+                                        <div style="display:flex; gap:8px;">
+                                            <a id="chat-site-external-link" href="#" target="_blank" class="btn btn-secondary btn-sm" style="color:var(--neon-cyan); border-color:rgba(0,210,255,0.4);">
+                                                <i class="fas fa-external-link-alt"></i> Acessar Site do Lead
+                                            </a>
+                                        </div>
+                                    </div>
+                                    <div class="composer-input-row">
+                                        <textarea id="chat-site-body" class="chat-textarea" placeholder="Mensagem enviada pelo formulário de contato do site..." rows="2"></textarea>
+                                        <button type="button" id="btn-send-site" class="btn btn-neon chat-send-btn" onclick="sendChatMessage()" style="border-color:var(--neon-cyan); color:var(--neon-cyan);">
+                                            <i class="fas fa-clipboard-check"></i> <span>Registrar Envio</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            </section>
+
+            <!-- 4. ABA WHATSAPP LOCAL & AUTOMAÇÃO WAHA -->
+            <section id="tab-whatsapp" class="tab-content">
+                <!-- CABEÇALHO DO MÓDULO -->
+                <div class="card" style="margin-bottom: 24px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
+                        <div>
+                            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;">
+                                <i class="fab fa-whatsapp" style="font-size: 26px; color: var(--neon-green);"></i>
+                                <h2 style="font-size: 20px; font-weight: 800; color: #fff;">Central de Automação WhatsApp (WAHA)</h2>
+                            </div>
+                            <p style="color: var(--text-secondary); font-size: 13px;">
+                                Integração com a WhatsApp HTTP API (devlikeapro/waha), disparo individual e campanhas em massa com motor anti-banimento.
+                            </p>
+                        </div>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <span id="waha-badge-status" class="waha-status-badge offline">
+                                <i class="fas fa-circle" style="font-size: 8px;"></i> <span id="waha-badge-text">OFFLINE</span>
+                            </span>
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="checkWahaStatus(true)">
+                                <i class="fas fa-sync-alt"></i> Atualizar Status
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="waha-grid">
+                    <!-- COLUNA ESQUERDA: STATUS DA SESSÃO & QR CODE -->
+                    <div style="display: flex; flex-direction: column; gap: 24px;">
+                        <!-- CARD DE CONEXÃO & SESSÃO -->
+                        <div class="waha-status-card">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <h3 style="font-size: 15px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px;">
+                                    <i class="fas fa-server" style="color: var(--neon-cyan);"></i> Status da Sessão WAHA
+                                </h3>
+                                <span id="waha-session-name-tag" style="font-family: var(--font-mono); font-size: 12px; color: var(--neon-cyan); background: rgba(0, 210, 255, 0.1); padding: 3px 8px; border-radius: 6px;">
+                                    session: default
+                                </span>
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 12.5px;">
+                                <div style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color);">
+                                    <span style="color: var(--text-secondary); display: block; font-size: 11.5px; font-weight: 600; letter-spacing: 0.5px; margin-bottom: 3px;">ENDPOINT WAHA:</span>
+                                    <strong id="waha-endpoint-display" style="color: #ffffff; font-family: var(--font-mono); font-size: 13px;">http://localhost:3000</strong>
+                                </div>
+                                <div style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color);">
+                                    <span style="color: var(--text-secondary); display: block; font-size: 11.5px; font-weight: 600; letter-spacing: 0.5px; margin-bottom: 3px;">ESTADO DO WHATSAPP:</span>
+                                    <strong id="waha-state-display" style="color: var(--alert-red); font-size: 13px; font-weight: 700;">DESCONECTADO</strong>
+                                </div>
+                            </div>
+
+                            <!-- CONTROLES DA SESSÃO -->
+                            <div style="display: flex; flex-wrap: wrap; gap: 8px; padding-top: 8px; border-top: 1px solid var(--border-color); align-items: center;">
+                                <button type="button" class="btn btn-secondary btn-sm" onclick="handleWahaSessionAction('start')">
+                                    <i class="fas fa-play" style="color: var(--neon-green);"></i> Iniciar
+                                </button>
+                                <button type="button" class="btn btn-secondary btn-sm" onclick="handleWahaSessionAction('stop')">
+                                    <i class="fas fa-stop" style="color: var(--alert-red);"></i> Parar
+                                </button>
+                                <button type="button" class="btn btn-secondary btn-sm" onclick="handleWahaSessionAction('restart')">
+                                    <i class="fas fa-redo" style="color: var(--alert-orange);"></i> Reiniciar
+                                </button>
+                                <button type="button" class="btn btn-secondary btn-sm" onclick="handleWahaSessionAction('reset')">
+                                    <i class="fas fa-trash-restore" style="color: var(--alert-red);"></i> Resetar Sessão
+                                </button>
+                                <button type="button" class="btn btn-secondary btn-sm" onclick="loadWahaQrCode(false)">
+                                    <i class="fas fa-qrcode" style="color: var(--neon-cyan);"></i> Atualizar QR
+                                </button>
+                                <a href="http://localhost:3000/dashboard" target="_blank" class="btn btn-secondary btn-sm" style="margin-left: auto;" title="Abrir painel direto do WAHA (porta 3000) - login: admin / bd4239a0af284e9d8731cb672736485f">
+                                    <i class="fas fa-external-link-alt" style="color: var(--neon-cyan);"></i> Painel WAHA (:3000)
+                                </a>
+                            </div>
+
+                            <!-- BOX DO QR CODE & CONEXÃO -->
+                            <div id="waha-qr-wrapper" class="qr-code-box">
+                                <div id="waha-qr-placeholder" style="color: var(--text-secondary); font-size: 13px; font-weight: 500;">
+                                    <i class="fas fa-qrcode" style="font-size: 38px; margin-bottom: 10px; display: block; opacity: 0.8; color: var(--neon-cyan);"></i>
+                                    <span>Clique em <strong style="color: #ffffff;">"Ver QR Code"</strong> ou aguarde o estado <em style="color: var(--alert-orange); font-style: normal; font-weight: 600;">SCAN_QR_CODE</em> para ler o código no celular.</span>
+                                </div>
+
+                                <!-- CONTEÚDO ATIVO DO QR CODE COM ORIENTAÇÕES CLARAS -->
+                                <div id="waha-qr-content" style="display: none; flex-direction: column; align-items: center; gap: 12px; width: 100%;">
+                                    <!-- AVISO CRÍTICO DE ESCANEAMENTO -->
+                                    <div style="background: rgba(255, 170, 0, 0.09); border: 1px solid rgba(255, 170, 0, 0.4); border-radius: 8px; padding: 10px 12px; text-align: left; width: 100%; box-sizing: border-box;">
+                                        <div style="display: flex; gap: 8px; align-items: flex-start;">
+                                            <i class="fas fa-exclamation-triangle" style="color: var(--alert-orange); font-size: 16px; margin-top: 2px;"></i>
+                                            <div>
+                                                <strong style="color: #fff; font-size: 12.5px; display: block; margin-bottom: 2px;">
+                                                    ATENÇÃO: NÃO use a câmera comum do celular!
+                                                </strong>
+                                                <p style="font-size: 11.5px; color: #cbd5e1; margin: 0 0 6px 0; line-height: 1.4;">
+                                                    O QR Code é uma chave interna criptográfica do WhatsApp (não é um link/site). Se lido pela câmera comum ou Google Lens, ele só mostrará números (ex: <code>03179352</code>) e não abrirá página.
+                                                </p>
+                                                <div style="font-size: 11.5px; color: var(--neon-cyan); line-height: 1.5;">
+                                                    <div>📱 <strong>Android:</strong> WhatsApp &gt; <strong>⋮ (3 pontos)</strong> &gt; <strong>Aparelhos conectados</strong> &gt; <strong>Conectar um aparelho</strong></div>
+                                                    <div>🍎 <strong>iPhone:</strong> WhatsApp &gt; <strong>Configurações</strong> &gt; <strong>Aparelhos conectados</strong> &gt; <strong>Conectar um aparelho</strong></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- SELETOR DE MODO DO QR CODE (IMAGEM vs TERMINAL ASCII) -->
+                                    <div style="display: flex; gap: 8px; margin-bottom: 4px;">
+                                        <button type="button" id="btn-qr-view-img" class="btn btn-neon btn-sm" onclick="toggleQrViewMode('img')" style="padding: 3px 10px; font-size: 11px;">
+                                            <i class="fas fa-image"></i> QR Code Imagem
+                                        </button>
+                                        <button type="button" id="btn-qr-view-ascii" class="btn btn-secondary btn-sm" onclick="toggleQrViewMode('ascii')" style="padding: 3px 10px; font-size: 11px;">
+                                            <i class="fas fa-terminal"></i> QR Code do Terminal (Docker)
+                                        </button>
+                                    </div>
+
+                                    <!-- QR CODE IMAGEM PNG -->
+                                    <div id="waha-qr-img-container" style="position: relative; display: inline-block;">
+                                        <img id="waha-qr-image" src="" alt="WhatsApp QR Code" class="qr-code-img">
+                                        <div id="waha-qr-refresh-indicator" style="position: absolute; bottom: 12px; right: 12px; background: rgba(0,0,0,0.8); color: var(--neon-green); font-size: 10px; font-family: var(--font-mono); padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(0,255,136,0.3);">
+                                            <i class="fas fa-sync-alt fa-spin"></i> Ativo
+                                        </div>
+                                    </div>
+
+                                    <!-- QR CODE TERMINAL ASCII -->
+                                    <div id="waha-qr-ascii-container" style="display: none; width: 100%; max-width: 320px; overflow-x: auto; background: #000; padding: 12px; border-radius: 8px; border: 1px solid rgba(0,255,136,0.4); text-align: center;">
+                                        <pre id="waha-qr-ascii-text" style="font-family: monospace; font-size: 6.5px; line-height: 6.5px; letter-spacing: 0; color: #fff; margin: 0; display: inline-block; user-select: all;">Carregando QR Code ASCII do terminal...</pre>
+                                    </div>
+
+                                    <div style="display: flex; gap: 10px; align-items: center; justify-content: center; flex-wrap: wrap;">
+                                        <span id="waha-qr-countdown" style="font-size: 11.5px; color: var(--text-secondary); font-family: var(--font-mono);">
+                                            Renovando em <strong id="waha-timer-secs" style="color: var(--neon-green);">20</strong>s
+                                        </span>
+                                        <button type="button" class="btn btn-secondary btn-sm" onclick="loadWahaQrCode(false)">
+                                            <i class="fas fa-sync-alt"></i> Atualizar Agora
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- CARD DE SESSÃO JÁ CONECTADA -->
+                                <div id="waha-connected-card" style="display: none; flex-direction: column; align-items: center; gap: 10px; width: 100%; padding: 16px 10px;">
+                                    <div style="width: 54px; height: 54px; border-radius: 50%; background: rgba(0, 255, 136, 0.12); border: 2px solid var(--neon-green); display: flex; align-items: center; justify-content: center; margin-bottom: 2px;">
+                                        <i class="fab fa-whatsapp" style="font-size: 30px; color: var(--neon-green);"></i>
+                                    </div>
+                                    <strong style="color: #fff; font-size: 15px;">WhatsApp Conectado com Sucesso!</strong>
+                                    <span id="waha-connected-details" style="font-size: 12.5px; color: var(--neon-cyan); font-family: var(--font-mono);">
+                                        Sessão ativa e sincronizada
+                                    </span>
+                                    <span style="font-size: 12px; color: var(--text-secondary); max-width: 320px; text-align: center; line-height: 1.4;">
+                                        O motor de disparo individual e campanhas em massa está liberado para envio aos seus leads.
+                                    </span>
+                                    <div style="display: flex; gap: 8px; margin-top: 6px;">
+                                        <button type="button" class="btn btn-secondary btn-sm" onclick="handleWahaSessionAction('restart')">
+                                            <i class="fas fa-redo"></i> Trocar Aparelho / Reconectar
+                                        </button>
+                                        <button type="button" class="btn btn-secondary btn-sm" onclick="handleWahaSessionAction('stop')">
+                                            <i class="fas fa-power-off"></i> Desconectar
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- CARD DISPARO INDIVIDUAL AVULSO -->
+                        <div class="card">
+                            <h3 style="font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
+                                <i class="fas fa-paper-plane" style="color: var(--neon-green);"></i> Teste de Disparo Rápido
+                            </h3>
+                            <div style="display: flex; flex-direction: column; gap: 12px;">
+                                <div class="form-group">
+                                    <label class="form-label">Número de Telefone (com DDD)</label>
+                                    <input type="text" id="quick-wa-phone" class="form-control" placeholder="ex: 11 99999-9999 ou 12988887777">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Mensagem (com suporte a Spintax {Olá|Oi})</label>
+                                    <textarea id="quick-wa-text" class="form-control" rows="3" placeholder="{Olá|Oi}! Tudo bem?">{Olá|Oi}! Tudo bem? Vi sua empresa no Google e gostaria de apresentar uma oportunidade rápida.</textarea>
+                                </div>
+                                <div style="display: flex; gap: 10px;">
+                                    <button type="button" class="btn btn-secondary btn-sm" onclick="previewSpintaxQuick()">
+                                        <i class="fas fa-random"></i> Testar Spintax
+                                    </button>
+                                    <button type="button" id="btn-quick-send" class="btn btn-whatsapp btn-sm" onclick="handleQuickSend(this)">
+                                        <i class="fab fa-whatsapp"></i> Disparar Agora
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- COLUNA DIREITA: MOTOR DE DISPARO EM MASSA & ANTI-BAN -->
+                    <div style="display: flex; flex-direction: column; gap: 24px;">
+                        <div class="card">
+                            <div class="card-header" style="margin-bottom: 16px;">
+                                <div class="card-title" style="font-size: 16px;">
+                                    <i class="fas fa-users" style="color: var(--neon-green);"></i> Campanha de Disparo em Massa (Anti-Ban)
+                                </div>
+                                <span style="font-size: 12px; color: var(--text-secondary);">
+                                    Dispara mensagens com delay randômico entre envios e Spintax dinâmico para blindagem do número.
+                                </span>
+                            </div>
+
+                            <div style="display: flex; flex-direction: column; gap: 16px;">
+                                <!-- PÚBLICO ALVO -->
+                                <div class="form-group">
+                                    <label class="form-label">Público da Campanha</label>
+                                    <select id="bulk-target-group" class="form-control" onchange="updateBulkAudienceCount()">
+                                        <option value="selection">Apenas leads marcados com checkbox na Tabela</option>
+                                        <option value="no-site" selected>Todos os leads SEM SITE (Oportunidades quentes)</option>
+                                        <option value="all-whatsapp">Todos os leads cadastrados com WhatsApp</option>
+                                        <option value="stage-contato">Leads na Etapa: 1º Contato</option>
+                                        <option value="stage-follow1">Leads na Etapa: Follow 1</option>
+                                        <option value="stage-follow2">Leads na Etapa: Follow 2</option>
+                                    </select>
+                                    <small id="bulk-audience-summary" style="color: var(--neon-cyan); font-size: 11.5px; margin-top: 4px; display: block;">
+                                        Calculando leads válidos...
+                                    </small>
+                                </div>
+
+                                <!-- DELAY RANDÔMICO -->
+                                <div style="background: rgba(0, 255, 136, 0.03); border: 1px solid rgba(0, 255, 136, 0.15); padding: 12px; border-radius: 8px;">
+                                    <label class="form-label" style="color: var(--neon-green); font-size: 12.5px; margin-bottom: 8px;">
+                                        <i class="fas fa-shield-alt"></i> Proteção Anti-Banimento (Delay Randômico Humano)
+                                    </label>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                                        <div>
+                                            <span style="font-size: 12px; font-weight: 500; color: var(--text-secondary);">Delay Mínimo (seg):</span>
+                                            <input type="number" id="bulk-delay-min" class="form-control" value="15" min="5" max="60" style="padding: 6px 10px; font-size: 12px;">
+                                        </div>
+                                        <div>
+                                            <span style="font-size: 12px; font-weight: 500; color: var(--text-secondary);">Delay Máximo (seg):</span>
+                                            <input type="number" id="bulk-delay-max" class="form-control" value="35" min="10" max="120" style="padding: 6px 10px; font-size: 12px;">
+                                        </div>
+                                    </div>
+                                    <small style="color: var(--text-secondary); font-size: 11.5px; margin-top: 6px; display: block;">
+                                        💡 O sistema aguardará um tempo aleatório entre o mínimo e o máximo antes de disparar para o próximo contato.
+                                    </small>
+                                </div>
+
+                                <!-- TEMPLATE DE MENSAGEM COM SPINTAX -->
+                                <div class="form-group">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                        <label class="form-label" style="margin-bottom: 0;">Template da Abordagem B2B</label>
+                                        <button type="button" class="btn btn-secondary btn-sm" style="padding: 2px 8px; font-size: 11px;" onclick="previewBulkSpintax()">
+                                            <i class="fas fa-dice"></i> Sortear Prévia
+                                        </button>
+                                    </div>
+                                    <textarea id="bulk-message-template" class="form-control" rows="5">{Olá|Oi|Tudo bem?} equipe da *{empresa}*!
+
+Notei que vocês atendem a região de *{cidade}*, mas atualmente constam como *{status}* no Google.
+
+Desenvolvemos páginas de alta velocidade para capturar clientes direto pelo celular. Posso lhe enviar uma demonstração sem custo?</textarea>
+                                    <small style="color: var(--text-secondary); font-size: 12px; margin-top: 5px; display: block;">
+                                        Tags disponíveis: <code style="color:var(--neon-green);">{empresa}</code>, <code style="color:var(--neon-green);">{cidade}</code>, <code style="color:var(--neon-green);">{status}</code> e Spintax <code style="color:var(--neon-green);">{Olá|Oi|Bom dia}</code>.
+                                    </small>
+                                </div>
+
+                                <!-- PRÉVIA AO VIVO DA MENSAGEM -->
+                                <div id="bulk-preview-box" style="background: rgba(255,255,255,0.02); border: 1px dashed var(--border-color); padding: 10px 12px; border-radius: 8px; font-size: 12px; color: var(--text-secondary); white-space: pre-line; display: none;">
+                                    <!-- Injetado via JS -->
+                                </div>
+
+                                <!-- PAINEL DE CONTROLE E PROGRESSO -->
+                                <div>
+                                    <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px;">
+                                        <button type="button" id="btn-start-bulk" class="btn btn-neon" style="flex: 1;" onclick="handleStartBulkCampaign()">
+                                            <i class="fab fa-whatsapp"></i> Iniciar Disparo em Massa
+                                        </button>
+                                        <button type="button" id="btn-stop-bulk" class="btn btn-secondary" style="display: none; border-color: var(--alert-red); color: var(--alert-red);" onclick="handleStopBulkCampaign()">
+                                            <i class="fas fa-hand-paper"></i> Interromper
+                                        </button>
+                                    </div>
+
+                                    <div id="bulk-status-container" style="display: none;">
+                                        <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;">
+                                            <span id="bulk-progress-text" style="color: var(--text-secondary);">Progresso: 0/0</span>
+                                            <span id="bulk-countdown-text" style="color: var(--neon-cyan); font-weight: 700;">Pronto</span>
+                                        </div>
+                                        <div class="bulk-progress-container">
+                                            <div id="bulk-progress-bar" class="bulk-progress-bar"></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- CONSOLE DE LOGS AO VIVO & TERMINAL DOCKER -->
+                                <div>
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 6px;">
+                                        <div style="display: flex; gap: 6px; align-items: center;">
+                                            <button type="button" id="btn-log-app" class="btn btn-neon btn-sm" onclick="switchLogView('app')" style="padding: 3px 8px; font-size: 11px;">
+                                                <i class="fas fa-terminal"></i> Logs da Aplicação
+                                            </button>
+                                            <button type="button" id="btn-log-docker" class="btn btn-secondary btn-sm" onclick="switchLogView('docker')" style="padding: 3px 8px; font-size: 11px;">
+                                                <i class="fab fa-docker" style="color: var(--neon-cyan);"></i> Terminal Docker (WAHA)
+                                            </button>
+                                        </div>
+                                        <div style="display: flex; gap: 6px;">
+                                            <button type="button" class="btn btn-secondary btn-sm" style="padding: 2px 6px; font-size: 10px;" onclick="refreshDockerLogs()">
+                                                <i class="fas fa-sync-alt"></i> Atualizar Docker
+                                            </button>
+                                            <button type="button" class="btn btn-secondary btn-sm" style="padding: 2px 6px; font-size: 10px;" onclick="clearWahaLogs()">
+                                                Limpar
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <!-- LOGS INTERNOS DO CRM -->
+                                    <div id="waha-console-logs" class="waha-console-logs">
+                                        <div class="log-info">[Sistema] Console de automação WAHA iniciado. Aguardando comando.</div>
+                                    </div>
+
+                                    <!-- LOGS DIRETOS DO CONTAINER DOCKER -->
+                                    <div id="waha-docker-logs" class="waha-console-logs" style="display: none; white-space: pre-wrap; font-size: 11px; height: 260px; line-height: 1.4; color: #a5b4fc;">
+                                        [Docker] Carregando logs em tempo real do container WAHA...
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 5. ABA CONFIGURAÇÕES -->
+            <section id="tab-settings" class="tab-content">
+                <div class="card" style="max-width: 800px;">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <i class="fas fa-cogs"></i> Parâmetros do Scraper & Abordagem
+                        </div>
+                    </div>
+
+                    <form id="settings-form">
+                        <div style="display: flex; flex-direction: column; gap: 20px;">
+                            <!-- CONFIGURAÇÃO WAHA NO FORMULÁRIO -->
+                            <div class="form-group" style="background: rgba(0, 255, 136, 0.05); border: 1px solid rgba(0, 255, 136, 0.2); padding: 16px; border-radius: 10px;">
+                                <label class="form-label" style="color:var(--neon-green); font-size: 14px; font-weight: 700;">
+                                    <i class="fab fa-whatsapp"></i> Configurações da API WAHA (WhatsApp HTTP API)
+                                </label>
+                                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 12px; margin-top: 10px;">
+                                    <div>
+                                        <label class="form-label" style="font-size: 12px;">URL do Servidor WAHA</label>
+                                        <input type="text" id="cfg-waha-url" class="form-control" placeholder="http://localhost:3000" value="http://localhost:3000">
+                                        <small style="color: var(--text-secondary); font-size: 12px; display: block; margin-top: 4px;">Endereço onde o contêiner do WAHA está ativo.</small>
+                                    </div>
+                                    <div>
+                                        <label class="form-label" style="font-size: 12px;">Nome da Sessão</label>
+                                        <input type="text" id="cfg-waha-session" class="form-control" placeholder="default" value="default">
+                                        <small style="color: var(--text-secondary); font-size: 12px; display: block; margin-top: 4px;">Sessão no WAHA.</small>
+                                    </div>
+                                </div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 12px;">
+                                    <div>
+                                        <label class="form-label" style="font-size: 12px;">API Key (Opcional)</label>
+                                        <input type="password" id="cfg-waha-apikey" class="form-control" placeholder="WAHA_API_KEY">
+                                    </div>
+                                    <div>
+                                        <label class="form-label" style="font-size: 12px;">Delay Mínimo (seg)</label>
+                                        <input type="number" id="cfg-waha-min-delay" class="form-control" value="15">
+                                    </div>
+                                    <div>
+                                        <label class="form-label" style="font-size: 12px;">Delay Máximo (seg)</label>
+                                        <input type="number" id="cfg-waha-max-delay" class="form-control" value="35">
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                                <div class="form-group">
+                                    <label class="form-label">Delay entre Requisições (segundos)</label>
+                                    <input type="number" step="0.5" id="cfg-delay" class="form-control" value="1.5">
+                                    <small style="color: var(--text-secondary); font-size: 12px; display: block; margin-top: 4px;">Garante comportamento humano e evita bloqueios de IP.</small>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Timeout por Site (segundos)</label>
+                                    <input type="number" id="cfg-timeout" class="form-control" value="10">
+                                    <small style="color: var(--text-secondary); font-size: 12px; display: block; margin-top: 4px;">Tempo limite para ler o código-fonte do site da empresa.</small>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Limite Padrão de Leads por Busca</label>
+                                <input type="number" id="cfg-max-leads" class="form-control" value="20">
+                            </div>
+
+                            <div class="form-group" style="background: rgba(0, 210, 255, 0.05); border: 1px solid rgba(0, 210, 255, 0.2); padding: 14px; border-radius: 10px;">
+                                <label class="form-label" style="color:var(--neon-cyan);">
+                                    <i class="fab fa-google"></i> Google Places API Key (Opcional - Google Cloud)
+                                </label>
+                                <input type="password" id="cfg-google-key" class="form-control" placeholder="AIzaSy...">
+                                <div style="font-size: 12px; color: var(--text-secondary); margin-top: 8px; line-height: 1.5;">
+                                    <strong style="color:#fff;">Robô Integrado vs API:</strong> Se deixar este campo <strong>em branco</strong>, o sistema usa automaticamente o <strong>Robô de Varredura Direta do Google Maps (Gratuito e sem limites)</strong>.
+                                    <br>
+                                    ⚠️ <em>Atenção: A chave do Google Maps sempre começa com <code style="color:var(--neon-green)">AIza...</code> (gerada no console Google Cloud). Chaves que começam com <code style="color:#ff5b73">AQ...</code> pertencem ao Google AI Studio / Gemini e não funcionam aqui.</em>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Apify Actor API Token (Opcional)</label>
+                                <input type="password" id="cfg-apify-token" class="form-control" placeholder="apify_api_...">
+                            </div>
+
+                            <div class="form-group" style="background: rgba(255, 91, 115, 0.05); border: 1px solid rgba(255, 91, 115, 0.25); padding: 14px; border-radius: 10px;">
+                                <label class="form-label" style="color:#ff5b73; font-weight:700;">
+                                    <i class="fas fa-ban"></i> Ignorar Grandes Redes & Franquias Corporativas (Blacklist)
+                                </label>
+                                <textarea id="cfg-excluded-brands" class="form-control" rows="3" placeholder="smart fit, skyfit, bluefit, panobianco, nubank, itau, bradesco, drogasil, droga raia, mcdonald, burger king, carrefour, casas bahia, magalu, renner, c&a, havan, petz, cobasi, unimed"></textarea>
+                                <div style="font-size: 12px; color: var(--text-secondary); margin-top: 6px; line-height: 1.45;">
+                                    Separe os nomes por vírgula. Estabelecimentos contendo essas marcas no nome ou site são <strong>automaticamente ignorados</strong> pelo robô de busca, garantindo que você foque 100% em negócios locais independentes que realmente precisam de sites.
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Template Padrão de Pitch / Abordagem WhatsApp</label>
+                                <textarea id="cfg-pitch-template" class="form-control" rows="3"></textarea>
+                            </div>
+
+                            <!-- CONFIGURAÇÃO DO CANAL PADRÃO DE ENVIO -->
+                            <div class="form-group" style="background: rgba(157, 78, 221, 0.08); border: 1px solid rgba(157, 78, 221, 0.3); padding: 16px; border-radius: 10px;">
+                                <label class="form-label" style="color:var(--neon-cyan); font-size: 14px; font-weight: 700; margin-bottom: 8px;">
+                                    <i class="fas fa-paper-plane"></i> Canal Padrão de Envio de Mensagens
+                                </label>
+                                <div style="display:flex; gap:16px; align-items:center; flex-wrap:wrap;">
+                                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer; color:#fff; font-size:13px;">
+                                        <input type="radio" name="default_channel" id="cfg-channel-whatsapp" value="whatsapp" checked style="accent-color:var(--neon-green);">
+                                        <i class="fab fa-whatsapp" style="color:var(--neon-green);"></i> WhatsApp (WAHA)
+                                    </label>
+                                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer; color:#fff; font-size:13px;">
+                                        <input type="radio" name="default_channel" id="cfg-channel-email" value="email" style="accent-color:var(--neon-cyan);">
+                                        <i class="fas fa-envelope" style="color:var(--neon-cyan);"></i> E-mail (SMTP)
+                                    </label>
+                                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer; color:#fff; font-size:13px;">
+                                        <input type="radio" name="default_channel" id="cfg-channel-site" value="site" style="accent-color:#ffb703;">
+                                        <i class="fas fa-globe" style="color:#ffb703;"></i> Formulário do Site
+                                    </label>
+                                </div>
+                                <small style="color:var(--text-secondary); font-size:12px; display:block; margin-top:8px;">
+                                    Define qual canal virá pré-selecionado na tela de chat e nas ações rápidas com leads. Você pode alternar entre eles a qualquer momento com 1 clique.
+                                </small>
+                            </div>
+
+                            <!-- CONFIGURAÇÃO DE E-MAIL (SMTP) -->
+                            <div class="form-group" style="background: rgba(0, 210, 255, 0.05); border: 1px solid rgba(0, 210, 255, 0.25); padding: 18px; border-radius: 10px;">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+                                    <label class="form-label" style="color:var(--neon-cyan); font-size: 14px; font-weight: 700; margin:0;">
+                                        <i class="fas fa-envelope"></i> Configurações de E-mail (Servidor SMTP & Mala Direta)
+                                    </label>
+                                    <button type="button" class="btn btn-secondary btn-sm" onclick="testSmtpConnection()" style="color:var(--neon-cyan); border-color:rgba(0,210,255,0.4);">
+                                        <i class="fas fa-paper-plane"></i> Testar Conexão SMTP
+                                    </button>
+                                </div>
+                                <p style="font-size:12.5px; color:var(--text-secondary); margin-bottom:14px; line-height:1.45;">
+                                    Envie e-mails comerciais diretamente pelo Kaptador via servidor SMTP (Gmail, Outlook, Hostinger, cPanel, Amazon SES).
+                                </p>
+                                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 12px;">
+                                    <div>
+                                        <label class="form-label" style="font-size: 12px;">Servidor SMTP (Host)</label>
+                                        <input type="text" id="cfg-smtp-host" class="form-control" placeholder="ex: smtp.gmail.com ou smtp.hostinger.com">
+                                    </div>
+                                    <div>
+                                        <label class="form-label" style="font-size: 12px;">Porta</label>
+                                        <input type="text" id="cfg-smtp-port" class="form-control" placeholder="587" value="587">
+                                    </div>
+                                </div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px;">
+                                    <div>
+                                        <label class="form-label" style="font-size: 12px;">Usuário / E-mail Remetente</label>
+                                        <input type="email" id="cfg-smtp-user" class="form-control" placeholder="contato@suaempresa.com.br">
+                                    </div>
+                                    <div>
+                                        <label class="form-label" style="font-size: 12px;">Senha / App Password</label>
+                                        <input type="password" id="cfg-smtp-password" class="form-control" placeholder="••••••••••••">
+                                    </div>
+                                </div>
+                                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 12px; margin-top: 12px;">
+                                    <div>
+                                        <label class="form-label" style="font-size: 12px;">Nome de Exibição do Remetente</label>
+                                        <input type="text" id="cfg-smtp-from-name" class="form-control" placeholder="ex: Kaptador Vendas" value="Kaptador Comercial">
+                                    </div>
+                                    <div>
+                                        <label class="form-label" style="font-size: 12px;">Segurança TLS/SSL</label>
+                                        <select id="cfg-smtp-tls" class="form-control">
+                                            <option value="true">STARTTLS (Porta 587)</option>
+                                            <option value="ssl">SSL Direto (Porta 465)</option>
+                                            <option value="false">Sem Criptografia</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div style="margin-top:14px;">
+                                    <label class="form-label" style="font-size: 12px;">Assunto Padrão de E-mail</label>
+                                    <input type="text" id="cfg-email-subject" class="form-control" placeholder="Oportunidade Comercial: Presença Digital para {empresa}">
+                                </div>
+                                <div style="margin-top:12px;">
+                                    <label class="form-label" style="font-size: 12px;">Template Padrão de Corpo de E-mail</label>
+                                    <textarea id="cfg-email-body" class="form-control" rows="4" placeholder="Escreva o template de e-mail..."></textarea>
+                                </div>
+                            </div>
+
+                            <!-- CONFIGURAÇÃO DE SITE & FORMULÁRIOS WEB -->
+                            <div class="form-group" style="background: rgba(255, 183, 3, 0.05); border: 1px solid rgba(255, 183, 3, 0.25); padding: 18px; border-radius: 10px;">
+                                <label class="form-label" style="color:#ffb703; font-size: 14px; font-weight: 700; margin-bottom: 8px;">
+                                    <i class="fas fa-globe"></i> Configurações de Abordagem via Site & Formulários Web
+                                </label>
+                                <p style="font-size:12.5px; color:var(--text-secondary); margin-bottom:12px; line-height:1.45;">
+                                    Defina o texto padrão e os dados de contato quando você for registrar envios pelo formulário de contato do site do cliente.
+                                </p>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom:12px;">
+                                    <div>
+                                        <label class="form-label" style="font-size: 12px;">Nome do Operador / Atendente</label>
+                                        <input type="text" id="cfg-site-operator-name" class="form-control" placeholder="ex: Equipe de Atendimento">
+                                    </div>
+                                    <div>
+                                        <label class="form-label" style="font-size: 12px;">Telefone / WhatsApp para Retorno</label>
+                                        <input type="text" id="cfg-site-contact-phone" class="form-control" placeholder="ex: (11) 99999-9999">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="form-label" style="font-size: 12px;">Mensagem Padrão para Formulários Web</label>
+                                    <textarea id="cfg-site-message" class="form-control" rows="3" placeholder="Mensagem para colar ou enviar em formulários de sites..."></textarea>
+                                </div>
+                            </div>
+
+                            <!-- CONTAS DE USUÁRIO & MULTI-OPERADOR (ONLINE) -->
+                            <div class="form-group" style="background: rgba(157, 78, 221, 0.06); border: 1px solid rgba(157, 78, 221, 0.25); padding: 18px; border-radius: 10px;">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                                    <label class="form-label" style="color:var(--neon-cyan); font-size:14px; font-weight:700; margin:0;">
+                                        <i class="fas fa-users-cog"></i> Gestão de Operadores & Acesso Multi-Usuário
+                                    </label>
+                                    <span style="font-size:11.5px; color:var(--neon-green); font-family:var(--font-mono);">
+                                        <i class="fas fa-check-circle"></i> 2 Operadores + 1 Admin
+                                    </span>
+                                </div>
+                                <p style="font-size: 12.5px; color: var(--text-secondary); margin-bottom: 14px; line-height: 1.5;">
+                                    Permite que <strong>duas pessoas</strong> gerenciem o CRM e os leads juntos, alternando operadores ou autenticando com contas separadas.
+                                </p>
+
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
+                                    <div>
+                                        <label class="form-label" style="font-size: 12px;">Selecionar Conta para Editar</label>
+                                        <select id="cfg-user-select" class="form-control" onchange="onSelectUserToEdit()">
+                                            <option value="1">Operador 1 (@operador1)</option>
+                                            <option value="2">Operador 2 (@operador2)</option>
+                                            <option value="3">Administrador (@admin)</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="form-label" style="font-size: 12px;">Nome de Exibição</label>
+                                        <input type="text" id="cfg-user-name" class="form-control" placeholder="ex: Lucas / Mariana">
+                                    </div>
+                                </div>
+                                <div style="display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: flex-end;">
+                                    <div>
+                                        <label class="form-label" style="font-size: 12px;">Nova Senha</label>
+                                        <input type="password" id="cfg-user-password" class="form-control" placeholder="Deixe em branco para manter atual">
+                                    </div>
+                                    <button type="button" class="btn btn-secondary btn-sm" onclick="saveUserAccountDetails()" style="height: 42px;">
+                                        <i class="fas fa-key"></i> Atualizar Usuário
+                                    </button>
+                                </div>
+
+                                <div style="margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.06); display: flex; align-items: center; justify-content: space-between;">
+                                    <label style="font-size: 12.5px; color: #fff; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                        <input type="checkbox" id="cfg-auth-required" style="width: 16px; height: 16px; accent-color: var(--neon-cyan);">
+                                        <span>Exigir Senha para Acesso (Modo Online Protegido)</span>
+                                    </label>
+                                    <small style="color: var(--text-secondary); font-size: 11.5px; font-weight: 500;">(Desmarque para uso local rápido)</small>
+                                </div>
+                            </div>
+
+                            <!-- PRONTIDÃO PARA HOSPEDAGEM ONLINE -->
+                            <div class="form-group" style="background: rgba(0, 210, 255, 0.04); border: 1px solid rgba(0, 210, 255, 0.2); padding: 16px; border-radius: 10px;">
+                                <label class="form-label" style="color:var(--neon-cyan); font-size: 13.5px; font-weight: 700; margin-bottom: 6px;">
+                                    <i class="fas fa-cloud-upload-alt"></i> Prontidão para Hospedagem Online
+                                </label>
+                                <p style="font-size: 12.5px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 8px;">
+                                    O sistema está preparado para rodar na nuvem (VPS, Render, Railway, Docker) sem alterar código. Quando decidir hospedar:
+                                </p>
+                                <ul style="font-size: 12px; color: #cbd5e1; line-height: 1.6; padding-left: 20px; margin: 0;">
+                                    <li>Basta clonar o projeto e rodar com <code>docker compose up -d</code> ou <code>uvicorn app:app</code>.</li>
+                                    <li>A variável <code>PORT</code> é detectada dinamicamente pelo servidor de nuvem.</li>
+                                    <li>Os dois operadores podem acessar pelo link oficial com seus logins e senhas cadastrados acima.</li>
+                                </ul>
+                            </div>
+
+                            <div>
+                                <button type="submit" class="btn btn-neon">
+                                    <i class="fas fa-save"></i> Salvar Configurações
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- MODAL DE DETALHES DO LEAD -->
+    <div id="lead-details-modal" class="modal-overlay">
+        <div class="modal-container">
+            <div class="modal-header">
+                <div>
+                    <h2 id="modal-lead-name" style="font-size: 20px; font-weight: 800; color: #fff;">Nome da Empresa</h2>
+                    <span id="modal-lead-category" style="font-size: 13px; color: var(--neon-cyan);">Categoria</span>
+                </div>
+                <button id="modal-close-btn" class="modal-close"><i class="fas fa-times"></i></button>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 16px;">
+                <!-- STATUS DO SITE & OPORTUNIDADE -->
+                <div style="background: rgba(17, 14, 36, 0.9); padding: 14px; border-radius: 10px; border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Diagnóstico de Presença Web:</div>
+                        <div id="modal-site-status"></div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Índice de Oportunidade:</div>
+                        <span id="modal-opp-score" class="opp-badge opp-high">95/100</span>
+                    </div>
+                </div>
+
+                <!-- LINKS DE ANÁLISE OFICIAL (GOOGLE / MAPS / MARKDOWN) -->
+                <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center; justify-content: space-between; background: rgba(0, 0, 0, 0.3); padding: 10px 14px; border-radius: 8px; border: 1px solid rgba(0, 210, 255, 0.15);">
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+                        <a id="modal-google-maps-btn" href="#" target="_blank" class="btn btn-secondary btn-sm" style="color:var(--neon-cyan); border-color:rgba(0,210,255,0.4);">
+                            <i class="fas fa-map-marked-alt"></i> Ver no Google Maps
+                        </a>
+                        <a id="modal-google-search-btn" href="#" target="_blank" class="btn btn-secondary btn-sm" style="color:#ffb703; border-color:rgba(255,183,3,0.4);">
+                            <i class="fab fa-google"></i> Analisar no Google
+                        </a>
+                    </div>
+                    <div>
+                        <button type="button" class="btn btn-secondary btn-sm" style="color:var(--neon-green); border-color:rgba(0,255,136,0.4);" onclick="copyLeadMarkdownDossier()">
+                            <i class="fab fa-markdown"></i> Copiar Ficha (.md)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- CONTATOS -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; font-size: 13px;">
+                    <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(157, 78, 221, 0.25); padding: 12px; border-radius: 8px;">
+                        <span style="color:var(--text-secondary); display:flex; align-items:center; gap:5px; font-size:11.5px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">
+                            <i class="fab fa-whatsapp" style="color:var(--neon-green);"></i> WHATSAPP:
+                        </span>
+                        <strong id="modal-lead-whatsapp" style="color:var(--neon-green); font-size:13.5px; font-family:var(--font-mono); font-weight:600;"></strong>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(157, 78, 221, 0.25); padding: 12px; border-radius: 8px;">
+                        <span style="color:var(--text-secondary); display:flex; align-items:center; gap:5px; font-size:11.5px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">
+                            <i class="fab fa-instagram" style="color:#ff75a0;"></i> INSTAGRAM:
+                        </span>
+                        <div id="modal-lead-instagram" style="font-weight:600; font-size:13.5px; color:#ffffff;">Não detectado</div>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(157, 78, 221, 0.25); padding: 12px; border-radius: 8px;">
+                        <span style="color:var(--text-secondary); display:flex; align-items:center; gap:5px; font-size:11.5px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">
+                            <i class="fas fa-phone-alt" style="color:var(--neon-cyan);"></i> TELEFONE COMERCIAL:
+                        </span>
+                        <strong id="modal-lead-phone" style="color:#ffffff; font-size:13.5px; font-family:var(--font-mono); font-weight:600;"></strong>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(157, 78, 221, 0.25); padding: 12px; border-radius: 8px;">
+                        <span style="color:var(--text-secondary); display:flex; align-items:center; gap:5px; font-size:11.5px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">
+                            <i class="fas fa-envelope" style="color:#ffb703;"></i> E-MAIL:
+                        </span>
+                        <strong id="modal-lead-email" style="color:#ffffff; font-size:13.5px; font-weight:600;"></strong>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(0, 210, 255, 0.3); padding: 12px 14px; border-radius: 8px; grid-column: span 2;">
+                        <span style="color:var(--text-secondary); display:flex; align-items:center; gap:5px; font-size:11.5px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">
+                            <i class="fas fa-map-marker-alt" style="color:var(--neon-cyan);"></i> ENDEREÇO COMPLETO:
+                        </span>
+                        <strong id="modal-lead-address" style="color:#ffffff; font-size:14px; font-weight:600; line-height:1.45; display:block;"></strong>
+                    </div>
+                </div>
+
+                <!-- GALERIA DE FOTOS REAIS (SOB DEMANDA - SÓ EXIBE QUANDO SOLICITADO) -->
+                <div style="background: rgba(17, 14, 36, 0.9); padding: 14px; border-radius: 10px; border: 1px solid var(--border-color);">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span style="font-size: 13px; font-weight: 700; color: var(--neon-cyan);">
+                                <i class="fas fa-camera"></i> Fotos Reais do Estabelecimento:
+                            </span>
+                            <span id="modal-photos-count" style="font-size: 12.5px; font-weight: 500; color: var(--text-secondary);">(0 fotos mapeadas)</span>
+                        </div>
+                        <button type="button" id="btn-toggle-lead-photos" class="btn btn-secondary btn-sm" style="border-color: rgba(0, 210, 255, 0.4); color: var(--neon-cyan);" onclick="toggleLeadPhotosView()">
+                            <i class="fas fa-eye"></i> Exibir Fotos Reais
+                        </button>
+                    </div>
+                    <!-- Conteúdo colapsável, fechado por padrão -->
+                    <div id="modal-lead-photos-container" style="display: none; margin-top: 14px;">
+                        <div id="modal-lead-photos-grid" class="photo-gallery-grid">
+                            <!-- Imagens injetadas via JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PITCH DE VENDAS PERSONALIZADO & ETAPAS DO FUNIL -->
+                <div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <label style="font-size: 13px; font-weight: 700; color: var(--neon-green);">
+                            <i class="fas fa-magic"></i> Scripts do Funil de Prospecção:
+                        </label>
+                        <button class="btn btn-secondary btn-sm" onclick="copyModalPitch()">
+                            <i class="fas fa-copy"></i> Copiar Mensagem
+                        </button>
+                    </div>
+
+                    <!-- Abas de Scripts por Etapa -->
+                    <div class="pitch-tabs">
+                        <button type="button" class="pitch-tab-btn active" id="tab-pitch-contato" onclick="switchPitchScript('contato')">
+                            <i class="fas fa-paper-plane"></i> 1º Contato
+                        </button>
+                        <button type="button" class="pitch-tab-btn" id="tab-pitch-follow1" onclick="switchPitchScript('follow1')">
+                            <i class="fas fa-redo"></i> Follow 1
+                        </button>
+                        <button type="button" class="pitch-tab-btn" id="tab-pitch-follow2" onclick="switchPitchScript('follow2')">
+                            <i class="fas fa-bell"></i> Follow 2
+                        </button>
+                        <button type="button" class="pitch-tab-btn" id="tab-pitch-proposta" onclick="switchPitchScript('proposta')">
+                            <i class="fas fa-file-invoice-dollar"></i> Proposta
+                        </button>
+                    </div>
+
+                    <div class="pitch-box" id="modal-pitch-text">
+                        <!-- Injetado via JS -->
+                    </div>
+                </div>
+
+                <!-- VALOR DE FECHAMENTO COM CLIENTE & NEGOCIAÇÃO -->
+                <div style="background: rgba(0, 255, 136, 0.05); border: 1px solid rgba(0, 255, 136, 0.25); border-radius: 10px; padding: 14px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px; flex-wrap:wrap; gap:8px;">
+                        <label style="font-size: 13px; font-weight: 700; color: var(--neon-green); display:flex; align-items:center; gap:6px;">
+                            <i class="fas fa-coins"></i> Valor de Fechamento com Cliente (R$):
+                        </label>
+                        <div id="modal-closed-at-info" style="display:none; font-size:12px; color:var(--neon-green); font-family:var(--font-mono);">
+                            <i class="fas fa-check-circle"></i> Fechado em: <strong id="modal-closed-at-text"></strong>
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                        <div style="position:relative; width: 170px;">
+                            <span style="position:absolute; left:12px; top:11px; font-weight:700; color:var(--neon-green); font-size:13px;">R$</span>
+                            <input type="text" id="modal-deal-value" class="form-control" style="padding-left: 38px; font-weight:700; font-family:var(--font-mono); font-size:14px;" placeholder="ex: 1500,00" onkeydown="if(event.key==='Enter'){event.preventDefault();updateModalDealValue();}">
+                        </div>
+                        <!-- Botões de valor predefinido rápido -->
+                        <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="setPresetDealValue(1000)" style="font-size:11px; padding:4px 8px;">R$ 1.000</button>
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="setPresetDealValue(1500)" style="font-size:11px; padding:4px 8px;">R$ 1.500</button>
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="setPresetDealValue(2500)" style="font-size:11px; padding:4px 8px;">R$ 2.500</button>
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="setPresetDealValue(3500)" style="font-size:11px; padding:4px 8px;">R$ 3.500</button>
+                        </div>
+                        <button type="button" id="btn-save-deal-val" class="btn btn-neon btn-sm" onclick="updateModalDealValue()" style="margin-left:auto;">
+                            <i class="fas fa-save"></i> Salvar Valor
+                        </button>
+                    </div>
+                </div>
+
+                <!-- GERENCIAMENTO NO CRM, OPERADOR & ETAPAS DO FUNIL -->
+                <div style="display: flex; flex-direction: column; gap: 12px; padding-top: 10px; border-top: 1px solid var(--border-color);">
+                    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+                        <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <label style="font-size: 12px; color: var(--text-secondary);">Coluna CRM:</label>
+                                <select id="modal-crm-status" class="form-control" style="padding: 5px 10px; font-size: 12.5px;" onchange="updateModalLeadStatus()">
+                                    <option value="novo">Novos Leads</option>
+                                    <option value="contatado">Em Contato</option>
+                                    <option value="proposta">Proposta Enviada</option>
+                                    <option value="fechado">Fechados / Clientes</option>
+                                </select>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <label style="font-size: 12px; color: var(--text-secondary);">Etapa do Funil:</label>
+                                <select id="modal-follow-stage" class="form-control" style="padding: 5px 10px; font-size: 12.5px;" onchange="updateModalFollowStage()">
+                                    <option value="contato">Contato</option>
+                                    <option value="follow1">Follow 1</option>
+                                    <option value="follow2">Follow 2</option>
+                                </select>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <label style="font-size: 12px; color: var(--text-secondary);">Responsável:</label>
+                                <select id="modal-assigned-to" class="form-control" style="padding: 5px 10px; font-size: 12.5px; width:auto;" onchange="updateModalAssignedTo()">
+                                    <option value="">Não atribuído</option>
+                                </select>
+                                <button type="button" class="btn btn-secondary btn-sm" style="font-size:11px; padding:5px 8px; color:var(--neon-cyan); border-color:rgba(0,210,255,0.4);" onclick="assignLeadToMe()">
+                                    <i class="fas fa-user-check"></i> Assumir
+                                </button>
+                            </div>
+                        </div>
+
+                        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                            <button type="button" class="btn btn-secondary" onclick="deleteLeadConfirm(event, activeLeadForModal ? activeLeadForModal.id : null)" style="color:#ff5b73; border-color:rgba(255,91,115,0.4);" title="Remover este lead da base de dados">
+                                <i class="fas fa-trash-alt"></i> Remover Lead
+                            </button>
+                            <button type="button" class="btn btn-whatsapp" onclick="openChatFromModal()" title="Abrir na tela de chat WhatsApp Web integrada">
+                                <i class="fas fa-comments"></i> Abrir no WhatsApp Web (Chat)
+                            </button>
+                            <a id="modal-send-wa-btn" href="#" target="_blank" class="btn btn-secondary btn-sm" style="border-color:rgba(0,255,136,0.3); color:var(--neon-green);" title="Abrir via link direto wa.me">
+                                <i class="fab fa-whatsapp"></i> Link wa.me
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE NOVA CONVERSA DIRETA (WHATSAPP WEB & CRM) -->
+    <div id="new-chat-modal" class="modal-overlay">
+        <div class="modal-container" style="max-width: 520px;">
+            <div class="modal-header">
+                <div>
+                    <h2 style="font-size: 19px; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 8px;">
+                        <i class="fab fa-whatsapp" style="color:var(--neon-green);"></i> Nova Conversa no WhatsApp
+                    </h2>
+                    <span style="font-size: 12.5px; color: var(--text-secondary);">
+                        Inicie um atendimento direto com qualquer número (seu celular, esposa, cliente avulso).
+                    </span>
+                </div>
+                <button type="button" class="modal-close" onclick="closeNewChatModal()"><i class="fas fa-times"></i></button>
+            </div>
+
+            <form id="new-chat-form" onsubmit="event.preventDefault(); submitCreateChat(false);">
+                <div style="display: flex; flex-direction: column; gap: 14px; margin-top: 10px;">
+                    <div>
+                        <label class="form-label" style="font-size: 12.5px; color: #fff; font-weight: 700;">
+                            Nome do Contato ou Empresa <span style="color:#ff5b73;">*</span>
+                        </label>
+                        <input type="text" id="new-chat-name" class="form-control" placeholder="ex: Meu Número (Teste), Minha Esposa, Dr. Silva..." required>
+                    </div>
+
+                    <div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 4px;">
+                            <label class="form-label" style="font-size: 12.5px; color: #fff; font-weight: 700; margin:0;">
+                                WhatsApp com DDD <span style="color:#ff5b73;">*</span>
+                            </label>
+                            <!-- Botão rápido para testar com o número do próprio operador -->
+                            <button type="button" class="btn btn-secondary btn-sm" style="font-size: 10.5px; padding: 2px 7px; color:var(--neon-green); border-color:rgba(0,255,136,0.3);" onclick="fillOperatorTestNumber()">
+                                <i class="fas fa-magic"></i> Usar Meu Número Conectado
+                            </button>
+                        </div>
+                        <input type="tel" id="new-chat-phone" class="form-control" placeholder="ex: (12) 98880-1327 ou 11999998888" required oninput="formatPhoneInput(this)">
+                        <small style="color:var(--text-secondary); font-size:11.5px; display:block; margin-top:4px;">
+                            💡 Digite com DDD (ex: <strong>11999998888</strong> ou <strong>12988801327</strong>). O sistema adiciona o código do Brasil (+55) automaticamente.
+                        </small>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div>
+                            <label class="form-label" style="font-size: 12px;">E-mail (Opcional)</label>
+                            <input type="email" id="new-chat-email" class="form-control" placeholder="contato@email.com">
+                        </div>
+                        <div>
+                            <label class="form-label" style="font-size: 12px;">Canal Inicial</label>
+                            <select id="new-chat-channel" class="form-control">
+                                <option value="whatsapp">🟢 WhatsApp (WAHA)</option>
+                                <option value="email">✉️ E-mail (SMTP)</option>
+                                <option value="site">🌐 Formulário Web</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 4px;">
+                            <label class="form-label" style="font-size: 12px;">Mensagem Inicial (Opcional)</label>
+                            <div style="display:flex; gap:6px;">
+                                <button type="button" class="btn btn-secondary btn-sm" style="font-size: 10.5px; padding: 2px 6px;" onclick="setNewChatMessagePreset('teste')">
+                                    Msg Teste
+                                </button>
+                                <button type="button" class="btn btn-secondary btn-sm" style="font-size: 10.5px; padding: 2px 6px;" onclick="setNewChatMessagePreset('pitch')">
+                                    Pitch Web
+                                </button>
+                            </div>
+                        </div>
+                        <textarea id="new-chat-message" class="form-control" rows="3" placeholder="Digite uma mensagem para enviar imediatamente, ou deixe em branco para apenas abrir a tela de conversa..."></textarea>
+                    </div>
+
+                    <div style="display:flex; gap:10px; justify-content:flex-end; margin-top: 6px; flex-wrap:wrap;">
+                        <button type="button" class="btn btn-secondary" onclick="closeNewChatModal()">
+                            Cancelar
+                        </button>
+                        <button type="button" class="btn btn-secondary" onclick="submitCreateChat(false)" style="color:var(--neon-cyan); border-color:rgba(0,210,255,0.4);">
+                            <i class="fas fa-comments"></i> Apenas Abrir Chat
+                        </button>
+                        <button type="button" id="btn-submit-new-chat-send" class="btn btn-whatsapp" onclick="submitCreateChat(true)">
+                            <i class="fab fa-whatsapp"></i> Iniciar e Enviar Agora
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL DE IMPORTAÇÃO DO INSTANT DATA SCRAPER -->
+    <div id="import-data-modal" class="modal-overlay">
+        <div class="modal-container" style="width: 700px;">
+            <div class="modal-header">
+                <div>
+                    <h2 style="font-size: 19px; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-file-import" style="color:var(--neon-green);"></i> Importar do Instant Data Scraper
+                    </h2>
+                    <span style="font-size: 12.5px; color: var(--text-secondary);">
+                        Cole o conteúdo do botão <strong>COPY ALL</strong> ou envie o arquivo <strong>CSV</strong> baixado.
+                    </span>
+                </div>
+                <button type="button" class="modal-close" onclick="closeImportModal()"><i class="fas fa-times"></i></button>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 16px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label class="form-label">Nicho das Empresas</label>
+                        <input type="text" id="import-niche" class="form-control" value="Academias" placeholder="ex: Academias, Clínicas">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Cidade / Região</label>
+                        <input type="text" id="import-location" class="form-control" value="São José dos Campos - SP" placeholder="ex: São José dos Campos - SP">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">
+                        <i class="fas fa-paste"></i> Cole os Dados (ou arraste o arquivo CSV):
+                    </label>
+                    <textarea id="import-content" class="form-control" rows="8" placeholder="Cole aqui o texto copiado via 'COPY ALL' do Instant Data Scraper..."></textarea>
+                </div>
+
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                    <div>
+                        <label class="btn btn-secondary btn-sm" style="cursor: pointer;">
+                            <i class="fas fa-upload"></i> Carregar Arquivo .CSV
+                            <input type="file" id="import-file-input" accept=".csv,.txt" style="display: none;" onchange="handleCsvFileUpload(event)">
+                        </label>
+                        <span id="import-file-name" style="font-size: 12px; color: var(--neon-cyan); margin-left: 8px;"></span>
+                    </div>
+
+                    <button type="button" id="import-submit-btn" class="btn btn-neon" onclick="submitInstantDataImport()">
+                        <i class="fas fa-magic"></i> Processar & Deep Scraping
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE VISUALIZAÇÃO DE FOTO AMPLIADA (LIGHTBOX) -->
+    <div id="photo-lightbox-modal" class="modal-overlay" style="z-index: 99999;">
+        <div style="position: relative; max-width: 90vw; max-height: 90vh; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+            <button type="button" class="modal-close" style="position: absolute; top: -45px; right: 0; font-size: 26px; color: #fff; background: none; border: none; cursor: pointer;" onclick="closePhotoLightbox()">
+                <i class="fas fa-times"></i>
+            </button>
+            <img id="lightbox-full-img" src="" alt="Foto Real do Estabelecimento" style="max-width: 88vw; max-height: 82vh; border-radius: 12px; box-shadow: 0 0 35px rgba(0,0,0,0.85); object-fit: contain; border: 1px solid rgba(0, 210, 255, 0.4);">
+            <div id="lightbox-caption" style="margin-top: 12px; color: var(--text-secondary); font-size: 13.5px; text-align: center; font-weight: 500;"></div>
+        </div>
+    </div>
+
+    <!-- MODAL DE RELATÓRIO EXECUTIVO E EXPORTAÇÃO PDF -->
+    <div id="executive-report-modal" class="modal-overlay">
+        <div class="modal-container report-modal-content">
+            <div class="modal-header no-print">
+                <div>
+                    <h2 style="font-size: 20px; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-file-invoice" style="color:var(--neon-cyan);"></i> Relatório Executivo de Mercado
+                    </h2>
+                    <span style="font-size: 13px; color: var(--text-secondary);">Dossiê de inteligência e oportunidades para abordagem comercial</span>
+                </div>
+                <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                    <button type="button" class="btn btn-secondary btn-sm" style="color:var(--neon-green); border-color:rgba(0,255,136,0.4);" onclick="copyExecutiveReportMarkdown()">
+                        <i class="fab fa-markdown"></i> Copiar Markdown
+                    </button>
+                    <a id="btn-download-report-md" href="/api/report/markdown?download=true" target="_blank" class="btn btn-secondary btn-sm" style="color:var(--neon-cyan); border-color:rgba(0,210,255,0.4);">
+                        <i class="fas fa-download"></i> Baixar .MD
+                    </a>
+                    <button type="button" class="btn btn-neon btn-sm" onclick="window.print()">
+                        <i class="fas fa-print"></i> Imprimir / PDF
+                    </button>
+                    <button type="button" class="modal-close" onclick="closeExecutiveReportModal()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- ÁREA DO RELATÓRIO IMPRIMÍVEL -->
+            <div id="printable-report-area">
+                <div id="report-content-body">
+                    <!-- Injetado dinamicamente via JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE CONFIRMAÇÃO PARA LIMPEZA INTELIGENTE DE DADOS -->
+    <div id="confirm-cleanup-modal" class="modal-overlay">
+        <div class="modal-container" style="max-width: 520px;">
+            <div class="modal-header">
+                <h3 id="cleanup-modal-title" style="color: #ffaa00; font-size: 18px; font-weight: 700; display:flex; align-items:center; gap:8px;">
+                    <i class="fas fa-filter-circle-xmark"></i> Gestão da Base de Leads
+                </h3>
+                <button type="button" class="modal-close" onclick="closeCleanupModal()"><i class="fas fa-times"></i></button>
+            </div>
+            <div style="padding: 12px 0;">
+                <div id="cleanup-modal-badge" style="padding: 10px 14px; border-radius: 8px; background: rgba(0,255,136,0.1); border: 1px solid rgba(0,255,136,0.3); margin-bottom: 14px; font-size: 13px; color: #fff;">
+                    <!-- Badge explicativo injetado via JS -->
+                </div>
+                <p id="cleanup-modal-desc" style="color: var(--text-secondary); font-size: 13.5px; line-height: 1.6;">
+                    <!-- Descrição explicativa injetada via JS -->
+                </p>
+            </div>
+            <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 14px;">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="closeCleanupModal()">Cancelar</button>
+                <button type="button" id="cleanup-confirm-btn" class="btn btn-sm" style="background:#ffaa00; color:#000; border:none; padding:8px 18px; border-radius:6px; font-weight:800;" onclick="executeCleanupAction()">
+                    <i class="fas fa-check"></i> Confirmar Ação
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE SELEÇÃO DE OPERADOR (ONLINE / DUAS PESSOAS) -->
+    <div id="login-user-modal" class="modal-overlay">
+        <div class="modal-container" style="max-width: 480px;">
+            <div class="modal-header">
+                <div>
+                    <h3 style="color: #fff; font-size: 18px; font-weight: 800; display:flex; align-items:center; gap:8px;">
+                        <i class="fas fa-users" style="color:var(--neon-cyan);"></i> Quem está operando o CRM?
+                    </h3>
+                    <span style="font-size: 12px; color: var(--text-secondary);">Selecione seu nome para atribuir seus leads e métricas</span>
+                </div>
+                <button type="button" class="modal-close" onclick="closeLoginModal()"><i class="fas fa-times"></i></button>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 16px; padding: 14px 0;">
+                <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 10px; padding: 16px;">
+                    <label style="font-size: 12.5px; font-weight: 700; color: var(--neon-cyan); display:block; margin-bottom: 12px;">
+                        <i class="fas fa-user-check"></i> Selecione seu Operador (Sem necessidade de senha):
+                    </label>
+                    <div id="operator-switch-buttons-container" style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="selectOperator('Operador 1')">
+                            <i class="fas fa-user"></i> Operador 1
+                        </button>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="selectOperator('Operador 2')">
+                            <i class="fas fa-user"></i> Operador 2
+                        </button>
+                    </div>
+                </div>
+
+                <div style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 14px; text-align: center;">
+                    <a href="/admin" class="btn btn-secondary btn-sm" style="color:var(--neon-cyan); border-color:rgba(0,210,255,0.3); width: 100%; justify-content: center; padding: 10px;">
+                        <i class="fas fa-user-shield"></i> Portal do Gerente (Gestão & Senha do Admin)
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- BARRA DE NAVEGAÇÃO INFERIOR PARA CELULAR (MOBILE BOTTOM NAV) -->
+    <nav class="mobile-bottom-nav">
+        <button type="button" class="bottom-nav-item active" data-tab="dashboard">
+            <i class="fas fa-chart-line"></i>
+            <span>Dashboard</span>
+        </button>
+        <button type="button" class="bottom-nav-item" data-tab="scraper">
+            <i class="fas fa-satellite-dish"></i>
+            <span>Varredura</span>
+        </button>
+        <button type="button" class="bottom-nav-item" data-tab="campaigns">
+            <i class="fas fa-bullhorn"></i>
+            <span>CRM</span>
+        </button>
+        <button type="button" class="bottom-nav-item" data-tab="chat">
+            <i class="fas fa-comments" style="color:var(--neon-green);"></i>
+            <span>Chat</span>
+        </button>
+        <button type="button" class="bottom-nav-item" data-tab="whatsapp">
+            <i class="fab fa-whatsapp" style="color:var(--neon-green);"></i>
+            <span>WAHA</span>
+        </button>
+        <button type="button" class="bottom-nav-item" data-tab="settings">
+            <i class="fas fa-sliders-h"></i>
+            <span>Ajustes</span>
+        </button>
+    </nav>
+
+    <!-- Script principal da aplicação -->
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
