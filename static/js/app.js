@@ -952,9 +952,16 @@ function renderLeadsTable(leads) {
                         </div>
                         <span class="company-meta"><i class="fas fa-map-marker-alt"></i> ${escapeHtml(lead.address || 'Local não especificado')}</span>
                         ${(() => {
+                            let metaPills = [];
+                            if (lead.rating !== undefined && lead.rating !== null && parseFloat(lead.rating) > 0) {
+                                metaPills.push(`<span class="badge-rating" style="display:inline-flex; align-items:center; gap:3px; font-size:10.5px; padding:1px 6px; border-radius:4px; background:rgba(255, 183, 3, 0.12); border:1px solid rgba(255, 183, 3, 0.35); color:#ffb703; font-weight:700;" title="Avaliação no Google Maps"><i class="fas fa-star" style="font-size:9.5px;"></i> ${Number(lead.rating).toFixed(1)} ${lead.reviews_count ? `<small style="opacity:0.8; font-weight:normal;">(${lead.reviews_count})</small>` : ''}</span>`);
+                            }
                             const pList = getLeadPhotos(lead);
-                            return pList.length > 0 
-                                ? `<div style="margin-top:3px;"><span class="badge-photos" style="display:inline-flex; align-items:center; gap:4px; font-size:10.5px; padding:2px 7px; border-radius:4px; background:rgba(0, 210, 255, 0.12); border:1px solid rgba(0, 210, 255, 0.3); color:var(--neon-cyan); cursor:pointer;" onclick="openLeadPhotosModal(${lead.id})" title="Clique para ver o acervo de fotos reais"><i class="fas fa-camera"></i> ${pList.length} fotos reais</span></div>` 
+                            if (pList.length > 0) {
+                                metaPills.push(`<span class="badge-photos" style="display:inline-flex; align-items:center; gap:4px; font-size:10.5px; padding:2px 7px; border-radius:4px; background:rgba(0, 210, 255, 0.12); border:1px solid rgba(0, 210, 255, 0.3); color:var(--neon-cyan); cursor:pointer;" onclick="openLeadPhotosModal(${lead.id})" title="Clique para ver o acervo de fotos reais"><i class="fas fa-camera"></i> ${pList.length} fotos reais</span>`);
+                            }
+                            return metaPills.length > 0 
+                                ? `<div style="margin-top:3px; display:flex; align-items:center; gap:6px; flex-wrap:wrap;">${metaPills.join('')}</div>` 
                                 : '';
                         })()}
                     </div>
