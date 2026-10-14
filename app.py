@@ -440,6 +440,39 @@ async def api_delete_lead(lead_id: int):
     success = database.delete_lead(lead_id)
     return {"success": success, "message": "Lead removido com sucesso!"}
 
+class SaveInstagramPayload(BaseModel):
+    instagram: str
+
+class BatchEnrichPayload(BaseModel):
+    lead_ids: Optional[List[int]] = None
+    limit: Optional[int] = 10
+
+@app.post("/api/leads/{lead_id}/enrich")
+async def api_enrich_lead(lead_id: int):
+    import enrichment_service
+    res = enrichment_service.enrich_single_lead(lead_id)
+    return res
+
+@app.post("/api/leads/{lead_id}/find-instagram")
+async def api_find_instagram(lead_id: int):
+    import enrichment_service
+    res = enrichment_service.find_instagram_for_lead(lead_id)
+    return res
+
+@app.post("/api/leads/{lead_id}/save-instagram")
+async def api_save_instagram(lead_id: int, payload: SaveInstagramPayload):
+    import enrichment_service
+    clean_h = enrichment_service.clean_instagram_handle(payload.instagram)
+    database.update_lead_contacts(lead_id=lead_id, instagram=clean_h)
+    lead = database.get_lead_by_id(lead_id)
+    return {"success": True, "instagram": clean_h, "lead": lead}
+
+@app.post("/api/leads/enrich-batch")
+async def api_enrich_batch(payload: BatchEnrichPayload):
+    import enrichment_service
+    res = enrichment_service.enrich_batch_leads(lead_ids=payload.lead_ids, limit=payload.limit or 10)
+    return res
+
 class ClearDataPayload(BaseModel):
     scan_id: Optional[int] = None
 
