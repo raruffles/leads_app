@@ -3430,11 +3430,26 @@ window.renderChatConversationsList = function() {
     if (!listEl) return;
 
     if (chatConversations.length === 0) {
+        const rawDigits = chatSearchQuery.replace(/\D/g, '');
+        if (rawDigits.length >= 8) {
+            listEl.innerHTML = `
+                <div style="text-align:center; padding:24px 14px; background:rgba(0, 255, 136, 0.06); border:1px dashed rgba(0, 255, 136, 0.35); border-radius:12px; margin:16px;">
+                    <i class="fab fa-whatsapp" style="font-size:30px; color:var(--neon-green); margin-bottom:10px; display:inline-block;"></i>
+                    <div style="font-weight:700; font-size:13.5px; color:#fff;">Número não cadastrado</div>
+                    <div style="color:var(--neon-green); font-size:13px; font-weight:700; margin:6px 0 14px; letter-spacing:0.5px;">${escapeHtml(chatSearchQuery)}</div>
+                    <button type="button" class="btn btn-whatsapp btn-sm" onclick="quickStartChatWithPhone('${escapeHtml(rawDigits)}')" style="width:100%; justify-content:center; padding:9px 12px; font-weight:700; font-size:12px;">
+                        <i class="fas fa-comment-dots"></i> Iniciar Conversa com este Número
+                    </button>
+                </div>
+            `;
+            return;
+        }
+
         listEl.innerHTML = `
             <div style="text-align:center; padding:40px 16px; color:var(--text-secondary);">
                 <i class="fas fa-search" style="font-size:24px; opacity:0.3; margin-bottom:10px; display:block;"></i>
                 <div style="font-weight:600; font-size:13px;">Nenhuma conversa localizada</div>
-                <small style="opacity:0.7; font-size:11.5px; margin-top:4px; display:block;">Tente outro filtro ou faça uma nova varredura de leads.</small>
+                <small style="opacity:0.7; font-size:11.5px; margin-top:4px; display:block;">Tente outro filtro ou clique no botão "+ Nova Conversa" acima.</small>
             </div>
         `;
         return;
@@ -3522,6 +3537,32 @@ window.clearChatSearch = function() {
     const clearBtn = document.getElementById('chat-search-clear');
     if (clearBtn) clearBtn.style.display = 'none';
     loadChatConversations();
+};
+
+window.quickStartChatWithPhone = function(rawPhone) {
+    openNewChatModal();
+    const phoneInput = document.getElementById('new-chat-phone');
+    const nameInput = document.getElementById('new-chat-name');
+    if (phoneInput) {
+        phoneInput.value = rawPhone;
+        formatPhoneInput(phoneInput);
+    }
+    if (nameInput && !nameInput.value) {
+        nameInput.value = `Contato (${phoneInput ? phoneInput.value : rawPhone})`;
+    }
+    const msgInput = document.getElementById('new-chat-message');
+    if (msgInput) {
+        setTimeout(() => msgInput.focus(), 200);
+    }
+};
+
+window.handleChatSearchKeyDown = function(e, val) {
+    if (e.key === 'Enter') {
+        const rawDigits = (val || '').replace(/\D/g, '');
+        if (rawDigits.length >= 8 && chatConversations.length === 0) {
+            quickStartChatWithPhone(rawDigits);
+        }
+    }
 };
 
 window.selectChatLead = async function(leadId) {

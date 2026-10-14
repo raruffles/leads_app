@@ -788,9 +788,22 @@ def get_chat_conversations(search: Optional[str] = None, filter_type: Optional[s
     params = []
     
     if search:
-        s = f"%{search.strip()}%"
-        query += " AND (l.name LIKE ? OR l.phone LIKE ? OR l.whatsapp LIKE ? OR l.email LIKE ?)"
-        params.extend([s, s, s, s])
+        raw_s = search.strip()
+        s = f"%{raw_s}%"
+        digits = "".join(c for c in raw_s if c.isdigit())
+        if len(digits) >= 8:
+            core_part = digits[-8:]
+            s_digits_raw = f"%{digits}%"
+            s_core = f"%{core_part}%"
+            s_pattern = f"%{core_part[:4]}%{core_part[4:]}%"
+            query += """ AND (
+                l.name LIKE ? OR l.email LIKE ? OR l.phone LIKE ? OR l.whatsapp LIKE ?
+                OR l.phone LIKE ? OR l.whatsapp LIKE ? OR l.phone LIKE ? OR l.whatsapp LIKE ?
+            )"""
+            params.extend([s, s, s, s, s_digits_raw, s_digits_raw, s_pattern, s_core])
+        else:
+            query += " AND (l.name LIKE ? OR l.phone LIKE ? OR l.whatsapp LIKE ? OR l.email LIKE ?)"
+            params.extend([s, s, s, s])
         
     if filter_type == 'whatsapp':
         query += " AND (l.whatsapp IS NOT NULL AND l.whatsapp != '')"

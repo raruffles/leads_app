@@ -591,7 +591,7 @@
                         <div class="chat-search-bar">
                             <div class="chat-search-input-wrapper">
                                 <i class="fas fa-search" style="color:var(--text-secondary);"></i>
-                                <input type="text" id="chat-search-input" placeholder="Buscar conversa, empresa ou número..." oninput="handleChatSearch(this.value)">
+                                <input type="text" id="chat-search-input" placeholder="Buscar conversa, empresa ou número..." oninput="handleChatSearch(this.value)" onkeydown="handleChatSearchKeyDown(event, this.value)">
                                 <button type="button" id="chat-search-clear" onclick="clearChatSearch()" style="display:none; background:none; border:none; color:var(--text-secondary); cursor:pointer;"><i class="fas fa-times"></i></button>
                             </div>
                         </div>
