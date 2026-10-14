@@ -1325,9 +1325,11 @@ async def scan_stream(
     niche: str = Query(...), 
     location: str = Query(...), 
     cep: Optional[str] = Query(None),
-    max_leads: int = Query(15)
+    max_leads: int = Query(15),
+    website_filter: str = Query("all"),
+    min_rating: float = Query(0.0)
 ):
-    """Server-Sent Events (SSE) para atualização do progresso em tempo real"""
+    """Server-Sent Events (SSE) para atualização do progresso em tempo real com filtros pré-scraping"""
     
     settings = database.get_settings()
     delay = float(settings.get("delay_between_requests", 1.0))
@@ -1343,7 +1345,14 @@ async def scan_stream(
         no_web_count = 0
         
         try:
-            for event in scraper.run_scan_stream(niche, location, cep=cep, max_leads=max_leads):
+            for event in scraper.run_scan_stream(
+                niche, 
+                location, 
+                cep=cep, 
+                max_leads=max_leads,
+                website_filter=website_filter,
+                min_rating=min_rating
+            ):
                 if event.get("step") == "finished":
                     last_leads = event.get("leads", [])
                     no_web_count = event.get("no_website_count", 0)

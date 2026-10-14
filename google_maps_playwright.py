@@ -25,7 +25,9 @@ def normalize_signature(text: str) -> str:
 async def scrape_google_maps_real(
     query: str, 
     limit: int = 15, 
-    exclude_signatures: Optional[Dict[str, Any]] = None
+    exclude_signatures: Optional[Dict[str, Any]] = None,
+    min_rating: float = 0.0,
+    website_filter: str = "all"
 ) -> List[Dict[str, Any]]:
     """
     Busca estabelecimentos REAIS diretamente no Google Maps via Chromium headless com rolagem dinâmica.
@@ -142,6 +144,11 @@ async def scrape_google_maps_real(
                         except ValueError:
                             pass
 
+                    # Filtro de Avaliação Mínima (ex: 4.5+ estrelas) antes de gastar tempo abrindo o card
+                    if min_rating > 0.0:
+                        if rating is None or rating < min_rating:
+                            continue
+
                     # Detalhes completos ao clicar no card
                     phone = ""
                     whatsapp = ""
@@ -251,6 +258,16 @@ async def scrape_google_maps_real(
                             elif href_site.startswith("http"):
                                 website = href_site
 
+                    # Filtro de Presença Web (com/sem site)
+                    if website_filter in ("no_site", "has_site"):
+                        site_lower = (website or "").lower()
+                        is_social = any(s in site_lower for s in ["instagram.com", "facebook.com", "linktr.ee", "wa.me", "whatsapp.com", "bit.ly"])
+                        has_real_web = bool(website and not is_social)
+                        if website_filter == "no_site" and has_real_web:
+                            continue
+                        if website_filter == "has_site" and not has_real_web:
+                            continue
+
                     # Fallbacks para Telefone por regex
                     if not phone:
                         phone_match = re.search(r'(?:\(?\d{2}\)?\s*)?(?:[2-9]\d{3,4}[-\s]?\d{4})', card_text)
@@ -347,7 +364,9 @@ async def scrape_google_maps_real(
 def run_real_maps_sync(
     query: str, 
     limit: int = 15, 
-    exclude_signatures: Optional[Dict[str, Any]] = None
+    exclude_signatures: Optional[Dict[str, Any]] = None,
+    min_rating: float = 0.0,
+    website_filter: str = "all"
 ) -> List[Dict[str, Any]]:
     """
     Wrapper síncrono thread-safe para executar a busca real do Google Maps.
@@ -357,7 +376,13 @@ def run_real_maps_sync(
         asyncio.set_event_loop(loop)
         try:
             return loop.run_until_complete(
-                scrape_google_maps_real(query, limit=limit, exclude_signatures=exclude_signatures)
+                scrape_google_maps_real(
+                    query, 
+                    limit=limit, 
+                    exclude_signatures=exclude_signatures,
+                    min_rating=min_rating,
+                    website_filter=website_filter
+                )
             )
         except Exception as e:
             print(f"Erro no worker scrape_google_maps_real: {e}")

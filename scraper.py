@@ -532,10 +532,29 @@ class LeadScraper:
         # Não gerar nomes fictícios ou combinados para manter 100% de precisão real
         return leads[:count]
 
-    def run_scan_stream(self, niche: str, location: str, cep: Optional[str] = None, max_leads: int = 15) -> Generator[Dict[str, Any], None, List[Dict[str, Any]]]:
-        """Executa a varredura com resolução estrita de CEP/Cidade e streaming SSE"""
+    def run_scan_stream(
+        self, 
+        niche: str, 
+        location: str, 
+        cep: Optional[str] = None, 
+        max_leads: int = 15,
+        website_filter: str = "all",
+        min_rating: float = 0.0
+    ) -> Generator[Dict[str, Any], None, List[Dict[str, Any]]]:
+        """Executa a varredura com resolução estrita de CEP/Cidade, filtros pré-scraping e streaming SSE"""
         
-        yield {"step": "init", "percent": 5, "message": f"Iniciando radar de leads para '{niche}'..."}
+        filter_descs = []
+        if website_filter == "no_site":
+            filter_descs.append("Apenas Sem Site Oficial")
+        elif website_filter == "has_site":
+            filter_descs.append("Apenas Com Site Oficial")
+        if min_rating >= 4.5:
+            filter_descs.append("4.5+ Estrelas ⭐")
+        elif min_rating > 0.0:
+            filter_descs.append(f"{min_rating}+ Estrelas ⭐")
+
+        filter_msg = f" [Filtros: {' | '.join(filter_descs)}]" if filter_descs else ""
+        yield {"step": "init", "percent": 5, "message": f"Iniciando radar de leads para '{niche}'{filter_msg}..."}
         time.sleep(self.delay * 0.4)
         
         # 1. Resolução estrita do CEP e Cidade
@@ -638,7 +657,14 @@ class LeadScraper:
                 search_query = f"{niche} em {cidade_nome}"
                 if loc_data.get("bairro"):
                     search_query += f" {loc_data['bairro']}"
-                real_results = run_real_maps_sync(search_query, limit=max_leads, exclude_signatures=exclude_signatures)
+                raw_fetch_limit = max(max_leads * 3, 30) if (website_filter != "all" or min_rating > 0.0) else max_leads
+                real_results = run_real_maps_sync(
+                    search_query, 
+                    limit=raw_fetch_limit, 
+                    exclude_signatures=exclude_signatures,
+                    min_rating=min_rating,
+                    website_filter=website_filter
+                )
                 if real_results:
                     candidates = real_results
                     yield {
@@ -665,6 +691,29 @@ class LeadScraper:
                     continue
                 fresh_candidates.append(c)
             candidates = fresh_candidates
+
+        # Aplicação rigorosa dos filtros pré-scraping (com/sem site e nota mínima)
+        if candidates and (website_filter != "all" or min_rating > 0.0):
+            filtered_c = []
+            for c in candidates:
+                if min_rating > 0.0:
+                    c_rating = c.get("rating")
+                    if c_rating is None or float(c_rating) < min_rating:
+                        continue
+                
+                if website_filter in ("no_site", "has_site"):
+                    raw_s = (c.get("website") or "").strip().lower()
+                    is_social = any(s in raw_s for s in ["instagram.com", "facebook.com", "linktr.ee", "wa.me", "whatsapp.com", "bit.ly"])
+                    has_web = bool(raw_s and not is_social)
+                    if website_filter == "no_site" and has_web:
+                        continue
+                    if website_filter == "has_site" and not has_web:
+                        continue
+                
+                filtered_c.append(c)
+                if len(filtered_c) >= max_leads:
+                    break
+            candidates = filtered_c
 
         total_found = len(candidates)
         
@@ -801,6 +850,8 @@ class LeadScraper:
                 "has_website": 1 if site else 0,
                 "address": lead_addr,
                 "category": niche.title(),
+                "rating": float(item.get("rating")) if item.get("rating") is not None else None,
+                "reviews_count": int(item.get("reviews_count") or 0),
                 "instagram": instagram,
                 "photos": photos,
                 "maps_url": maps_url,
@@ -813,10 +864,14 @@ class LeadScraper:
             final_leads.append(lead_data)
             time.sleep(self.delay * 0.3)
             
+        filter_summary = f" ({no_website_count} sem site)"
+        if min_rating > 0.0:
+            filter_summary += f" | {min_rating}+ ⭐"
+            
         yield {
             "step": "finished",
             "percent": 100,
-            "message": f"Varredura em {cidade_nome} concluída! {total_found} leads capturados ({no_website_count} sem site).",
+            "message": f"Varredura em {cidade_nome} concluída! {total_found} leads capturados{filter_summary}.",
             "leads": final_leads,
             "no_website_count": no_website_count,
             "city": cidade_nome

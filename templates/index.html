@@ -424,6 +424,29 @@
                             </div>
 
                             <div class="form-group">
+                                <label class="form-label" for="scan-website-filter">
+                                    <i class="fas fa-globe"></i> Presença Web
+                                </label>
+                                <select id="scan-website-filter" class="form-control" title="Filtrar antes de scraptar por presença de site">
+                                    <option value="all">🌐 Todos (Com e Sem)</option>
+                                    <option value="no_site" selected>🔥 Sem Site (Oportunidade)</option>
+                                    <option value="has_site">✅ Com Site Oficial</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label" for="scan-min-rating">
+                                    <i class="fas fa-star" style="color:#ffb703;"></i> Avaliação
+                                </label>
+                                <select id="scan-min-rating" class="form-control" title="Filtrar antes de scraptar por nota no Google Maps">
+                                    <option value="0">⭐ Todas as Notas</option>
+                                    <option value="4.5" selected>⭐ 4.5+ Estrelas</option>
+                                    <option value="4.0">⭐ 4.0+ Estrelas</option>
+                                    <option value="3.5">⭐ 3.5+ Estrelas</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
                                 <label class="form-label" for="max-leads-select">
                                     <i class="fas fa-list-ol"></i> Qtd.
                                 </label>
@@ -519,6 +542,9 @@
                             </button>
                             <button class="filter-btn" data-filter="whatsapp">
                                 <i class="fab fa-whatsapp" style="color:var(--neon-green);"></i> Com WhatsApp
+                            </button>
+                            <button class="filter-btn" data-filter="rating-45" style="border-color: rgba(255, 183, 3, 0.4);" title="Ver apenas estabelecimentos com 4.5+ estrelas">
+                                <i class="fas fa-star" style="color:#ffb703;"></i> 4.5+ Estrelas
                             </button>
                             <button class="filter-btn" data-filter="instagram" style="border-color: rgba(225, 48, 108, 0.4);" title="Leads que possuem perfil no Instagram ou vieram do Instagram">
                                 <i class="fab fa-instagram" style="color:#ff75a0;"></i> Do Instagram
@@ -2782,7 +2808,7 @@ Se preferir não receber mensagens, é só me avisar.</textarea>
 
     <!-- MODAL DE DISPARO RÁPIDO PARA SELECIONADOS NA PROSPECÇÃO B2B -->
     <div id="modal-b2b-quick-dispatch" class="modal-overlay">
-        <div class="modal-container" style="max-width: 620px;">
+        <div class="modal-container" style="max-width: 680px;">
             <div class="modal-header">
                 <div>
                     <h3 style="color: #fff; font-size: 18px; font-weight: 800; display:flex; align-items:center; gap:8px;">
@@ -2795,10 +2821,10 @@ Se preferir não receber mensagens, é só me avisar.</textarea>
                 <button type="button" class="modal-close" onclick="closeB2BQuickDispatchModal()"><i class="fas fa-times"></i></button>
             </div>
 
-            <div style="display: flex; flex-direction: column; gap: 16px; padding: 14px 0;">
+            <div style="display: flex; flex-direction: column; gap: 14px; padding: 14px 0;">
                 <!-- SELETOR DE ETAPA DA PROSPECÇÃO B2B -->
-                <div class="form-group">
-                    <label class="form-label" style="font-weight: 700; color: var(--neon-cyan);">
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label" style="font-weight: 700; color: var(--neon-cyan); margin-bottom: 6px;">
                         <i class="fas fa-layer-group"></i> Etapa da Mensagem de Prospecção:
                     </label>
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px;">
@@ -2817,34 +2843,91 @@ Se preferir não receber mensagens, é só me avisar.</textarea>
                     </div>
                 </div>
 
-                <!-- TEXTO DA MENSAGEM -->
-                <div class="form-group">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px;">
-                        <label class="form-label" style="margin-bottom:0;">
-                            <i class="fas fa-comment-dots"></i> Conteúdo da Mensagem (WhatsApp):
+                <!-- SELETOR DE SAUDAÇÃO & ABERTURA (OLÁ, OI, BOM DIA / BOA TARDE) -->
+                <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(0, 210, 255, 0.2); border-radius: 8px; padding: 10px 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 6px;">
+                        <label class="form-label" style="font-weight: 700; color: var(--neon-cyan); margin-bottom: 0; font-size: 12px; display: flex; align-items: center; gap: 6px;">
+                            <i class="fas fa-hand-sparkles" style="color: #ffaa00;"></i> Saudação & Abertura da Mensagem:
                         </label>
-                        <span style="font-size: 11px; color: var(--text-muted);">Tags: <code style="color:var(--neon-green);">{nome}</code>, <code style="color:var(--neon-cyan);">{empresa}</code>, <code style="color:#ffaa00;">{cidade}</code></span>
+                        <span style="font-size: 11px; color: var(--text-secondary);">Adaptação dinâmica automática:</span>
                     </div>
-                    <textarea id="b2b-modal-message-text" class="form-control" rows="5" style="font-family: var(--font-main); font-size: 13.5px; line-height: 1.5; resize: vertical;" placeholder="Escreva a mensagem aqui..."></textarea>
+                    <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                        <button type="button" class="btn btn-secondary btn-sm b2b-greeting-btn active" id="btn-greet-horario" onclick="applyB2BGreeting('horario')" style="font-size: 11px; padding: 5px 10px; border-color: var(--neon-green); color: var(--neon-green); font-weight: 700;" title="Insere Bom dia / Boa tarde / Boa noite de acordo com o horário real">
+                            <i class="fas fa-clock"></i> Bom dia / Boa tarde (Horário)
+                        </button>
+                        <button type="button" class="btn btn-secondary btn-sm b2b-greeting-btn" id="btn-greet-spintax-ola-oi" onclick="applyB2BGreeting('spintax_ola_oi')" style="font-size: 11px; padding: 5px 10px;" title="Varia aleatoriamente entre Olá e Oi">
+                            <i class="fas fa-random"></i> {Olá|Oi} (Spintax)
+                        </button>
+                        <button type="button" class="btn btn-secondary btn-sm b2b-greeting-btn" id="btn-greet-spintax-full" onclick="applyB2BGreeting('spintax_full')" style="font-size: 11px; padding: 5px 10px;" title="Varia entre Olá tudo bem? / Oi tudo bom? / Bom dia/Boa tarde">
+                            <i class="fas fa-shield-alt"></i> {Olá|Oi|{saudacao}} (Anti-Ban)
+                        </button>
+                        <button type="button" class="btn btn-secondary btn-sm b2b-greeting-btn" id="btn-greet-ola" onclick="applyB2BGreeting('ola')" style="font-size: 11px; padding: 5px 10px;">
+                            Olá, [{primeiro_nome}]
+                        </button>
+                        <button type="button" class="btn btn-secondary btn-sm b2b-greeting-btn" id="btn-greet-oi" onclick="applyB2BGreeting('oi')" style="font-size: 11px; padding: 5px 10px;">
+                            Oi, [{primeiro_nome}]
+                        </button>
+                    </div>
                 </div>
 
-                <!-- DELAY HUMANO ANTI-BAN -->
-                <div style="display: flex; gap: 14px; align-items: center; background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 14px;">
-                    <div style="font-size: 12.5px; color: var(--text-secondary); display:flex; align-items:center; gap:8px;">
-                        <i class="fas fa-shield-alt" style="color:var(--neon-green); font-size:16px;"></i>
-                        <span>Delay Anti-Ban (Humano):</span>
+                <!-- TEXTO DA MENSAGEM COM TAGS CLICÁVEIS -->
+                <div class="form-group" style="margin-bottom: 0;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px; flex-wrap:wrap; gap:6px;">
+                        <label class="form-label" style="margin-bottom:0; font-size:12px; font-weight:700;">
+                            <i class="fas fa-comment-dots"></i> Conteúdo da Mensagem (WhatsApp):
+                        </label>
+                        <div style="display:flex; gap: 4px; flex-wrap: wrap; align-items: center;">
+                            <span style="font-size: 10px; color: var(--text-muted); margin-right: 2px;">Tags:</span>
+                            <span class="tag-chip" style="font-size: 10.5px; padding: 2px 6px; cursor: pointer;" onclick="insertTagIntoB2B('[{saudacao}]')" title="Insere Bom dia / Boa tarde / Boa noite conforme o horário">+ [{saudacao}]</span>
+                            <span class="tag-chip" style="font-size: 10.5px; padding: 2px 6px; cursor: pointer;" onclick="insertTagIntoB2B('{Olá|Oi}')" title="Spintax Olá / Oi">+ {Olá|Oi}</span>
+                            <span class="tag-chip" style="font-size: 10.5px; padding: 2px 6px; cursor: pointer;" onclick="insertTagIntoB2B('[{primeiro_nome}]')" title="Primeiro nome do contato">+ [{primeiro_nome}]</span>
+                            <span class="tag-chip" style="font-size: 10.5px; padding: 2px 6px; cursor: pointer;" onclick="insertTagIntoB2B('[{empresa}]')" title="Nome da empresa">+ [{empresa}]</span>
+                            <span class="tag-chip" style="font-size: 10.5px; padding: 2px 6px; cursor: pointer;" onclick="insertTagIntoB2B('[{cidade}]')" title="Cidade da empresa">+ [{cidade}]</span>
+                        </div>
                     </div>
-                    <div style="display:flex; align-items:center; gap:8px; margin-left:auto;">
-                        <input type="number" id="b2b-delay-min" class="form-control" value="15" min="15" max="3600" style="width: 65px; height: 32px; padding: 4px 8px; text-align: center; font-size: 12.5px;" title="Mínimo obrigatório de 15 segundos">
-                        <span style="font-size: 12px; color: var(--text-muted);">a</span>
-                        <input type="number" id="b2b-delay-max" class="form-control" value="35" min="15" max="3600" style="width: 65px; height: 32px; padding: 4px 8px; text-align: center; font-size: 12.5px;">
-                        <span style="font-size: 12px; color: var(--text-muted);">seg</span>
+                    <textarea id="b2b-modal-message-text" class="form-control" rows="5" oninput="updateB2BPreview()" style="font-family: var(--font-main); font-size: 13.5px; line-height: 1.5; resize: vertical;" placeholder="Escreva a mensagem aqui..."></textarea>
+                    
+                    <!-- PRÉVIA EM TEMPO REAL -->
+                    <div style="background: rgba(0, 0, 0, 0.4); border: 1px dashed rgba(0, 255, 136, 0.3); border-radius: 8px; padding: 10px 12px; margin-top: 8px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                            <span style="font-size: 11px; font-weight: 700; color: var(--neon-green); text-transform: uppercase;">
+                                <i class="fab fa-whatsapp"></i> Prévia em Tempo Real (Como o lead lerá):
+                            </span>
+                            <span id="b2b-preview-target-name" style="font-size: 11px; color: var(--text-secondary);">Para: Lead Selecionado</span>
+                        </div>
+                        <div id="b2b-preview-rendered-text" style="font-size: 12.5px; line-height: 1.45; color: #f1f5f9; white-space: pre-wrap; font-family: var(--font-main);">
+                            <!-- Injetado dinamicamente via updateB2BPreview() -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- DELAY HUMANO ANTI-BAN & INTEGRAÇÃO WHATSAPP WEB -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div style="display: flex; gap: 8px; align-items: center; background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 12px;">
+                        <i class="fas fa-shield-alt" style="color:var(--neon-green); font-size:15px;"></i>
+                        <span style="font-size: 12px; color: var(--text-secondary);">Delay Anti-Ban:</span>
+                        <div style="display:flex; align-items:center; gap:4px; margin-left:auto;">
+                            <input type="number" id="b2b-delay-min" class="form-control" value="15" min="15" max="3600" style="width: 55px; height: 30px; padding: 2px 6px; text-align: center; font-size: 12px;" title="Mínimo de 15s">
+                            <span style="font-size: 11px; color: var(--text-muted);">a</span>
+                            <input type="number" id="b2b-delay-max" class="form-control" value="35" min="15" max="3600" style="width: 55px; height: 30px; padding: 2px 6px; text-align: center; font-size: 12px;">
+                            <span style="font-size: 11px; color: var(--text-muted);">s</span>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(0, 255, 136, 0.05); border: 1px solid rgba(0, 255, 136, 0.25); border-radius: 8px; padding: 10px 12px;">
+                        <label style="display: flex; align-items: center; gap: 8px; font-size: 11.5px; color: #fff; cursor: pointer; margin: 0;">
+                            <input type="checkbox" id="b2b-auto-open-chat-cb" checked>
+                            <span><strong style="color:var(--neon-green);"><i class="fab fa-whatsapp"></i> Abrir WhatsApp Web</strong> ao concluir</span>
+                        </label>
+                        <a href="https://web.whatsapp.com" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" style="font-size: 10.5px; padding: 2px 6px; color: var(--neon-cyan); border-color: rgba(0, 210, 255, 0.35);" title="Abrir WhatsApp Web Oficial em nova aba">
+                            <i class="fas fa-external-link-alt"></i> Web
+                        </a>
                     </div>
                 </div>
 
                 <!-- LISTA DE DESTINATÁRIOS PRÉVIA -->
-                <div style="background: rgba(14, 11, 28, 0.6); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 14px; max-height: 120px; overflow-y: auto;">
-                    <div style="font-size: 11.5px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px; text-transform: uppercase;">
+                <div style="background: rgba(14, 11, 28, 0.6); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 14px; max-height: 110px; overflow-y: auto;">
+                    <div style="font-size: 11px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px; text-transform: uppercase;">
                         Destinatários Selecionados:
                     </div>
                     <div id="b2b-modal-recipient-preview" style="display: flex; flex-direction: column; gap: 4px; font-size: 12px;">
@@ -2852,7 +2935,7 @@ Se preferir não receber mensagens, é só me avisar.</textarea>
                     </div>
                 </div>
 
-                <!-- PAINEL DE PROGRESSO DE ENVIO -->
+                <!-- PAINEL DE PROGRESSO DE ENVIO COM BOTÃO PARA WHATSAPP WEB -->
                 <div id="b2b-dispatch-progress-panel" style="display: none; background: rgba(0, 255, 136, 0.05); border: 1px solid rgba(0, 255, 136, 0.25); border-radius: 8px; padding: 12px 14px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
                         <span id="b2b-dispatch-status-text" style="font-size: 12.5px; font-weight: 700; color: var(--neon-green);">
@@ -2863,12 +2946,33 @@ Se preferir não receber mensagens, é só me avisar.</textarea>
                     <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden; margin-bottom: 8px;">
                         <div id="b2b-dispatch-progress-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, var(--neon-cyan), var(--neon-green)); border-radius: 4px; transition: width 0.3s ease;"></div>
                     </div>
-                    <div id="b2b-dispatch-log-box" style="font-family: var(--font-mono); font-size: 11px; color: #a7f3d0; max-height: 80px; overflow-y: auto;"></div>
+                    <div id="b2b-dispatch-log-box" style="font-family: var(--font-mono); font-size: 11px; color: #a7f3d0; max-height: 90px; overflow-y: auto;"></div>
+
+                    <!-- BOTÕES DE GESTÃO WHATSAPP WEB PÓS-DISPARO -->
+                    <div id="b2b-post-dispatch-actions" style="display: none; margin-top: 10px; padding: 10px; background: rgba(0, 255, 136, 0.12); border: 1px solid var(--neon-green); border-radius: 6px; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+                        <div>
+                            <strong style="color: #fff; font-size: 12px;"><i class="fab fa-whatsapp" style="color:var(--neon-green);"></i> Mensagens Entregues!</strong>
+                            <div style="color: var(--text-secondary); font-size: 11px;">Abra a Central do WhatsApp Web para responder os clientes imediatamente.</div>
+                        </div>
+                        <div style="display: flex; gap: 6px;">
+                            <button type="button" class="btn btn-neon btn-sm" onclick="goToChatAfterB2BDispatch()" style="font-weight: 800; box-shadow: 0 0 10px rgba(0, 255, 136, 0.4);">
+                                <i class="fas fa-comments"></i> Abrir WhatsApp Web & Responder
+                            </button>
+                            <a href="https://web.whatsapp.com" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" style="color:var(--neon-cyan); border-color:rgba(0,210,255,0.4);">
+                                <i class="fas fa-external-link-alt"></i> Web Oficial
+                            </a>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color); padding-top: 14px; margin-top: 4px;">
-                <button type="button" class="btn btn-secondary btn-sm" onclick="closeB2BQuickDispatchModal()">Fechar</button>
+            <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color); padding-top: 14px; margin-top: 4px; flex-wrap: wrap; gap: 8px;">
+                <div style="display:flex; gap: 8px; align-items:center;">
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="closeB2BQuickDispatchModal()">Fechar</button>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="goToChatAfterB2BDispatch()" style="color:var(--neon-cyan); border-color:rgba(0,210,255,0.35);" title="Ir para a aba WhatsApp Web do CRM para gerenciar conversas">
+                        <i class="fab fa-whatsapp"></i> Ir para WhatsApp Web
+                    </button>
+                </div>
                 <div style="display: flex; gap: 10px;">
                     <button type="button" id="btn-b2b-stop-dispatch" class="btn btn-secondary btn-sm" onclick="stopB2BQuickDispatch()" style="display: none; color: var(--alert-red); border-color: rgba(255,77,109,0.4);">
                         <i class="fas fa-stop"></i> Interromper

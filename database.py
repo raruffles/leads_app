@@ -121,6 +121,16 @@ def init_db():
     except sqlite3.OperationalError:
         pass
 
+    try:
+        cursor.execute("ALTER TABLE leads ADD COLUMN rating REAL DEFAULT NULL")
+    except sqlite3.OperationalError:
+        pass
+
+    try:
+        cursor.execute("ALTER TABLE leads ADD COLUMN reviews_count INTEGER DEFAULT 0")
+    except sqlite3.OperationalError:
+        pass
+
     # Tabela de usuários para modo online e colaboração de 2 operadores
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS users (
@@ -640,8 +650,8 @@ def save_leads(scan_id: int, leads: List[Dict[str, Any]]) -> List[int]:
             INSERT INTO leads (
                 scan_id, name, phone, whatsapp, email, website, has_website,
                 address, category, instagram, opportunity_score, campaign_status, notes, photos,
-                maps_url, google_url, deal_value, assigned_to, closed_at, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                maps_url, google_url, deal_value, assigned_to, closed_at, rating, reviews_count, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             scan_id,
             name,
@@ -662,6 +672,8 @@ def save_leads(scan_id: int, leads: List[Dict[str, Any]]) -> List[int]:
             deal_val,
             assigned,
             closed_at,
+            lead.get("rating"),
+            int(lead.get("reviews_count") or 0),
             created_at
         ))
         inserted_ids.append(cursor.lastrowid)

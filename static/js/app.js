@@ -611,6 +611,8 @@ async function handleScanSubmit(e) {
     const location = document.getElementById('location-input').value.trim();
     const cep = document.getElementById('cep-input') ? document.getElementById('cep-input').value.trim() : '';
     const maxLeads = document.getElementById('max-leads-select').value || 15;
+    const websiteFilter = document.getElementById('scan-website-filter') ? document.getElementById('scan-website-filter').value : 'all';
+    const minRating = document.getElementById('scan-min-rating') ? document.getElementById('scan-min-rating').value : '0';
 
     if (!niche || !location) {
         alert("Por favor, preencha o Nicho e a Localização para iniciar a varredura!");
@@ -638,7 +640,7 @@ async function handleScanSubmit(e) {
         currentEventSource.close();
     }
 
-    let streamUrl = `/api/scan/stream?niche=${encodeURIComponent(niche)}&location=${encodeURIComponent(location)}&max_leads=${maxLeads}`;
+    let streamUrl = `/api/scan/stream?niche=${encodeURIComponent(niche)}&location=${encodeURIComponent(location)}&max_leads=${maxLeads}&website_filter=${encodeURIComponent(websiteFilter)}&min_rating=${encodeURIComponent(minRating)}`;
     if (cep) {
         streamUrl += `&cep=${encodeURIComponent(cep)}`;
     }
@@ -653,7 +655,12 @@ async function handleScanSubmit(e) {
         terminalLogs.scrollTop = terminalLogs.scrollHeight;
     }
 
-    addLog(`Iniciando varredura para nicho: "${niche}" em "${location}"`);
+    let filterDescs = [];
+    if (websiteFilter === 'no_site') filterDescs.push('Apenas Sem Site');
+    else if (websiteFilter === 'has_site') filterDescs.push('Apenas Com Site');
+    if (parseFloat(minRating) > 0) filterDescs.push(`${minRating}+ ⭐`);
+    const filterText = filterDescs.length > 0 ? ` [Filtros: ${filterDescs.join(' | ')}]` : '';
+    addLog(`Iniciando varredura para nicho: "${niche}" em "${location}"${filterText}`);
 
     currentEventSource.onmessage = async (event) => {
         try {
@@ -3313,20 +3320,115 @@ window.handleBulkDeleteSelected = async function() {
 
 // DISPARO RÁPIDO PARA SELECIONADOS NA PROSPECÇÃO B2B
 const B2B_TEMPLATES = {
-    contato: `Olá {nome}, tudo bem? Vi o perfil de vocês no Google Maps e achei excelente o projeto da {empresa}!
+    contato: `[{saudacao}], [{primeiro_nome}]! Tudo bem? Vi o perfil de vocês no Google Maps e achei excelente o projeto da [{empresa}]!
 
 Trabalho ajudando empresas da região a atraírem mais clientes com presença digital profissional e sites modernos no Google. Quem costuma cuidar dessa parte comercial ou de marketing por aí?`,
-    follow1: `Olá {nome}, tudo bem?
+    follow1: `[{saudacao}], [{primeiro_nome}]! Tudo bem?
 
-Passando para compartilhar uma proposta prática: analisamos o posicionamento da {empresa} e preparamos um estudo com informações de estrutura para um site moderno, rápido e otimizado para o Google.
+Passando para compartilhar uma proposta prática: analisamos o posicionamento da [{empresa}] e preparamos um estudo com informações de estrutura para um site moderno, rápido e otimizado para o Google.
 
 O melhor de tudo: esse diagnóstico e a prévia do projeto são 100% sem custo e sem compromisso nenhum! Posso te enviar os detalhes aqui por WhatsApp?`,
-    follow2: `Oi {nome}, tudo bom?
+    follow2: `{Oi|Olá}, [{primeiro_nome}]! Tudo bom?
 
-Passando rapidinho só para saber se você conseguiu ver minha mensagem anterior sobre a proposta para a {empresa}.
+Passando rapidinho só para saber se você conseguiu ver minha mensagem anterior sobre a proposta para a [{empresa}].
 
 Posso te enviar uma prévia visual de como ficaria a presença digital de vocês no celular e no Google? Leva menos de 2 minutos para dar uma olhada e você já consegue ver na prática! Me avisa se fizer sentido.`,
-    custom: `Olá {nome}, tudo bem? Notei a presença da {empresa} no Google Maps em {cidade}. Gostaria de compartilhar uma oportunidade sem custo para o posicionamento de vocês!`
+    custom: `[{saudacao}], [{primeiro_nome}]! Notei a presença da [{empresa}] no Google Maps em [{cidade}]. Gostaria de compartilhar uma oportunidade sem custo para o posicionamento de vocês!`
+};
+
+let currentB2BGreeting = 'horario';
+
+window.applyB2BGreeting = function(type) {
+    currentB2BGreeting = type;
+    document.querySelectorAll('.b2b-greeting-btn').forEach(btn => {
+        btn.classList.remove('active');
+        btn.style.borderColor = '';
+        btn.style.color = '';
+        btn.style.fontWeight = 'normal';
+    });
+
+    const btnId = `btn-greet-${type.replace(/_/g, '-')}`;
+    const activeBtn = document.getElementById(btnId);
+    if (activeBtn) {
+        activeBtn.classList.add('active');
+        activeBtn.style.borderColor = 'var(--neon-green)';
+        activeBtn.style.color = 'var(--neon-green)';
+        activeBtn.style.fontWeight = '700';
+    }
+
+    const textarea = document.getElementById('b2b-modal-message-text');
+    if (!textarea) return;
+
+    let text = textarea.value.trim();
+
+    // Determina a saudação escolhida
+    let greetingPrefix = '[{saudacao}], [{primeiro_nome}]!';
+    if (type === 'spintax_ola_oi') {
+        greetingPrefix = '{Olá|Oi}, [{primeiro_nome}]!';
+    } else if (type === 'spintax_full') {
+        greetingPrefix = '{Oi, tudo bem?|Olá, tudo certo?|[{saudacao}], tudo bem?}, [{primeiro_nome}]!';
+    } else if (type === 'ola') {
+        greetingPrefix = 'Olá, [{primeiro_nome}]!';
+    } else if (type === 'oi') {
+        greetingPrefix = 'Oi, [{primeiro_nome}]!';
+    }
+
+    // Se já tem saudação no início, substitui a saudação preservando o resto da mensagem
+    const regexPattern = /^(\[\{\s*saudacao\s*\}\]|\{\s*Olá\|Oi\s*\}|\{\s*Oi[^}]*\}|Olá|Oi|Bom dia|Boa tarde|Boa noite)[^,\n!]*[,!.]?\s*/i;
+    if (regexPattern.test(text)) {
+        text = text.replace(regexPattern, greetingPrefix + ' ');
+    } else {
+        text = greetingPrefix + '\n\n' + text;
+    }
+
+    textarea.value = text;
+    updateB2BPreview();
+};
+
+window.insertTagIntoB2B = function(tag) {
+    const textarea = document.getElementById('b2b-modal-message-text');
+    if (!textarea) return;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = textarea.value;
+    textarea.value = text.substring(0, start) + tag + text.substring(end);
+    textarea.selectionStart = textarea.selectionEnd = start + tag.length;
+    textarea.focus();
+    updateB2BPreview();
+};
+
+window.updateB2BPreview = function() {
+    const previewEl = document.getElementById('b2b-preview-rendered-text');
+    const targetNameEl = document.getElementById('b2b-preview-target-name');
+    const textarea = document.getElementById('b2b-modal-message-text');
+    if (!previewEl || !textarea) return;
+
+    const templateText = textarea.value;
+    const targets = currentLeads.filter(l => selectedLeadIds.has(l.id));
+    const sampleLead = targets.length > 0 ? targets[0] : {
+        name: 'Exemplo Empresa',
+        address: 'São Paulo - SP',
+        category: 'Comércio Local',
+        has_website: 0,
+        website: ''
+    };
+
+    if (targetNameEl) {
+        targetNameEl.textContent = `Para: ${sampleLead.name || 'Lead Exemplo'}`;
+    }
+
+    const rendered = typeof buildPersonalizedMessage === 'function'
+        ? buildPersonalizedMessage(sampleLead, templateText, { includeOptOut: false })
+        : templateText.replace(/\[\{\s*saudacao\s*\}\]/gi, typeof getSaudacaoHorario === 'function' ? getSaudacaoHorario() : 'Olá')
+                      .replace(/\{\s*saudacao\s*\}/gi, typeof getSaudacaoHorario === 'function' ? getSaudacaoHorario() : 'Olá')
+                      .replace(/\[\{\s*primeiro_nome\s*\}\]/gi, sampleLead.name ? sampleLead.name.split(' ')[0] : 'amigo')
+                      .replace(/\{\s*nome\s*\}/gi, sampleLead.name ? sampleLead.name.split(' ')[0] : 'amigo')
+                      .replace(/\[\{\s*empresa\s*\}\]/gi, sampleLead.name || 'sua empresa')
+                      .replace(/\{\s*empresa\s*\}/gi, sampleLead.name || 'sua empresa')
+                      .replace(/\[\{\s*cidade\s*\}\]/gi, sampleLead.address || 'sua região')
+                      .replace(/\{\s*cidade\s*\}/gi, sampleLead.address || 'sua região');
+
+    previewEl.textContent = rendered;
 };
 
 window.openB2BQuickDispatchModal = function() {
@@ -3367,6 +3469,9 @@ window.openB2BQuickDispatchModal = function() {
     const progressPanel = document.getElementById('b2b-dispatch-progress-panel');
     if (progressPanel) progressPanel.style.display = 'none';
 
+    const postActions = document.getElementById('b2b-post-dispatch-actions');
+    if (postActions) postActions.style.display = 'none';
+
     const startBtn = document.getElementById('btn-b2b-start-dispatch');
     if (startBtn) {
         startBtn.disabled = false;
@@ -3378,6 +3483,8 @@ window.openB2BQuickDispatchModal = function() {
 
     const modal = document.getElementById('modal-b2b-quick-dispatch');
     if (modal) modal.classList.add('active');
+
+    updateB2BPreview();
 };
 
 window.closeB2BQuickDispatchModal = function() {
@@ -3406,6 +3513,8 @@ window.selectB2BTemplate = function(step) {
     if (textarea) {
         textarea.value = B2B_TEMPLATES[step] || '';
     }
+
+    updateB2BPreview();
 };
 
 window.startB2BQuickDispatch = async function() {
@@ -3438,10 +3547,12 @@ window.startB2BQuickDispatch = async function() {
     const pctText = document.getElementById('b2b-dispatch-pct-text');
     const statusText = document.getElementById('b2b-dispatch-status-text');
     const logBox = document.getElementById('b2b-dispatch-log-box');
+    const postActions = document.getElementById('b2b-post-dispatch-actions');
 
     if (startBtn) startBtn.style.display = 'none';
     if (stopBtn) stopBtn.style.display = 'inline-flex';
     if (progressPanel) progressPanel.style.display = 'block';
+    if (postActions) postActions.style.display = 'none';
     if (logBox) logBox.innerHTML = '';
     if (progressBar) progressBar.style.width = '0%';
     if (pctText) pctText.textContent = '0%';
@@ -3461,6 +3572,7 @@ window.startB2BQuickDispatch = async function() {
 
     let sentCount = 0;
     let skippedCount = 0;
+    let firstSentLeadId = null;
 
     for (let i = 0; i < targets.length; i++) {
         if (b2bDispatchStopRequested) {
@@ -3485,9 +3597,14 @@ window.startB2BQuickDispatch = async function() {
 
         const personalizedMsg = typeof buildPersonalizedMessage === 'function'
             ? buildPersonalizedMessage(lead, templateText, { includeOptOut: false })
-            : templateText.replace(/\{nome\}/gi, lead.name ? lead.name.split(' ')[0] : 'amigo')
-                          .replace(/\{empresa\}/gi, lead.name || 'sua empresa')
-                          .replace(/\{cidade\}/gi, lead.address || 'sua região');
+            : templateText.replace(/\[\{\s*saudacao\s*\}\]/gi, typeof getSaudacaoHorario === 'function' ? getSaudacaoHorario() : 'Olá')
+                          .replace(/\{\s*saudacao\s*\}/gi, typeof getSaudacaoHorario === 'function' ? getSaudacaoHorario() : 'Olá')
+                          .replace(/\[\{\s*primeiro_nome\s*\}\]/gi, lead.name ? lead.name.split(' ')[0] : 'amigo')
+                          .replace(/\{\s*nome\s*\}/gi, lead.name ? lead.name.split(' ')[0] : 'amigo')
+                          .replace(/\[\{\s*empresa\s*\}\]/gi, lead.name || 'sua empresa')
+                          .replace(/\{\s*empresa\s*\}/gi, lead.name || 'sua empresa')
+                          .replace(/\[\{\s*cidade\s*\}\]/gi, lead.address || 'sua região')
+                          .replace(/\{\s*cidade\s*\}/gi, lead.address || 'sua região');
 
         try {
             const payload = {
@@ -3507,6 +3624,7 @@ window.startB2BQuickDispatch = async function() {
 
             if (res.ok && data.success) {
                 sentCount++;
+                if (!firstSentLeadId) firstSentLeadId = lead.id;
                 lead.campaign_status = 'contatado';
                 lead.follow_stage = currentB2BTemplate;
                 appendB2BLog(`✅ Enviado para "${lead.name}" (${chatId})`, 'success');
@@ -3546,12 +3664,27 @@ window.startB2BQuickDispatch = async function() {
     }
     if (stopBtn) stopBtn.style.display = 'none';
 
+    if (postActions && sentCount > 0) {
+        postActions.style.display = 'flex';
+    }
+
     if (typeof showToast === 'function') {
         showToast(`Disparo B2B finalizado! ${sentCount} mensagens enviadas.`, 'success');
     }
 
     loadDashboardStats();
     applyFiltersAndRender();
+
+    const autoOpenChat = document.getElementById('b2b-auto-open-chat-cb')?.checked;
+    if (autoOpenChat && sentCount > 0 && firstSentLeadId) {
+        appendB2BLog(`💬 Abrindo WhatsApp Web em 2 segundos para você acompanhar e responder...`, 'success');
+        if (statusText) {
+            statusText.innerHTML = `<i class="fas fa-arrow-right" style="color:var(--neon-green)"></i> Abrindo WhatsApp Web em 2s para responder contatos...`;
+        }
+        setTimeout(() => {
+            goToChatAfterB2BDispatch(firstSentLeadId);
+        }, 2000);
+    }
 };
 
 window.stopB2BQuickDispatch = function() {
@@ -3568,6 +3701,21 @@ window.stopB2BQuickDispatch = function() {
     if (statusText) {
         statusText.innerHTML = `<i class="fas fa-pause-circle" style="color:#ffaa00"></i> Disparo interrompido pelo operador.`;
     }
+};
+
+window.goToChatAfterB2BDispatch = function(leadId) {
+    closeB2BQuickDispatchModal();
+    if (typeof switchTab === 'function') {
+        switchTab('chat');
+    }
+    setTimeout(() => {
+        if (typeof loadChatConversations === 'function') {
+            loadChatConversations(leadId || null);
+        }
+        if (typeof showToast === 'function') {
+            showToast("WhatsApp Web aberto! Acompanhe e responda seus leads em tempo real.", "success");
+        }
+    }, 150);
 };
 
 // HANDLERS DE BUSCA DE INSTAGRAM E ENRIQUECIMENTO DE DADOS REAIS
