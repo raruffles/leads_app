@@ -23,36 +23,143 @@
         </div>
 
         <ul class="nav-menu">
-            <li class="nav-item active" data-tab="dashboard">
-                <i class="fas fa-chart-line"></i>
-                <span>Dashboard</span>
+            <!-- ATENDIMENTO -->
+            <div class="nav-section-title">
+                <span>Atendimento</span>
+                <i class="fas fa-chevron-down" style="font-size:9px;"></i>
+            </div>
+            <li class="nav-item nav-item-sub" data-tab="email">
+                <i class="fas fa-envelope-open-text"></i>
+                <span>E-mail da empresa</span>
             </li>
-            <li class="nav-item" data-tab="scraper">
-                <i class="fas fa-satellite-dish"></i>
-                <span>Varredura de Leads</span>
-            </li>
-            <li class="nav-item" data-tab="campaigns">
-                <i class="fas fa-bullhorn"></i>
-                <span>Campanhas & CRM</span>
-            </li>
-            <li class="nav-item" data-tab="chat">
-                <i class="fas fa-comments" style="color:var(--neon-green);"></i>
-                <span>WhatsApp Web (Chat)</span>
+            <li class="nav-item nav-item-sub" data-tab="chat">
+                <i class="fas fa-inbox"></i>
+                <span>Inbox (Chat)</span>
                 <span id="chat-nav-badge" style="display:none; margin-left:auto; background:var(--neon-green); color:#000; font-size:10px; font-weight:800; border-radius:10px; padding:1px 6px;">0</span>
             </li>
-            <li class="nav-item" data-tab="whatsapp">
-                <i class="fab fa-whatsapp" style="color:var(--neon-green);"></i>
-                <span>Conexão WAHA</span>
+            <li class="nav-item nav-item-sub" data-tab="radar">
+                <i class="fas fa-radar" style="color:var(--alert-orange);"></i>
+                <span>Radar de risco</span>
+                <span id="radar-nav-badge" style="margin-left:auto; background:var(--alert-red); color:#fff; font-size:10px; font-weight:800; border-radius:10px; padding:1px 6px;">CRÍTICO</span>
             </li>
-            <li class="nav-item" data-tab="settings">
+            <li class="nav-item nav-item-sub" data-tab="agenda">
+                <i class="fas fa-calendar-alt"></i>
+                <span>Agenda</span>
+            </li>
+            <li class="nav-item nav-item-sub" data-tab="quick-replies">
+                <i class="fas fa-bolt" style="color:#ffcc00;"></i>
+                <span>Respostas rápidas</span>
+            </li>
+
+            <!-- CRM -->
+            <div class="nav-section-title">
+                <span>CRM</span>
+                <i class="fas fa-chevron-down" style="font-size:9px;"></i>
+            </div>
+            <li class="nav-item nav-item-sub" data-tab="campaigns">
+                <i class="fas fa-filter"></i>
+                <span>Funis & Pipeline</span>
+            </li>
+            <li class="nav-item nav-item-sub active" data-tab="dashboard">
+                <i class="fas fa-chart-line"></i>
+                <span>Visão geral</span>
+            </li>
+            <li class="nav-item nav-item-sub" data-tab="contacts">
+                <i class="fas fa-user-friends"></i>
+                <span>Contatos (360)</span>
+            </li>
+            <li class="nav-item nav-item-sub" data-tab="tasks">
+                <i class="fas fa-tasks"></i>
+                <span>Tarefas</span>
+            </li>
+            <li class="nav-item nav-item-sub" data-tab="scraper">
+                <i class="fas fa-satellite-dish"></i>
+                <span>Prospecção B2B</span>
+            </li>
+            <li class="nav-item nav-item-sub" data-tab="crm-hub">
+                <i class="fas fa-th-large" style="color:var(--neon-cyan);"></i>
+                <span>Ver tudo em CRM</span>
+            </li>
+
+            <!-- VENDAS -->
+            <div class="nav-section-title">
+                <span>Vendas</span>
+                <i class="fas fa-chevron-down" style="font-size:9px;"></i>
+            </div>
+            <li class="nav-item nav-item-sub" data-tab="pricing">
+                <i class="fas fa-calculator" style="color:var(--neon-green);"></i>
+                <span>Precificação</span>
+            </li>
+            <li class="nav-item nav-item-sub" data-tab="products">
+                <i class="fas fa-box-open"></i>
+                <span>Produtos</span>
+            </li>
+            <li class="nav-item nav-item-sub" data-tab="comandas">
+                <i class="fas fa-receipt"></i>
+                <span>Comandas</span>
+            </li>
+
+            <!-- AGENTE DE IA -->
+            <div class="nav-section-title">
+                <span>Agente de IA</span>
+                <i class="fas fa-chevron-down" style="font-size:9px;"></i>
+            </div>
+            <li class="nav-item nav-item-sub" data-tab="ai-agents">
+                <i class="fas fa-robot" style="color:var(--purple-light);"></i>
+                <span>Agentes</span>
+            </li>
+            <li class="nav-item nav-item-sub" data-tab="follow-ups">
+                <i class="fas fa-project-diagram"></i>
+                <span>Follow-ups</span>
+            </li>
+            <li class="nav-item nav-item-sub" data-tab="knowledge">
+                <i class="fas fa-book"></i>
+                <span>Cofre de Conhecimento</span>
+            </li>
+            <li class="nav-item nav-item-sub" data-tab="ai-hub">
+                <i class="fas fa-brain" style="color:var(--purple-light);"></i>
+                <span>Ver tudo em IA</span>
+            </li>
+
+            <!-- CANAIS -->
+            <div class="nav-section-title">
+                <span>Canais & Disparos</span>
+                <i class="fas fa-chevron-down" style="font-size:9px;"></i>
+            </div>
+            <li class="nav-item nav-item-sub" data-tab="disparador">
+                <i class="fas fa-paper-plane" style="color:var(--neon-green);"></i>
+                <span>Disparador Automático</span>
+                <span style="margin-left:auto; background:var(--neon-green); color:#000; font-size:9.5px; font-weight:800; border-radius:10px; padding:1px 6px;">DISPARADOR</span>
+            </li>
+            <li class="nav-item nav-item-sub" data-tab="whatsapp">
+                <i class="fab fa-whatsapp" style="color:var(--neon-cyan);"></i>
+                <span>Conexões (WAHA)</span>
+            </li>
+
+            <!-- ANÁLISE -->
+            <div class="nav-section-title">
+                <span>Análise</span>
+                <i class="fas fa-chevron-down" style="font-size:9px;"></i>
+            </div>
+            <li class="nav-item nav-item-sub" data-tab="analytics">
+                <i class="fas fa-chart-pie"></i>
+                <span>Métricas & Auditoria</span>
+            </li>
+
+            <!-- CONFIGURAÇÕES -->
+            <div class="nav-section-title">
+                <span>Sistema</span>
+                <i class="fas fa-chevron-down" style="font-size:9px;"></i>
+            </div>
+            <li class="nav-item nav-item-sub" data-tab="settings">
                 <i class="fas fa-sliders-h"></i>
-                <span>Configurações</span>
+                <span>Configurações & APIs</span>
             </li>
-            <li style="margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(157,78,221,0.15);">
-                <a href="/admin" style="display:flex; align-items:center; gap:12px; padding:10px 14px; color:var(--neon-cyan); text-decoration:none; border-radius:8px; font-weight:700; font-size:12.5px; background:rgba(0,210,255,0.06); border:1px solid rgba(0,210,255,0.2); transition:all 0.2s;" onmouseover="this.style.background='rgba(0,210,255,0.12)'" onmouseout="this.style.background='rgba(0,210,255,0.06)'">
-                    <i class="fas fa-user-shield" style="font-size:15px;"></i>
+            <li style="margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(157,78,221,0.15);">
+                <a href="/admin" style="display:flex; align-items:center; gap:10px; padding:8px 12px; color:var(--neon-cyan); text-decoration:none; border-radius:8px; font-weight:700; font-size:12px; background:rgba(0,210,255,0.06); border:1px solid rgba(0,210,255,0.2); transition:all 0.2s;">
+                    <i class="fas fa-user-shield" style="font-size:14px;"></i>
                     <span>Portal do Gerente</span>
-                    <span style="margin-left:auto; font-size:10px; background:var(--neon-cyan); color:#000; padding:1px 5px; border-radius:4px; font-weight:800;">/admin</span>
+                    <span style="margin-left:auto; font-size:9.5px; background:var(--neon-cyan); color:#000; padding:1px 5px; border-radius:4px; font-weight:800;">/admin</span>
                 </a>
             </li>
         </ul>
@@ -280,7 +387,7 @@
             <!-- 2. ABA VARREDURA DE LEADS -->
             <section id="tab-scraper" class="tab-content">
                 <!-- FORMULÁRIO DE BUSCA -->
-                <div class="card">
+                <div class="card" style="position: relative; z-index: 50; overflow: visible;">
                     <div class="card-header">
                         <div class="card-title">
                             <i class="fas fa-crosshairs"></i> Configuração da Varredura de Mercado
@@ -310,7 +417,10 @@
                                 <label class="form-label" for="location-input">
                                     <i class="fas fa-map-marker-alt"></i> Cidade / Estado
                                 </label>
-                                <input type="text" id="location-input" class="form-control" placeholder="ex: São José dos Campos - SP" required>
+                                <div class="city-autocomplete-container">
+                                    <input type="text" id="location-input" class="form-control" placeholder="ex: São José dos Campos - SP" autocomplete="off" required>
+                                    <div id="location-autocomplete-dropdown" class="city-autocomplete-dropdown" style="display: none;"></div>
+                                </div>
                             </div>
 
                             <div class="form-group">
@@ -525,10 +635,20 @@
 
                     <!-- BARRA DE PESQUISA & FILTROS DO KANBAN -->
                     <div style="display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-bottom: 14px;">
-                        <div style="display: flex; gap: 10px; align-items: center; flex: 1; min-width: 260px;">
-                            <div style="position: relative; flex: 1; max-width: 320px;">
+                        <div style="display: flex; gap: 10px; align-items: center; flex: 1; min-width: 260px; flex-wrap: wrap;">
+                            <!-- SELETOR DE MODO DO KANBAN (ETAPAS DE CONTATO VS PIPELINE GERAL) -->
+                            <div class="kanban-view-mode-tabs" style="display: inline-flex; background: rgba(0, 0, 0, 0.4); border: 1px solid var(--border-color); border-radius: 8px; padding: 3px; gap: 4px;">
+                                <button type="button" id="btn-kanban-mode-stages" class="btn btn-sm active" onclick="setKanbanViewMode('stages')" style="font-size: 11.5px; padding: 5px 12px; border-radius: 6px;" title="Visualizar por cadência de contato: Novos ➔ 1º Contato ➔ Follow 1 ➔ Follow 2 ➔ Proposta ➔ Fechado">
+                                    <i class="fas fa-tasks"></i> Etapas de Contato (Follow-up)
+                                </button>
+                                <button type="button" id="btn-kanban-mode-pipeline" class="btn btn-sm btn-secondary" onclick="setKanbanViewMode('pipeline')" style="font-size: 11.5px; padding: 5px 12px; border-radius: 6px;" title="Visualizar por status geral de vendas: Novos ➔ Em Contato ➔ Proposta ➔ Fechado">
+                                    <i class="fas fa-columns"></i> Funil Comercial Clássico
+                                </button>
+                            </div>
+
+                            <div style="position: relative; flex: 1; min-width: 170px; max-width: 280px;">
                                 <i class="fas fa-search" style="position: absolute; left: 12px; top: 11px; color: var(--text-secondary); font-size: 13px;"></i>
-                                <input type="text" id="kanban-search-input" class="form-control" style="padding-left: 36px; font-size: 13px;" placeholder="Buscar empresa no Kanban..." oninput="filterKanbanCards()">
+                                <input type="text" id="kanban-search-input" class="form-control" style="padding-left: 36px; font-size: 13px;" placeholder="Buscar empresa..." oninput="filterKanbanCards()">
                             </div>
                             <select id="kanban-operator-filter" class="form-control" style="width: auto; font-size: 12.5px; padding: 7px 12px;" onchange="filterKanbanCards()">
                                 <option value="all">Todos os Operadores</option>
@@ -539,7 +659,7 @@
                         </div>
                         <div style="font-size: 12px; color: var(--text-secondary); font-weight: 500; display: flex; align-items: center; gap: 6px;">
                             <i class="fas fa-info-circle" style="color:var(--neon-cyan);"></i>
-                            <span>Arraste os cards entre as colunas do funil ou para a lixeira.</span>
+                            <span>Arraste os cards para avançar de etapa ou use os botões rápidos.</span>
                         </div>
                     </div>
 
@@ -572,8 +692,8 @@
                                 </div>
                                 <div>
                                     <div style="font-weight:700; font-size:13.5px; color:#fff;" id="chat-current-operator">Operador</div>
-                                    <div style="font-size:11px; color:var(--neon-green); display:flex; align-items:center; gap:4px;">
-                                        <span id="chat-waha-indicator">🟢 WAHA Pronto</span>
+                                    <div style="font-size:11px; display:flex; align-items:center; gap:4px;">
+                                        <span id="chat-waha-indicator" onclick="openWahaQrModal()" style="cursor:pointer;" title="Clique para conectar ou ver o QR Code">🟡 Verificando...</span>
                                     </div>
                                 </div>
                             </div>
@@ -687,6 +807,20 @@
                                 </div>
                             </div>
 
+                            <!-- BANNER DE WHATSAPP DESCONECTADO COM BOTÃO QR CODE -->
+                            <div id="chat-waha-qr-banner" style="display:none; background:rgba(255,179,0,0.12); border:1px solid rgba(255,179,0,0.4); border-radius:10px; padding:10px 14px; margin:8px 16px; align-items:center; justify-content:space-between; gap:12px;">
+                                <div style="display:flex; align-items:center; gap:10px;">
+                                    <i class="fas fa-exclamation-triangle" style="color:var(--alert-orange); font-size:16px;"></i>
+                                    <div>
+                                        <strong style="color:#fff; font-size:12.5px; display:block;">WhatsApp Desconectado</strong>
+                                        <span style="font-size:11.5px; color:var(--text-secondary);">Escaneie o QR Code no seu celular para enviar e receber mensagens.</span>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn btn-whatsapp btn-sm" onclick="openWahaQrModal()" style="font-weight:700; font-size:12px; padding:6px 12px; white-space:nowrap;">
+                                    <i class="fas fa-qrcode"></i> Ler QR Code
+                                </button>
+                            </div>
+
                             <!-- ÁREA DE HISTÓRICO DE MENSAGENS (WHATSAPP WEB THREAD) -->
                             <div class="chat-thread-wrapper" id="chat-thread-wrapper">
                                 <div class="chat-messages-container" id="chat-messages-container">
@@ -698,13 +832,17 @@
                             <div class="chat-scripts-bar">
                                 <div class="chat-vars-group">
                                     <span style="font-size:11px; font-weight:700; color:var(--text-secondary); text-transform:uppercase;">Inserir:</span>
-                                    <button type="button" class="chat-var-tag" onclick="insertChatVar('{nome}')">{nome}</button>
+                                    <button type="button" class="chat-var-tag" onclick="insertChatVar('[{saudacao}]')">[{saudacao}]</button>
+                                    <button type="button" class="chat-var-tag" onclick="insertChatVar('[{primeiro_nome}]')">[{primeiro_nome}]</button>
                                     <button type="button" class="chat-var-tag" onclick="insertChatVar('{empresa}')">{empresa}</button>
                                     <button type="button" class="chat-var-tag" onclick="insertChatVar('{localizacao}')">{localizacao}</button>
                                     <button type="button" class="chat-var-tag" onclick="insertChatVar('{nicho}')">{nicho}</button>
                                 </div>
                                 <div class="chat-templates-group">
                                     <span style="font-size:11px; font-weight:700; color:var(--text-secondary); text-transform:uppercase;">Pitch:</span>
+                                    <button type="button" class="chat-template-btn" style="color:var(--neon-green); font-weight:700;" onclick="applyImageTemplateInChat()">
+                                        <i class="fas fa-magic"></i> Abordagem Imagem
+                                    </button>
                                     <button type="button" class="chat-template-btn" onclick="applyChatTemplate('contato')">1º Contato</button>
                                     <button type="button" class="chat-template-btn" onclick="applyChatTemplate('follow1')">Follow 1</button>
                                     <button type="button" class="chat-template-btn" onclick="applyChatTemplate('follow2')">Follow 2</button>
@@ -969,12 +1107,16 @@
                                 <div class="form-group">
                                     <label class="form-label">Público da Campanha</label>
                                     <select id="bulk-target-group" class="form-control" onchange="updateBulkAudienceCount()">
-                                        <option value="selection">Apenas leads marcados com checkbox na Tabela</option>
-                                        <option value="no-site" selected>Todos os leads SEM SITE (Oportunidades quentes)</option>
-                                        <option value="all-whatsapp">Todos os leads cadastrados com WhatsApp</option>
-                                        <option value="stage-contato">Leads na Etapa: 1º Contato</option>
-                                        <option value="stage-follow1">Leads na Etapa: Follow 1</option>
-                                        <option value="stage-follow2">Leads na Etapa: Follow 2</option>
+                                        <option value="novos" selected>📥 Novos Leads (Nunca Abordados / Status Novo)</option>
+                                        <option value="stage-contato">📞 Leads na Etapa: 1º Contato</option>
+                                        <option value="stage-follow1">🔄 Leads na Etapa: Follow-up 1</option>
+                                        <option value="stage-follow2">⏰ Leads na Etapa: Follow-up 2</option>
+                                        <option value="stage-follow-todos">🔁 Todos em Follow-up (Follow 1 + Follow 2)</option>
+                                        <option value="stage-proposta">📑 Leads com Proposta Enviada</option>
+                                        <option value="no-site">🔥 Todos os leads SEM SITE (Oportunidades quentes)</option>
+                                        <option value="with-site">🌐 Leads COM SITE (Proposta de Otimização)</option>
+                                        <option value="selection">🎯 Apenas leads marcados com checkbox na Tabela</option>
+                                        <option value="all-whatsapp">📱 Todos os leads cadastrados com WhatsApp</option>
                                     </select>
                                     <small id="bulk-audience-summary" style="color: var(--neon-cyan); font-size: 11.5px; margin-top: 4px; display: block;">
                                         Calculando leads válidos...
@@ -1079,6 +1221,342 @@ Desenvolvemos páginas de alta velocidade para capturar clientes direto pelo cel
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ABA DISPARADOR AUTOMÁTICO (NOVO RECURSO PRO) -->
+            <section id="tab-disparador" class="tab-content">
+                <!-- CABEÇALHO DO DISPARADOR -->
+                <div class="card" style="margin-bottom: 24px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
+                        <div>
+                            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 6px;">
+                                <i class="fas fa-paper-plane" style="font-size: 26px; color: var(--neon-green);"></i>
+                                <h2 style="font-size: 22px; font-weight: 800; color: #fff; margin:0;">Disparador Automático de Abordagem Comercial</h2>
+                                <span style="background: rgba(0, 255, 136, 0.15); color: var(--neon-green); border: 1px solid var(--neon-green); font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 12px;">MOTOR ANTI-BAN</span>
+                            </div>
+                            <p style="color: var(--text-secondary); font-size: 13.5px; margin:0;">
+                                Envio inteligente em lote com Spintax, delay randômico humano, opt-out LGPD e interpolação de tags dinâmicas de alta conversão.
+                            </p>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                            <span id="disp-waha-badge" class="badge" style="background: rgba(0,255,136,0.12); color: var(--neon-green); border: 1px solid var(--neon-green); padding: 6px 12px; font-size: 12px;">
+                                <i class="fab fa-whatsapp"></i> WhatsApp: <strong id="disp-waha-status-text">VERIFICANDO...</strong>
+                            </span>
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="switchTab('whatsapp')">
+                                <i class="fas fa-plug"></i> Gerenciar Conexão
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- KPI STRIP DO DISPARADOR -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px;">
+                    <div class="card" style="padding: 16px; border-left: 3px solid var(--neon-green);">
+                        <div style="color: var(--text-secondary); font-size: 11.5px; text-transform: uppercase; font-weight: 700;">Leads Prontos (WhatsApp)</div>
+                        <div id="disp-metric-ready" style="font-size: 24px; font-weight: 900; color: var(--neon-green); margin-top: 4px;">0</div>
+                        <small style="color: var(--text-muted); font-size: 11px;">Com telefone validado na base</small>
+                    </div>
+                    <div class="card" style="padding: 16px; border-left: 3px solid var(--neon-cyan);">
+                        <div style="color: var(--text-secondary); font-size: 11.5px; text-transform: uppercase; font-weight: 700;">Leads Contatados</div>
+                        <div id="disp-metric-contacted" style="font-size: 24px; font-weight: 900; color: var(--neon-cyan); margin-top: 4px;">0</div>
+                        <small style="color: var(--text-muted); font-size: 11px;">Abordados no funil de vendas</small>
+                    </div>
+                    <div class="card" style="padding: 16px; border-left: 3px solid var(--purple-light);">
+                        <div style="color: var(--text-secondary); font-size: 11.5px; text-transform: uppercase; font-weight: 700;">Campanhas Realizadas</div>
+                        <div id="disp-metric-campaigns" style="font-size: 24px; font-weight: 900; color: #fff; margin-top: 4px;">0</div>
+                        <small style="color: var(--text-muted); font-size: 11px;">Lotes de disparos registrados</small>
+                    </div>
+                    <div class="card" style="padding: 16px; border-left: 3px solid #ffcc00;">
+                        <div style="color: var(--text-secondary); font-size: 11.5px; text-transform: uppercase; font-weight: 700;">Proteção Anti-Banimento</div>
+                        <div style="font-size: 18px; font-weight: 800; color: #ffcc00; margin-top: 8px;">ATIVADA (15s-35s)</div>
+                        <small style="color: var(--text-muted); font-size: 11px;">Simulação de digitação humana</small>
+                    </div>
+                </div>
+
+                <!-- SELETOR DE SEÇÃO / FUNIL DO DISPARADOR AUTOMÁTICO -->
+                <div class="card" style="margin-bottom: 20px; padding: 16px 20px; background: rgba(18, 24, 38, 0.7); border: 1px solid rgba(0, 255, 136, 0.25);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
+                        <div>
+                            <span style="font-size: 11px; font-weight: 800; color: var(--neon-green); text-transform: uppercase; letter-spacing: 0.8px;">
+                                <i class="fas fa-layer-group"></i> Disparo Estruturado por Seção do Funil
+                            </span>
+                            <div style="font-size: 14px; font-weight: 700; color: #fff; margin-top: 2px;">
+                                Selecione a seção da abordagem para carregar o script adaptado e a audiência correspondente:
+                            </div>
+                        </div>
+                        <div id="disp-active-section-pill" style="padding: 4px 12px; border-radius: 20px; background: rgba(0, 255, 136, 0.15); border: 1px solid var(--neon-green); font-size: 12px; font-weight: 700; color: var(--neon-green);">
+                            Seção Ativa: 1º Contato (Google Maps)
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px;">
+                        <!-- SEÇÃO 1: CONTATO INICIAL -->
+                        <div class="disp-section-card active" id="sec-card-contato" onclick="selectDisparadorSection('contato')">
+                            <div class="disp-sec-badge">ETAPA 1</div>
+                            <div class="disp-sec-title"><i class="fas fa-map-marker-alt" style="color:var(--neon-green);"></i> 1º Contato (Google Maps)</div>
+                            <div class="disp-sec-desc">"Olá tudo bem? Vi o Google Maps e gostei do projeto de vocês... quem cuida dessa parte?"</div>
+                            <div class="disp-sec-meta">Avança lead para: <strong>Follow 1</strong></div>
+                        </div>
+
+                        <!-- SEÇÃO 2: FOLLOW 1 -->
+                        <div class="disp-section-card" id="sec-card-follow1" onclick="selectDisparadorSection('follow1')">
+                            <div class="disp-sec-badge" style="background: rgba(0, 229, 255, 0.15); color: var(--neon-cyan); border-color: var(--neon-cyan);">ETAPA 2</div>
+                            <div class="disp-sec-title"><i class="fas fa-file-invoice" style="color:var(--neon-cyan);"></i> Follow 1 (Proposta Sem Custo)</div>
+                            <div class="disp-sec-desc">Apresenta informações do site, estudo e destaca que é 100% sem custo e sem compromisso.</div>
+                            <div class="disp-sec-meta">Avança lead para: <strong>Follow 2</strong></div>
+                        </div>
+
+                        <!-- SEÇÃO 3: FOLLOW 2 -->
+                        <div class="disp-section-card" id="sec-card-follow2" onclick="selectDisparadorSection('follow2')">
+                            <div class="disp-sec-badge" style="background: rgba(157, 78, 221, 0.15); color: var(--neon-purple); border-color: var(--neon-purple);">ETAPA 3</div>
+                            <div class="disp-sec-title"><i class="fas fa-eye" style="color:var(--neon-purple);"></i> Follow 2 (Cobrança & Prévia)</div>
+                            <div class="disp-sec-desc">Pergunta se conseguiram ver a proposta e oferece envio de prévia rápida de 2 min no WhatsApp.</div>
+                            <div class="disp-sec-meta">Avança lead para: <strong>Proposta / Negociação</strong></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CORPO PRINCIPAL DO DISPARADOR EM 2 COLUNAS -->
+                <div style="display: grid; grid-template-columns: 1.25fr 1fr; gap: 24px; align-items: start;">
+                    
+                    <!-- COLUNA ESQUERDA: EDITOR DE MENSAGEM & TAGS -->
+                    <div style="display: flex; flex-direction: column; gap: 20px;">
+                        
+                        <!-- CARD DO EDITOR DE SCRIPT -->
+                        <div class="card">
+                            <div class="card-header" style="margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
+                                <div class="card-title" style="font-size: 16px;">
+                                    <i class="fas fa-edit" style="color: var(--neon-green);"></i> Template da Abordagem Comercial
+                                </div>
+                                <div style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
+                                    <select id="disp-quick-reply-select" class="form-control" style="font-size: 11.5px; padding: 4px 8px; width: auto; max-width: 175px;" onchange="insertQuickReplyIntoDisparador(this.value)">
+                                        <option value="">⚡ Respostas Rápidas...</option>
+                                    </select>
+                                    <button type="button" class="btn btn-secondary btn-sm" onclick="selectDisparadorSection('contato')" title="1º Contato via Google Maps">
+                                        <i class="fas fa-map-marker-alt" style="color: var(--neon-green);"></i> 1º Contato
+                                    </button>
+                                    <button type="button" class="btn btn-secondary btn-sm" onclick="selectDisparadorSection('follow1')" title="Follow 1: Proposta sem custo">
+                                        <i class="fas fa-file-invoice" style="color: var(--neon-cyan);"></i> Follow 1
+                                    </button>
+                                    <button type="button" class="btn btn-secondary btn-sm" onclick="selectDisparadorSection('follow2')" title="Follow 2: Cobrança e Prévia">
+                                        <i class="fas fa-eye" style="color: var(--neon-purple);"></i> Follow 2
+                                    </button>
+                                    <button type="button" class="btn btn-secondary btn-sm" onclick="applyDisparadorPreset('sem_site')">
+                                        <i class="fas fa-globe"></i> Sem Site
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- CHIPS DE TAGS CLICÁVEIS -->
+                            <div style="margin-bottom: 12px;">
+                                <span style="font-size: 11px; color: var(--text-secondary); font-weight: 700; text-transform: uppercase; display: block; margin-bottom: 6px;">
+                                    Clique nas tags abaixo para inserir no template:
+                                </span>
+                                <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                                    <span class="tag-chip" onclick="insertTagIntoDisparador('[{saudacao}]')" title="Insere Bom dia / Boa tarde / Boa noite de acordo com o horário atual">
+                                        <i class="fas fa-plus"></i> [{saudacao}]
+                                    </span>
+                                    <span class="tag-chip" onclick="insertTagIntoDisparador('[{primeiro_nome}]')" title="Insere o primeiro nome do responsável ou da empresa">
+                                        <i class="fas fa-plus"></i> [{primeiro_nome}]
+                                    </span>
+                                    <span class="tag-chip" onclick="insertTagIntoDisparador('[NOME_DA_EMPRESA]')" title="Insere o nome da sua empresa (ex: Kaptador)">
+                                        <i class="fas fa-plus"></i> [NOME_DA_EMPRESA]
+                                    </span>
+                                    <span class="tag-chip" onclick="insertTagIntoDisparador('[SOLUCAO_CONFIRMADA]')" title="Insere a solução que você está oferecendo">
+                                        <i class="fas fa-plus"></i> [SOLUCAO_CONFIRMADA]
+                                    </span>
+                                    <span class="tag-chip" onclick="insertTagIntoDisparador('[PUBLICO_ALVO]')" title="Insere o público-alvo ou o nicho do lead">
+                                        <i class="fas fa-plus"></i> [PUBLICO_ALVO]
+                                    </span>
+                                    <span class="tag-chip" onclick="insertTagIntoDisparador('[BENEFICIO_CONFIRMADO]')" title="Insere o benefício principal">
+                                        <i class="fas fa-plus"></i> [BENEFICIO_CONFIRMADO]
+                                    </span>
+                                    <span class="tag-chip" onclick="insertTagIntoDisparador('[{cidade}]')" title="Insere a cidade do lead">
+                                        <i class="fas fa-plus"></i> [{cidade}]
+                                    </span>
+                                    <span class="tag-chip" onclick="insertTagIntoDisparador('[{empresa}]')" title="Insere o nome completo da empresa">
+                                        <i class="fas fa-plus"></i> [{empresa}]
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- TEXTAREA DO TEMPLATE -->
+                            <div class="form-group">
+                                <textarea id="disparador-template" class="form-control" rows="6" oninput="updateDisparadorPreview()" style="font-family: inherit; font-size: 13.5px; line-height: 1.55;">[{saudacao}], [{primeiro_nome}]! Sou da [NOME_DA_EMPRESA]. Trabalhamos com [SOLUCAO_CONFIRMADA] para [PUBLICO_ALVO]. Gostaria de saber se faz sentido conversar sobre [BENEFICIO_CONFIRMADO]. Posso fazer uma pergunta rápida?
+
+Se preferir não receber mensagens, é só me avisar.</textarea>
+                                <small style="color: var(--text-secondary); font-size: 11.5px; margin-top: 6px; display: block;">
+                                    💡 <strong>Dica Spintax:</strong> Use <code style="color:var(--neon-green);">{Opção 1|Opção 2}</code> para variar palavras automaticamente e evitar bloqueios do WhatsApp.
+                                </small>
+                            </div>
+
+                            <!-- PARÂMETROS GLOBAIS DAS TAGS DA CAMPANHA -->
+                            <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(157, 78, 221, 0.2); border-radius: 10px; padding: 14px; margin-top: 14px;">
+                                <div style="font-size: 12.5px; font-weight: 700; color: var(--neon-cyan); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                                    <i class="fas fa-sliders-h"></i> Valores das Tags da Campanha (Preenchimento Global)
+                                </div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                                    <div class="form-group" style="margin-bottom: 0;">
+                                        <label class="form-label" style="font-size: 11px;">[NOME_DA_EMPRESA]</label>
+                                        <input type="text" id="disp-my-company" class="form-control" value="Kaptador" oninput="updateDisparadorPreview()" placeholder="ex: Kaptador">
+                                    </div>
+                                    <div class="form-group" style="margin-bottom: 0;">
+                                        <label class="form-label" style="font-size: 11px;">[SOLUCAO_CONFIRMADA]</label>
+                                        <input type="text" id="disp-solution" class="form-control" value="modernização de sites e captação de clientes" oninput="updateDisparadorPreview()" placeholder="ex: modernização de presença digital">
+                                    </div>
+                                    <div class="form-group" style="margin-bottom: 0;">
+                                        <label class="form-label" style="font-size: 11px;">[PUBLICO_ALVO] (Vazio = Nicho do Lead)</label>
+                                        <input type="text" id="disp-target-audience" class="form-control" placeholder="Deixe em branco p/ usar o nicho do lead" oninput="updateDisparadorPreview()">
+                                    </div>
+                                    <div class="form-group" style="margin-bottom: 0;">
+                                        <label class="form-label" style="font-size: 11px;">[BENEFICIO_CONFIRMADO]</label>
+                                        <input type="text" id="disp-benefit" class="form-control" value="aumentar o faturamento através de contatos qualificados" oninput="updateDisparadorPreview()" placeholder="ex: atrair novos clientes pelo Google">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- OPÇÃO LGPD OPT-OUT & DELAY -->
+                            <div style="margin-top: 14px; display: flex; flex-direction: column; gap: 10px;">
+                                <label style="display: flex; align-items: center; gap: 10px; font-size: 12.5px; color: #fff; cursor: pointer;">
+                                    <input type="checkbox" id="disp-opt-out-cb" checked onchange="toggleDisparadorOptOut()">
+                                    <span>Garantir rodapé anti-bloqueio / LGPD: <em style="color:var(--text-secondary);">"Se preferir não receber mensagens, é só me avisar."</em></span>
+                                </label>
+
+                                <div style="display: flex; align-items: center; gap: 14px; background: rgba(0,255,136,0.03); border: 1px solid rgba(0,255,136,0.15); border-radius: 8px; padding: 10px 14px;">
+                                    <i class="fas fa-shield-alt" style="color: var(--neon-green); font-size: 18px;"></i>
+                                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                                        <span style="font-size: 12px; color: var(--text-secondary);">Delay Humano Randômico:</span>
+                                        <input type="number" id="disp-delay-min" class="form-control" value="15" min="5" max="60" style="width: 60px; padding: 4px 8px; font-size: 12px; text-align: center;">
+                                        <span style="font-size: 12px; color: var(--text-secondary);">a</span>
+                                        <input type="number" id="disp-delay-max" class="form-control" value="35" min="10" max="120" style="width: 60px; padding: 4px 8px; font-size: 12px; text-align: center;">
+                                        <span style="font-size: 12px; color: var(--text-secondary);">segundos entre cada envio</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- COLUNA DIREITA: LIVE PREVIEW NO WHATSAPP & AUDIÊNCIA -->
+                    <div style="display: flex; flex-direction: column; gap: 20px;">
+                        
+                        <!-- SIMULADOR WHATSAPP (SMARTPHONE PREVIEW) -->
+                        <div class="card" style="padding: 16px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                <div style="font-size: 13.5px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px;">
+                                    <i class="fab fa-whatsapp" style="color: var(--neon-green);"></i> Prévia Real no WhatsApp
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 6px;">
+                                    <span style="font-size: 11px; color: var(--text-secondary);">Simular lead:</span>
+                                    <select id="disp-sample-lead-select" class="form-control" style="font-size: 11px; padding: 2px 6px; width: 140px;" onchange="updateDisparadorPreview()">
+                                        <option value="first">Primeiro da lista</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- MOCKUP DO WHATSAPP -->
+                            <div class="whatsapp-mockup-frame">
+                                <div class="whatsapp-mockup-header">
+                                    <div style="width: 34px; height: 34px; border-radius: 50%; background: #2a3942; display: flex; align-items: center; justify-content: center; color: #8696a0; font-size: 14px;">
+                                        <i class="fas fa-store"></i>
+                                    </div>
+                                    <div style="flex: 1; overflow: hidden;">
+                                        <div id="disp-mockup-contact-name" style="color: #e9edef; font-weight: 600; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                            Contato da Empresa
+                                        </div>
+                                        <div style="color: #00a884; font-size: 11px;">online agora</div>
+                                    </div>
+                                    <div style="color: #8696a0; font-size: 13px; display: flex; gap: 12px;">
+                                        <i class="fas fa-video"></i>
+                                        <i class="fas fa-phone-alt"></i>
+                                    </div>
+                                </div>
+                                <div class="whatsapp-mockup-body">
+                                    <div class="whatsapp-mockup-bubble">
+                                        <div id="disp-mockup-text">
+                                            Carregando prévia dinâmica...
+                                        </div>
+                                        <div class="whatsapp-mockup-meta">
+                                            <span id="disp-mockup-time">10:45</span>
+                                            <i class="fas fa-check-double"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SELETOR DE AUDIÊNCIA E DISPARO -->
+                        <div class="card">
+                            <div class="card-header" style="margin-bottom: 14px;">
+                                <div class="card-title" style="font-size: 15px;">
+                                    <i class="fas fa-users" style="color: var(--neon-cyan);"></i> Segmentação da Audiência
+                                </div>
+                            </div>
+
+                            <div style="display: flex; flex-direction: column; gap: 14px;">
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label class="form-label" style="font-size: 12px;">Grupo Alvo para Disparo</label>
+                                    <select id="disparador-target-group" class="form-control" onchange="updateDisparadorAudienceCount()">
+                                        <option value="novos" selected>📥 Novos Leads (Nunca Abordados / Status Novo)</option>
+                                        <option value="stage-contato">📞 Leads na etapa '1º Contato'</option>
+                                        <option value="stage-follow1">🔄 Leads na etapa 'Follow 1' (Aguardando retorno)</option>
+                                        <option value="stage-follow2">⏰ Leads na etapa 'Follow 2' (Cobrança final)</option>
+                                        <option value="stage-follow-todos">🔁 Todos em Follow-up (Follow 1 + Follow 2)</option>
+                                        <option value="stage-proposta">📑 Leads com Proposta Enviada</option>
+                                        <option value="no-site">🔥 Todos os leads SEM SITE (Mais quentes)</option>
+                                        <option value="with-site">🌐 Leads COM SITE (Proposta de Otimização)</option>
+                                        <option value="selection">🎯 Leads marcados na Tabela de Prospecção</option>
+                                        <option value="all-whatsapp">📱 Todos os leads cadastrados com WhatsApp</option>
+                                    </select>
+                                    <small id="disparador-audience-summary" style="color: var(--neon-cyan); font-size: 12px; margin-top: 6px; display: block; font-weight: 600;">
+                                        Calculando leads válidos...
+                                    </small>
+                                </div>
+
+                                <!-- CONTROLES DE EXECUÇÃO -->
+                                <div style="display: flex; gap: 10px; margin-top: 6px; flex-wrap: wrap;">
+                                    <button type="button" id="btn-start-disparador" class="btn btn-neon" style="flex: 2; min-width: 200px; padding: 12px;" onclick="handleStartDisparador()">
+                                        <i class="fab fa-whatsapp"></i> Iniciar Disparo Automático
+                                    </button>
+                                    <button type="button" class="btn btn-secondary" style="flex: 1; min-width: 130px; padding: 12px 14px; font-weight: 700;" onclick="handleDisparadorTestSend()" title="Enviar mensagem de teste para seu WhatsApp agora">
+                                        <i class="fas fa-paper-plane" style="color:var(--neon-green);"></i> Teste Rápido
+                                    </button>
+                                    <button type="button" id="btn-stop-disparador" class="btn btn-secondary" style="display: none; border-color: var(--alert-red); color: var(--alert-red);" onclick="handleStopDisparador()">
+                                        <i class="fas fa-hand-paper"></i> Pausar
+                                    </button>
+                                </div>
+
+                                <!-- STATUS E BARRA DE PROGRESSO -->
+                                <div id="disparador-status-container" style="display: none; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px;">
+                                    <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 6px;">
+                                        <span id="disparador-progress-text" style="color: #fff; font-weight: 600;">Progresso: 0/0 (0%)</span>
+                                        <span id="disparador-countdown-text" style="color: var(--neon-cyan); font-weight: 700;">Iniciando...</span>
+                                    </div>
+                                    <div class="bulk-progress-container" style="height: 10px; background: rgba(255,255,255,0.06); border-radius: 6px; overflow: hidden;">
+                                        <div id="disparador-progress-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, var(--neon-green), var(--neon-cyan)); transition: width 0.3s;"></div>
+                                    </div>
+                                </div>
+
+                                <!-- LOG AO VIVO DA CAMPANHA -->
+                                <div>
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                        <span style="font-size: 11px; color: var(--text-secondary); font-weight: 700; text-transform: uppercase;">
+                                            Console de Envios em Tempo Real:
+                                        </span>
+                                        <button type="button" class="btn btn-secondary btn-sm" style="padding: 2px 6px; font-size: 10px;" onclick="clearDisparadorLogs()">
+                                            Limpar
+                                        </button>
+                                    </div>
+                                    <div id="disparador-console-logs" class="waha-console-logs" style="height: 130px; font-size: 11.5px;">
+                                        <div class="log-info">[Disparador] Pronto para executar campanha de abordagem.</div>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+
                     </div>
                 </div>
             </section>
@@ -1343,6 +1821,53 @@ Desenvolvemos páginas de alta velocidade para capturar clientes direto pelo cel
                                 </ul>
                             </div>
 
+                            <!-- CONFIGURAÇÃO DO DISPARADOR AUTOMÁTICO & TAGS GLOBAIS -->
+                            <div class="form-group" style="background: rgba(0, 255, 136, 0.05); border: 1px solid rgba(0, 255, 136, 0.25); padding: 18px; border-radius: 10px;">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+                                    <label class="form-label" style="color:var(--neon-green); font-size: 14px; font-weight: 700; margin:0;">
+                                        <i class="fas fa-paper-plane"></i> Parâmetros Globais do Disparador Automático
+                                    </label>
+                                    <button type="button" class="btn btn-secondary btn-sm" onclick="switchTab('disparador')" style="color:var(--neon-green); border-color:rgba(0,255,136,0.4);">
+                                        <i class="fas fa-external-link-alt"></i> Abrir Tela do Disparador
+                                    </button>
+                                </div>
+                                <p style="font-size:12.5px; color:var(--text-secondary); margin-bottom:14px; line-height:1.45;">
+                                    Defina as informações padrão da sua empresa para preenchimento automático das tags dinâmicas <code>[NOME_DA_EMPRESA]</code>, <code>[SOLUCAO_CONFIRMADA]</code>, <code>[PUBLICO_ALVO]</code> e <code>[BENEFICIO_CONFIRMADO]</code>.
+                                </p>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                                    <div>
+                                        <label class="form-label" style="font-size: 12px;">Nome da Sua Empresa [NOME_DA_EMPRESA]</label>
+                                        <input type="text" id="cfg-disp-company" class="form-control" placeholder="ex: Kaptador" value="Kaptador">
+                                    </div>
+                                    <div>
+                                        <label class="form-label" style="font-size: 12px;">Solução Oferecida [SOLUCAO_CONFIRMADA]</label>
+                                        <input type="text" id="cfg-disp-solution" class="form-control" placeholder="ex: modernização de sites e captação de clientes" value="modernização de sites e captação de clientes">
+                                    </div>
+                                </div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                                    <div>
+                                        <label class="form-label" style="font-size: 12px;">Público-Alvo Padrão [PUBLICO_ALVO]</label>
+                                        <input type="text" id="cfg-disp-audience" class="form-control" placeholder="ex: líderes do setor (deixe em branco p/ usar o nicho do lead)">
+                                    </div>
+                                    <div>
+                                        <label class="form-label" style="font-size: 12px;">Benefício Principal [BENEFICIO_CONFIRMADO]</label>
+                                        <input type="text" id="cfg-disp-benefit" class="form-control" placeholder="ex: aumentar o faturamento com novos clientes" value="aumentar o faturamento através de contatos qualificados">
+                                    </div>
+                                </div>
+                                <div style="margin-bottom: 12px;">
+                                    <label class="form-label" style="font-size: 12px;">Template Padrão do Disparador Automático</label>
+                                    <textarea id="cfg-disp-template" class="form-control" rows="4">[{saudacao}], [{primeiro_nome}]! Sou da [NOME_DA_EMPRESA]. Trabalhamos com [SOLUCAO_CONFIRMADA] para [PUBLICO_ALVO]. Gostaria de saber se faz sentido conversar sobre [BENEFICIO_CONFIRMADO]. Posso fazer uma pergunta rápida?
+
+Se preferir não receber mensagens, é só me avisar.</textarea>
+                                </div>
+                                <div>
+                                    <label style="display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: #fff; cursor: pointer;">
+                                        <input type="checkbox" id="cfg-disp-optout" checked style="accent-color: var(--neon-green);">
+                                        <span>Ativar rodapé anti-bloqueio / LGPD por padrão (Se preferir não receber mensagens, é só me avisar)</span>
+                                    </label>
+                                </div>
+                            </div>
+
                             <div>
                                 <button type="submit" class="btn btn-neon">
                                     <i class="fas fa-save"></i> Salvar Configurações
@@ -1350,6 +1875,848 @@ Desenvolvemos páginas de alta velocidade para capturar clientes direto pelo cel
                             </div>
                         </div>
                     </form>
+                </div>
+            </section>
+
+            <!-- ========================================================
+                 NOVAS SEÇÕES DO CRM (CORTEX EXTENSION SYSTEM)
+                 ======================================================== -->
+
+            <!-- 1. ABA E-MAIL DA EMPRESA -->
+            <section id="tab-email" class="tab-content">
+                <div class="card" style="margin-bottom: 24px;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px;">
+                        <div>
+                            <span style="font-size:11px; text-transform:uppercase; letter-spacing:1px; color:var(--text-muted); font-weight:700;">Plano Completo</span>
+                            <h2 style="font-size:26px; font-weight:800; color:#fff; margin:4px 0 6px;">E-mail da empresa</h2>
+                            <p style="font-size:13.5px; color:var(--text-secondary); max-width:650px;">
+                                Conecte o Gmail para ler mensagens, responder clientes e preparar campanhas com o contexto do CRM.
+                            </p>
+                        </div>
+                        <div id="gmail-status-card" style="background:#110e24; border:1px solid var(--border-color); border-radius:10px; padding:12px 18px; display:flex; align-items:center; gap:14px;">
+                            <i class="fab fa-google" style="font-size:22px; color:var(--alert-orange);"></i>
+                            <div>
+                                <div style="font-size:11px; color:var(--text-muted); font-weight:600;">Sua conta Gmail</div>
+                                <div id="gmail-account-label" style="font-size:13.5px; font-weight:700; color:#fff;">Consultando conexão...</div>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-neon" onclick="connectGmailAccount()">
+                                <i class="fas fa-link"></i> <span id="gmail-btn-text">Conectar Gmail</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div style="display:flex; gap:10px; margin-top:20px; border-bottom:1px solid rgba(157,78,221,0.2); padding-bottom:12px; flex-wrap:wrap;">
+                        <button type="button" class="btn btn-secondary btn-sm active" onclick="loadCompanyEmails('inbox')">
+                            <i class="fas fa-inbox"></i> Caixa e mensagens
+                        </button>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="loadCompanyEmails('campaign')">
+                            <i class="fas fa-bullhorn"></i> Campanhas de e-mail
+                        </button>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="loadCompanyEmails('inbox')">
+                            <i class="fas fa-sync-alt"></i> Atualizar histórico
+                        </button>
+                    </div>
+
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:24px; margin-top:20px;">
+                        <!-- Listagem de Mensagens Recebidas -->
+                        <div style="background:#090717; border:1px solid var(--border-color); border-radius:10px; padding:18px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+                                <h4 style="font-size:15px; font-weight:700; color:#fff;">Últimas mensagens</h4>
+                                <span style="font-size:11.5px; color:var(--text-muted);">Até 30 recentes</span>
+                            </div>
+                            <div id="company-email-list" style="display:flex; flex-direction:column; gap:8px; max-height:450px; overflow-y:auto;">
+                                <div style="text-align:center; padding:30px; color:var(--text-muted); font-size:13px;">
+                                    <i class="fas fa-spinner fa-spin"></i> Carregando mensagens do e-mail...
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Formulário de Nova Mensagem -->
+                        <div style="background:#090717; border:1px solid var(--border-color); border-radius:10px; padding:18px;">
+                            <h4 style="font-size:15px; font-weight:700; color:#fff; margin-bottom:14px;">Nova mensagem</h4>
+                            
+                            <div style="margin-bottom:12px;">
+                                <span style="font-size:11.5px; color:var(--text-muted); margin-right:8px;">Começar com um modelo:</span>
+                                <div style="display:inline-flex; gap:6px; flex-wrap:wrap; margin-top:6px;">
+                                    <button type="button" class="btn btn-secondary btn-sm" onclick="applyEmailTemplate('apresentacao')">Apresentação</button>
+                                    <button type="button" class="btn btn-secondary btn-sm" onclick="applyEmailTemplate('retorno')">Retorno</button>
+                                    <button type="button" class="btn btn-secondary btn-sm" onclick="applyEmailTemplate('proximo_passo')">Próximo passo</button>
+                                </div>
+                            </div>
+
+                            <form id="form-send-company-email" onsubmit="handleSendCompanyEmail(event)">
+                                <div class="form-group" style="margin-bottom:12px;">
+                                    <label class="form-label">Destinatário</label>
+                                    <input type="email" id="email-compose-to" class="form-control" placeholder="cliente@empresa.com" required>
+                                </div>
+                                <div class="form-group" style="margin-bottom:12px;">
+                                    <label class="form-label">Assunto</label>
+                                    <input type="text" id="email-compose-subject" class="form-control" placeholder="Proposta Comercial - Presença Digital" required>
+                                </div>
+                                <div class="form-group" style="margin-bottom:16px;">
+                                    <label class="form-label">Mensagem</label>
+                                    <textarea id="email-compose-body" class="form-control" rows="7" placeholder="Escreva o conteúdo do e-mail aqui..." required></textarea>
+                                </div>
+                                <div style="display:flex; justify-content:space-between; align-items:center;">
+                                    <span style="font-size:11.5px; color:var(--text-muted);">Envio em nome da empresa</span>
+                                    <button type="submit" class="btn btn-neon">
+                                        <i class="fas fa-paper-plane"></i> Enviar Mensagem
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 2. ABA RADAR DE RISCO -->
+            <section id="tab-radar" class="tab-content">
+                <div class="card" style="margin-bottom:24px;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px; margin-bottom:20px;">
+                        <div>
+                            <h2 style="font-size:26px; font-weight:800; color:#fff; margin-bottom:4px;">
+                                <i class="fas fa-radar" style="color:var(--alert-orange); margin-right:8px;"></i> Radar de risco
+                            </h2>
+                            <p style="font-size:13.5px; color:var(--text-secondary); max-width:700px;">
+                                Demandas abertas que esfriaram e precisam de você. Se o assistente já agendou um retorno, aparece como "em voo"; sem próximo passo, é risco de perder o cliente.
+                            </p>
+                        </div>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="loadRiskRadar()">
+                            <i class="fas fa-sync-alt"></i> Atualizar Radar
+                        </button>
+                    </div>
+
+                    <div class="radar-filter-bar">
+                        <div class="radar-chip active" id="chip-radar-critico" onclick="filterRadarTab('critico')">
+                            <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--alert-red);"></span>
+                            <span id="radar-count-critico">0</span> crítico
+                        </div>
+                        <div class="radar-chip" id="chip-radar-risco" onclick="filterRadarTab('risco')">
+                            <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--alert-orange);"></span>
+                            <span id="radar-count-risco">0</span> em risco
+                        </div>
+                        <div class="radar-chip" id="chip-radar-voo" onclick="filterRadarTab('voo')">
+                            <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--neon-cyan);"></span>
+                            <span id="radar-count-voo">0</span> em voo
+                        </div>
+                    </div>
+
+                    <div id="radar-leads-container" style="display:flex; flex-direction:column; gap:10px;">
+                        <div style="text-align:center; padding:30px; color:var(--text-muted);">
+                            <i class="fas fa-spinner fa-spin"></i> Escaneando oportunidades em risco...
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 3. ABA AGENDA -->
+            <section id="tab-agenda" class="tab-content">
+                <div class="card" style="margin-bottom:24px;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px; margin-bottom:16px;">
+                        <div>
+                            <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+                                <span style="font-size:12px; background:rgba(0,210,255,0.15); color:var(--neon-cyan); padding:2px 8px; border-radius:4px; font-weight:700;">
+                                    <i class="fab fa-google"></i> Google Calendar
+                                </span>
+                                <span id="agenda-account-label" style="font-size:12.5px; color:var(--text-secondary);">agenda.empresa@gmail.com</span>
+                            </div>
+                            <h2 style="font-size:26px; font-weight:800; color:#fff;">Agenda</h2>
+                            <p style="font-size:13.5px; color:var(--text-secondary);">
+                                O que está marcado, com quem, e quem atende — seu e da equipe.
+                            </p>
+                        </div>
+                        <div style="display:flex; gap:10px; align-items:center;">
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="connectGoogleCalendar()">
+                                <i class="fas fa-cog"></i> Configurar agendas
+                            </button>
+                            <button type="button" class="btn btn-neon btn-sm" onclick="openNewEventModal()">
+                                <i class="fas fa-calendar-plus"></i> Novo agendamento
+                            </button>
+                        </div>
+                    </div>
+
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px; border-bottom:1px solid rgba(157,78,221,0.2); padding-bottom:14px;">
+                        <div style="display:flex; align-items:center; gap:12px;">
+                            <div style="display:flex; align-items:center; gap:6px;">
+                                <button type="button" class="btn btn-secondary btn-sm" style="padding:4px 8px;" onclick="shiftAgendaWeek(-1)"><i class="fas fa-chevron-left"></i></button>
+                                <strong id="agenda-week-label" style="font-size:14px; color:#fff; min-width:140px; text-align:center;">11 de out — 17 de out</strong>
+                                <button type="button" class="btn btn-secondary btn-sm" style="padding:4px 8px;" onclick="shiftAgendaWeek(1)"><i class="fas fa-chevron-right"></i></button>
+                            </div>
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="resetAgendaToday()">Hoje</button>
+                        </div>
+
+                        <div style="display:flex; gap:8px;">
+                            <span style="font-size:12px; color:var(--text-muted); align-self:center;">Horários de:</span>
+                            <span class="badge" style="background:rgba(0,210,255,0.15); color:var(--neon-cyan); border:1px solid var(--neon-cyan);">Atendimento</span>
+                            <span class="badge" style="background:rgba(0,255,136,0.15); color:var(--neon-green); border:1px solid var(--neon-green);">Consulta</span>
+                            <span class="badge" style="background:rgba(192,132,252,0.15); color:var(--purple-light); border:1px solid var(--purple-light);">Reunião</span>
+                        </div>
+                    </div>
+
+                    <!-- Grade Semanal da Agenda -->
+                    <div id="agenda-calendar-grid" class="agenda-grid">
+                        <!-- Gerado via JavaScript -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- 4. ABA RESPOSTAS RÁPIDAS -->
+            <section id="tab-quick-replies" class="tab-content">
+                <div class="card" style="margin-bottom:24px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; margin-bottom:20px;">
+                        <div>
+                            <h2 style="font-size:26px; font-weight:800; color:#fff; margin-bottom:4px;">
+                                <i class="fas fa-bolt" style="color:#ffcc00; margin-right:8px;"></i> Respostas rápidas
+                            </h2>
+                            <p style="font-size:13.5px; color:var(--text-secondary);">
+                                Scripts salvos para responder mais rápido; pessoais ou compartilhados com a equipe.
+                            </p>
+                        </div>
+                        <button type="button" class="btn btn-neon btn-sm" onclick="openNewQuickReplyModal()">
+                            <i class="fas fa-plus"></i> Novo template
+                        </button>
+                    </div>
+
+                    <div id="quick-replies-list" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:16px;">
+                        <!-- Gerado dinamicamente -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- 5. ABA VER TUDO EM CRM (HUB) -->
+            <section id="tab-crm-hub" class="tab-content">
+                <div class="card" style="margin-bottom:24px;">
+                    <div style="margin-bottom:20px;">
+                        <span style="font-size:11px; text-transform:uppercase; letter-spacing:1px; color:var(--text-muted); font-weight:700;">Da Primeira Oportunidade à Venda</span>
+                        <h2 style="font-size:28px; font-weight:800; color:#fff; margin:4px 0 6px;">Seu próximo passo, em um só lugar.</h2>
+                        <p style="font-size:14px; color:var(--text-secondary);">
+                            Encontre empresas, organize o público, prepare sua campanha e acompanhe as conversas no funil.
+                        </p>
+                    </div>
+
+                    <!-- TOP 4 CARDS -->
+                    <div class="hub-grid" style="margin-bottom:30px;">
+                        <div class="hub-card" onclick="switchTab('scraper')">
+                            <span class="hub-card-badge">01</span>
+                            <div class="hub-card-header">
+                                <div class="hub-card-icon"><i class="fas fa-satellite-dish"></i></div>
+                                <div class="hub-card-title">Prospecção</div>
+                            </div>
+                            <div class="hub-card-desc">Pesquise empresas em fontes públicas, revise evidências e traga oportunidades para o CRM.</div>
+                        </div>
+
+                        <div class="hub-card" onclick="switchTab('contacts')">
+                            <span class="hub-card-badge">02</span>
+                            <div class="hub-card-header">
+                                <div class="hub-card-icon"><i class="fas fa-users"></i></div>
+                                <div class="hub-card-title">Listas de disparo</div>
+                            </div>
+                            <div class="hub-card-desc">Organize públicos com os contatos da sua empresa e reutilize em campanhas de WhatsApp.</div>
+                        </div>
+
+                        <div class="hub-card" onclick="switchTab('disparador')">
+                            <span class="hub-card-badge" style="background:var(--neon-green); color:#000;">PRO</span>
+                            <div class="hub-card-header">
+                                <div class="hub-card-icon"><i class="fas fa-paper-plane" style="color:var(--neon-green);"></i></div>
+                                <div class="hub-card-title">Disparador Automático</div>
+                            </div>
+                            <div class="hub-card-desc">Crie abordagens comerciais em massa com Spintax, proteção anti-ban e tags dinâmicas.</div>
+                        </div>
+
+                        <div class="hub-card" onclick="switchTab('campaigns')">
+                            <span class="hub-card-badge">04</span>
+                            <div class="hub-card-header">
+                                <div class="hub-card-icon"><i class="fas fa-filter"></i></div>
+                                <div class="hub-card-title">Funis</div>
+                            </div>
+                            <div class="hub-card-desc">Seus funis de venda — clique em um para abrir o quadro Kanban de clientes.</div>
+                        </div>
+                    </div>
+
+                    <!-- ENCONTRAR E ORGANIZAR CONTATOS -->
+                    <div class="hub-section-title"><i class="fas fa-address-book"></i> Encontrar e Organizar Contatos</div>
+                    <div class="hub-grid" style="margin-bottom:24px;">
+                        <div class="hub-card" onclick="switchTab('contacts')">
+                            <div class="hub-card-header">
+                                <div class="hub-card-icon"><i class="fas fa-user-friends"></i></div>
+                                <div class="hub-card-title">Contatos (Customer 360)</div>
+                            </div>
+                            <div class="hub-card-desc">As pessoas do outro lado da conversa e seu histórico completo de relacionamento.</div>
+                        </div>
+                        <div class="hub-card" onclick="switchTab('scraper')">
+                            <div class="hub-card-header">
+                                <div class="hub-card-icon"><i class="fas fa-map-marked-alt"></i></div>
+                                <div class="hub-card-title">Prospecção Google Maps</div>
+                            </div>
+                            <div class="hub-card-desc">Varredura automática por nicho e cidade com detecção de sites e telefones.</div>
+                        </div>
+                    </div>
+
+                    <!-- CAMPANHAS E DISPAROS -->
+                    <div class="hub-section-title"><i class="fas fa-paper-plane"></i> Campanhas e Disparos</div>
+                    <div class="hub-grid" style="margin-bottom:24px;">
+                        <div class="hub-card" onclick="switchTab('disparador')">
+                            <div class="hub-card-header">
+                                <div class="hub-card-icon"><i class="fas fa-paper-plane" style="color:var(--neon-green);"></i></div>
+                                <div class="hub-card-title">Disparador Automático (Anti-Ban)</div>
+                            </div>
+                            <div class="hub-card-desc">Envio em lote com tags dinâmicas de primeiro nome, empresa, solução e opt-out LGPD.</div>
+                        </div>
+                        <div class="hub-card" onclick="switchTab('whatsapp')">
+                            <div class="hub-card-header">
+                                <div class="hub-card-icon"><i class="fab fa-whatsapp" style="color:var(--neon-cyan);"></i></div>
+                                <div class="hub-card-title">Conexões WhatsApp (WAHA)</div>
+                            </div>
+                            <div class="hub-card-desc">Gerenciamento de instâncias, QR Code, status de sessão e logs do contêiner.</div>
+                        </div>
+                        <div class="hub-card" onclick="switchTab('quick-replies')">
+                            <div class="hub-card-header">
+                                <div class="hub-card-icon"><i class="fas fa-comment-dots"></i></div>
+                                <div class="hub-card-title">Mensagens prontas</div>
+                            </div>
+                            <div class="hub-card-desc">Biblioteca da empresa com textos, imagens e áudios prontos para envio.</div>
+                        </div>
+                    </div>
+
+                    <!-- O DIA A DIA DA VENDA -->
+                    <div class="hub-section-title"><i class="fas fa-briefcase"></i> O Dia a Dia da Venda</div>
+                    <div class="hub-grid" style="margin-bottom:24px;">
+                        <div class="hub-card" onclick="switchTab('campaigns')">
+                            <div class="hub-card-header">
+                                <div class="hub-card-icon"><i class="fas fa-columns"></i></div>
+                                <div class="hub-card-title">Funis</div>
+                            </div>
+                            <div class="hub-card-desc">Quadro Kanban com colunas de Novo, Contatado, Proposta, Negociação e Fechado.</div>
+                        </div>
+                        <div class="hub-card" onclick="switchTab('dashboard')">
+                            <div class="hub-card-header">
+                                <div class="hub-card-icon"><i class="fas fa-chart-line"></i></div>
+                                <div class="hub-card-title">Visão geral</div>
+                            </div>
+                            <div class="hub-card-desc">Seu dia em quatro painéis: progresso das vendas, tarefas em foco e negócios.</div>
+                        </div>
+                        <div class="hub-card" onclick="switchTab('tasks')">
+                            <div class="hub-card-header">
+                                <div class="hub-card-icon"><i class="fas fa-tasks"></i></div>
+                                <div class="hub-card-title">Tarefas</div>
+                            </div>
+                            <div class="hub-card-desc">O que ficou combinado, com prazo. Tarefa presa ao lead na linha do tempo.</div>
+                        </div>
+                        <div class="hub-card" onclick="switchTab('comandas')">
+                            <div class="hub-card-header">
+                                <div class="hub-card-icon"><i class="fas fa-receipt"></i></div>
+                                <div class="hub-card-title">Comandas</div>
+                            </div>
+                            <div class="hub-card-desc">O que foi feito, por quem, e quanto o cliente paga. Ordem de serviço comercial.</div>
+                        </div>
+                    </div>
+
+                    <!-- PREPARAR A VENDA -->
+                    <div class="hub-section-title"><i class="fas fa-tools"></i> Preparar a Venda</div>
+                    <div class="hub-grid">
+                        <div class="hub-card" onclick="switchTab('products')">
+                            <div class="hub-card-header">
+                                <div class="hub-card-icon"><i class="fas fa-box-open"></i></div>
+                                <div class="hub-card-title">Produtos</div>
+                            </div>
+                            <div class="hub-card-desc">O catálogo da loja, com o preço que o atendente de IA responde no WhatsApp.</div>
+                        </div>
+                        <div class="hub-card" onclick="switchTab('pricing')">
+                            <div class="hub-card-header">
+                                <div class="hub-card-icon"><i class="fas fa-calculator"></i></div>
+                                <div class="hub-card-title">Calculadora de Precificação</div>
+                            </div>
+                            <div class="hub-card-desc">Informe o site e descubra quanto cobrar, justificativas e limites de mercado.</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 6. ABA CONTATOS (CUSTOMER 360) -->
+            <section id="tab-contacts" class="tab-content">
+                <div class="card" style="margin-bottom:24px;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px; margin-bottom:18px;">
+                        <div>
+                            <h2 style="font-size:26px; font-weight:800; color:#fff; margin-bottom:4px;">Contatos</h2>
+                            <p style="font-size:13.5px; color:var(--text-secondary);">Customer 360 — busque, filtre e gerencie contatos da base.</p>
+                        </div>
+                        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="checkContactDuplicates()">
+                                <i class="fas fa-clone"></i> Duplicados
+                            </button>
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="openImportModal()">
+                                <i class="fas fa-file-import"></i> Importar CSV
+                            </button>
+                            <button type="button" class="btn btn-neon btn-sm" onclick="openNewChatModal()">
+                                <i class="fas fa-user-plus"></i> Novo Contato
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Filtros por Nicho -->
+                    <div style="display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap;">
+                        <span style="font-size:12px; color:var(--text-muted); align-self:center;">Grupos por nicho:</span>
+                        <button type="button" class="badge" style="background:rgba(0,255,136,0.1); border:1px solid var(--neon-green); color:var(--neon-green); cursor:pointer;" onclick="filterContactsNiche('')">Todos</button>
+                        <button type="button" class="badge" style="background:#110e24; border:1px solid var(--border-color); color:var(--text-secondary); cursor:pointer;" onclick="filterContactsNiche('clinica')">clínicas</button>
+                        <button type="button" class="badge" style="background:#110e24; border:1px solid var(--border-color); color:var(--text-secondary); cursor:pointer;" onclick="filterContactsNiche('restaurante')">restaurantes</button>
+                        <button type="button" class="badge" style="background:#110e24; border:1px solid var(--border-color); color:var(--text-secondary); cursor:pointer;" onclick="filterContactsNiche('academia')">academias</button>
+                    </div>
+
+                    <div style="display:flex; gap:12px; margin-bottom:16px; flex-wrap:wrap;">
+                        <div class="search-box" style="flex:1; min-width:240px;">
+                            <i class="fas fa-search search-icon"></i>
+                            <input type="text" id="contacts-search-input" placeholder="Buscar por nome, email ou telefone..." oninput="debounceContactsSearch()">
+                        </div>
+                    </div>
+
+                    <div class="table-container">
+                        <table class="leads-table">
+                            <thead>
+                                <tr>
+                                    <th>Nome</th>
+                                    <th>E-mail</th>
+                                    <th>Telefone</th>
+                                    <th>Nicho / Tags</th>
+                                    <th>Status CRM</th>
+                                    <th>Ações Rápidas</th>
+                                </tr>
+                            </thead>
+                            <tbody id="contacts-table-body">
+                                <tr>
+                                    <td colspan="6" style="text-align:center; padding:30px; color:var(--text-muted);">
+                                        <i class="fas fa-spinner fa-spin"></i> Carregando contatos...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 7. ABA TAREFAS -->
+            <section id="tab-tasks" class="tab-content">
+                <div class="card" style="margin-bottom:24px;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px; margin-bottom:18px;">
+                        <div>
+                            <h2 style="font-size:26px; font-weight:800; color:#fff; margin-bottom:4px;">Tarefas</h2>
+                            <p style="font-size:13.5px; color:var(--text-secondary);">
+                                O que ficou combinado, com prazo. Tarefa presa a um negócio aparece na linha do tempo dele.
+                            </p>
+                        </div>
+                        <div style="display:flex; gap:10px; align-items:center;">
+                            <select id="tasks-filter-status" class="form-control" style="width:auto; padding:6px 12px; font-size:13px;" onchange="loadTasksView()">
+                                <option value="pendente">Em aberto</option>
+                                <option value="concluida">Concluídas</option>
+                                <option value="todos">Todas</option>
+                            </select>
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="loadTasksView()"><i class="fas fa-sync-alt"></i> Atualizar</button>
+                            <button type="button" class="btn btn-neon btn-sm" onclick="openNewTaskModal()"><i class="fas fa-plus"></i> Nova tarefa</button>
+                        </div>
+                    </div>
+
+                    <div id="tasks-list-container">
+                        <div style="text-align:center; padding:30px; color:var(--text-muted);">
+                            <i class="fas fa-spinner fa-spin"></i> Carregando tarefas...
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 8. ABA COMANDAS -->
+            <section id="tab-comandas" class="tab-content">
+                <div class="card" style="margin-bottom:24px;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px; margin-bottom:20px;">
+                        <div>
+                            <h2 style="font-size:26px; font-weight:800; color:#fff; margin-bottom:4px;">Comandas</h2>
+                            <p style="font-size:13.5px; color:var(--text-secondary);">O que foi feito, por quem, e quanto o cliente paga.</p>
+                        </div>
+                        <button type="button" class="btn btn-neon btn-sm" onclick="openNewComandaModal()">
+                            <i class="fas fa-plus"></i> Nova comanda
+                        </button>
+                    </div>
+
+                    <div class="comanda-box">
+                        <!-- Lista de comandas -->
+                        <div>
+                            <h4 style="font-size:14px; font-weight:700; color:var(--text-muted); margin-bottom:12px; text-transform:uppercase;">Comandas Recentes</h4>
+                            <div id="comandas-sidebar-list" style="max-height:550px; overflow-y:auto;">
+                                <!-- Itens dinâmicos -->
+                            </div>
+                        </div>
+
+                        <!-- Detalhe da comanda ativa -->
+                        <div id="comanda-detail-area" style="background:#090717; border:1px solid var(--border-color); border-radius:12px; padding:22px;">
+                            <div style="text-align:center; padding:40px; color:var(--text-muted);">
+                                Selecione ou crie uma comanda para gerenciar serviços e pagamentos.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 9. ABA PRODUTOS -->
+            <section id="tab-products" class="tab-content">
+                <div class="card" style="margin-bottom:24px;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px; margin-bottom:20px;">
+                        <div>
+                            <h2 style="font-size:26px; font-weight:800; color:#fff; margin-bottom:4px;">Produtos & Serviços</h2>
+                            <p style="font-size:13.5px; color:var(--text-secondary);">
+                                O catálogo da empresa. É daqui que o atendente de IA tira os preços quando um lead pergunta no WhatsApp.
+                            </p>
+                        </div>
+                        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                            <a href="/api/products/sample-csv" class="btn btn-secondary btn-sm" download>
+                                <i class="fas fa-download"></i> Baixar modelo
+                            </a>
+                            <button type="button" class="btn btn-neon btn-sm" onclick="openNewProductModal()">
+                                <i class="fas fa-plus"></i> Novo produto
+                            </button>
+                        </div>
+                    </div>
+
+                    <div style="display:flex; gap:12px; margin-bottom:20px; flex-wrap:wrap;">
+                        <div class="search-box" style="flex:1; min-width:240px;">
+                            <i class="fas fa-search search-icon"></i>
+                            <input type="text" id="products-search-input" placeholder="Buscar por nome, código ou categoria..." oninput="debounceProductsSearch()">
+                        </div>
+                    </div>
+
+                    <div id="products-grid-container" class="product-grid">
+                        <!-- Cards de produtos gerados via JavaScript -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- 10. ABA CALCULADORA DE PRECIFICAÇÃO -->
+            <section id="tab-pricing" class="tab-content">
+                <div class="card" style="margin-bottom:24px;">
+                    <div style="margin-bottom:20px;">
+                        <h2 style="font-size:26px; font-weight:800; color:#fff; margin-bottom:4px;">
+                            <i class="fas fa-calculator" style="color:var(--neon-green); margin-right:8px;"></i> Calculadora de Precificação
+                        </h2>
+                        <p style="font-size:13.5px; color:var(--text-secondary);">
+                            Informe o site e descubra quanto cobrar, por quê, quanto o mercado cobraria e quanto o projeto vale para o cliente — com a fonte de cada número.
+                        </p>
+                    </div>
+
+                    <div class="pricing-calc-box">
+                        <h3 style="font-size:18px; font-weight:800; color:#fff; margin-bottom:6px;">Quanto vale esse projeto?</h3>
+                        <p style="font-size:12.5px; color:var(--text-muted); margin-bottom:16px;">
+                            Lemos o site, os concorrentes e os preços públicos do mercado. Só o endereço é obrigatório.
+                        </p>
+
+                        <div style="display:flex; gap:12px; margin-bottom:20px; flex-wrap:wrap;">
+                            <input type="url" id="pricing-url-input" class="form-control" style="flex:1; min-width:260px;" placeholder="https://seusite.example">
+                            <button type="button" class="btn btn-neon" onclick="calculatePricing()">
+                                <i class="fas fa-calculator"></i> Analisar e calcular preço
+                            </button>
+                        </div>
+
+                        <!-- Detalhes do Projeto -->
+                        <div style="border-top:1px solid rgba(157,78,221,0.2); padding-top:16px;">
+                            <span style="font-size:12px; font-weight:700; color:var(--neon-cyan); text-transform:uppercase; display:block; margin-bottom:14px;">
+                                <i class="fas fa-sliders-h"></i> Detalhes do projeto (melhoram a precisão e a confiança)
+                            </span>
+                            
+                            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:14px; margin-bottom:16px;">
+                                <div>
+                                    <label class="form-label">Nome do cliente</label>
+                                    <input type="text" id="pricing-client-name" class="form-control" placeholder="Ex: Clínica Sorriso Real">
+                                </div>
+                                <div>
+                                    <label class="form-label">Cidade/região</label>
+                                    <div class="city-autocomplete-container">
+                                        <input type="text" id="pricing-city" class="form-control" placeholder="Ex: São Paulo" autocomplete="off">
+                                        <div id="pricing-city-autocomplete-dropdown" class="city-autocomplete-dropdown" style="display: none;"></div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="form-label">UF</label>
+                                    <select id="pricing-uf" class="form-control">
+                                        <option value="SP">SP</option><option value="RJ">RJ</option><option value="MG">MG</option><option value="PR">PR</option><option value="SC">SC</option><option value="RS">RS</option><option value="DF">DF</option><option value="BA">BA</option><option value="Outro">Outro</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="form-label">Segmento</label>
+                                    <input type="text" id="pricing-segment" class="form-control" placeholder="Ex: clínica odontológica">
+                                </div>
+                            </div>
+
+                            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:14px; margin-bottom:16px;">
+                                <div>
+                                    <label class="form-label">Tipo de projeto</label>
+                                    <select id="pricing-project-type" class="form-control">
+                                        <option value="Identificar automaticamente">Identificar automaticamente</option>
+                                        <option value="Landing Page">Landing Page</option>
+                                        <option value="Site Institucional">Site Institucional</option>
+                                        <option value="E-commerce">E-commerce</option>
+                                        <option value="Portal de Serviços">Portal de Serviços</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="form-label">Prazo desejado</label>
+                                    <select id="pricing-timeline" class="form-control">
+                                        <option value="2 semanas">2 semanas</option>
+                                        <option value="3 semanas">3 semanas</option>
+                                        <option value="4 semanas" selected>4 semanas</option>
+                                        <option value="6 semanas">6 semanas</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="form-label">Como você se posiciona</label>
+                                    <select id="pricing-positioning" class="form-control">
+                                        <option value="Usar o padrão da empresa" selected>Usar o padrão da empresa</option>
+                                        <option value="Especialista de Alto Valor">Especialista de Alto Valor</option>
+                                        <option value="Agência Premium">Agência Premium</option>
+                                        <option value="Custo-benefício Acessível">Custo-benefício Acessível</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div style="display:flex; gap:20px; flex-wrap:wrap; margin-top:12px; align-items:center;">
+                                <div style="display:flex; gap:10px;">
+                                    <label style="display:flex; align-items:center; gap:6px; font-size:13px; color:#fff; cursor:pointer;">
+                                        <input type="radio" name="pricing-mode" id="pricing-mode-redesign" checked> Redesign
+                                    </label>
+                                    <label style="display:flex; align-items:center; gap:6px; font-size:13px; color:#fff; cursor:pointer;">
+                                        <input type="radio" name="pricing-mode" id="pricing-mode-zero"> Criação do zero
+                                    </label>
+                                </div>
+                                <div style="display:flex; gap:16px;">
+                                    <label style="display:flex; align-items:center; gap:6px; font-size:13px; color:var(--text-secondary); cursor:pointer;">
+                                        <input type="checkbox" id="pricing-outsource"> Vou terceirizar a execução
+                                    </label>
+                                    <label style="display:flex; align-items:center; gap:6px; font-size:13px; color:var(--text-secondary); cursor:pointer;">
+                                        <input type="checkbox" id="pricing-urgency"> Cliente pediu urgência (+25%)
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Painel de Resultados do Preço -->
+                        <div id="pricing-result-area" style="display:none; margin-top:24px;" class="pricing-output-box">
+                            <!-- Gerado dinamicamente via JS -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 11. ABA AGENTES DE IA -->
+            <section id="tab-ai-agents" class="tab-content">
+                <div class="card" style="margin-bottom:24px;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px; margin-bottom:20px;">
+                        <div>
+                            <h2 style="font-size:26px; font-weight:800; color:#fff; margin-bottom:4px;">
+                                <i class="fas fa-robot" style="color:var(--purple-light); margin-right:8px;"></i> Agentes de IA
+                            </h2>
+                            <p style="font-size:13.5px; color:var(--text-secondary);">Configure o comportamento dos agentes que atendem no WhatsApp e CRM.</p>
+                        </div>
+                        <button type="button" class="btn btn-neon btn-sm" onclick="openNewAgentModal()">
+                            <i class="fas fa-plus"></i> Novo agente
+                        </button>
+                    </div>
+
+                    <div id="ai-agents-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(340px, 1fr)); gap:18px;">
+                        <!-- Cards dos agentes carregados via JS -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- 12. ABA FOLLOW-UPS -->
+            <section id="tab-follow-ups" class="tab-content">
+                <div class="card" style="margin-bottom:24px;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px; margin-bottom:18px;">
+                        <div>
+                            <h2 style="font-size:26px; font-weight:800; color:#fff; margin-bottom:4px;">Follow-ups</h2>
+                            <p style="font-size:13.5px; color:var(--text-secondary);">
+                                Fluxos automáticos de reengajamento — silêncio, etapa, webhook ou resposta do contato, sem intervenção manual.
+                            </p>
+                        </div>
+                        <div style="display:flex; gap:10px;">
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="applyFollowupTemplate()"><i class="fas fa-magic"></i> Começar de um modelo</button>
+                            <button type="button" class="btn btn-neon btn-sm" onclick="openNewFollowupModal()"><i class="fas fa-plus"></i> Novo fluxo</button>
+                        </div>
+                    </div>
+
+                    <div id="followups-list-container">
+                        <!-- Carregado via JS -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- 13. ABA COFRE DE CONHECIMENTO -->
+            <section id="tab-knowledge" class="tab-content">
+                <div class="card" style="margin-bottom:24px;">
+                    <div style="margin-bottom:20px;">
+                        <h2 style="font-size:26px; font-weight:800; color:#fff; margin-bottom:4px;">
+                            <i class="fas fa-book" style="color:var(--neon-cyan); margin-right:8px;"></i> Cofre de conhecimento
+                        </h2>
+                        <p style="font-size:13.5px; color:var(--text-secondary);">
+                            Seus arquivos, o conhecimento dos agentes e as propostas de melhoria em um só lugar.
+                        </p>
+                    </div>
+
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:18px; margin-bottom:24px;">
+                        <!-- Conexão Google Drive -->
+                        <div style="background:#090717; border:1px solid var(--border-color); border-radius:12px; padding:18px;">
+                            <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+                                <i class="fab fa-google-drive" style="font-size:24px; color:var(--neon-green);"></i>
+                                <h4 style="font-size:15px; font-weight:700; color:#fff;">Seu cofre no Google Drive</h4>
+                            </div>
+                            <p style="font-size:12.5px; color:var(--text-secondary); line-height:1.45; margin-bottom:14px;">
+                                Escolha uma pasta. Os arquivos viram materiais que seus agentes podem consultar antes de responder aos leads.
+                            </p>
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="connectGoogleDrive()">
+                                <i class="fas fa-folder-open"></i> Conectar Google Drive
+                            </button>
+                        </div>
+
+                        <!-- Agente Curador -->
+                        <div style="background:#090717; border:1px solid var(--border-color); border-radius:12px; padding:18px;">
+                            <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+                                <i class="fas fa-brain" style="font-size:24px; color:var(--purple-light);"></i>
+                                <h4 style="font-size:15px; font-weight:700; color:#fff;">Agente Curador</h4>
+                            </div>
+                            <p style="font-size:12.5px; color:var(--text-secondary); line-height:1.45; margin-bottom:14px;">
+                                Transforma os materiais em sugestões rastreáveis e encontra respostas inconsistentes para você revisar.
+                            </p>
+                            <button type="button" class="btn btn-neon btn-sm" onclick="runCuratorAnalysis()">
+                                <i class="fas fa-magic"></i> Analisar acervo
+                            </button>
+                        </div>
+                    </div>
+
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid rgba(157,78,221,0.2); padding-bottom:10px;">
+                        <h4 style="font-size:14px; font-weight:700; color:#fff;">Estado da base de conhecimento</h4>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="openNewMaterialModal()"><i class="fas fa-plus"></i> Adicionar Material</button>
+                    </div>
+
+                    <div id="vault-materials-container" class="vault-grid">
+                        <!-- Carregado via JS -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- 14. ABA VER TUDO EM IA (HUB) -->
+            <section id="tab-ai-hub" class="tab-content">
+                <div class="card" style="margin-bottom:24px;">
+                    <div style="margin-bottom:20px;">
+                        <h2 style="font-size:28px; font-weight:800; color:#fff; margin-bottom:4px;">
+                            <i class="fas fa-brain" style="color:var(--purple-light); margin-right:8px;"></i> Agente de IA — Hub Geral
+                        </h2>
+                        <p style="font-size:14px; color:var(--text-secondary);">
+                            Tudo que define quem atende por você — e como acompanhar o que ele faz em produção.
+                        </p>
+                    </div>
+
+                    <!-- MONTAR O AGENTE -->
+                    <div class="hub-section-title"><i class="fas fa-wrench"></i> Montar o Agente</div>
+                    <div class="hub-grid" style="margin-bottom:26px;">
+                        <div class="hub-card" onclick="switchTab('ai-agents')">
+                            <div class="hub-card-header">
+                                <div class="hub-card-icon"><i class="fas fa-robot"></i></div>
+                                <div class="hub-card-title">Agentes</div>
+                            </div>
+                            <div class="hub-card-desc">Quem atende por você: instruções, modelo, ferramentas e publicação.</div>
+                        </div>
+                        <div class="hub-card" onclick="switchTab('follow-ups')">
+                            <div class="hub-card-header">
+                                <div class="hub-card-icon"><i class="fas fa-project-diagram"></i></div>
+                                <div class="hub-card-title">Follow-ups</div>
+                            </div>
+                            <div class="hub-card-desc">Como o agente retoma uma conversa que esfriou, para nenhuma morrer no silêncio.</div>
+                        </div>
+                        <div class="hub-card" onclick="switchTab('settings')">
+                            <div class="hub-card-header">
+                                <div class="hub-card-icon"><i class="fas fa-key"></i></div>
+                                <div class="hub-card-title">Credenciais & Provedores</div>
+                            </div>
+                            <div class="hub-card-desc">Chaves de API da OpenAI, Google Gemini, Anthropic Claude, Groq e Ollama.</div>
+                        </div>
+                    </div>
+
+                    <!-- ENSINAR O AGENTE -->
+                    <div class="hub-section-title"><i class="fas fa-graduation-cap"></i> Ensinar o Agente</div>
+                    <div class="hub-grid" style="margin-bottom:26px;">
+                        <div class="hub-card" onclick="switchTab('knowledge')">
+                            <div class="hub-card-header">
+                                <div class="hub-card-icon"><i class="fas fa-book"></i></div>
+                                <div class="hub-card-title">Conhecimento (Cofre)</div>
+                            </div>
+                            <div class="hub-card-desc">Os materiais e documentos que o agente consulta antes de responder.</div>
+                        </div>
+                        <div class="hub-card" onclick="switchTab('products')">
+                            <div class="hub-card-header">
+                                <div class="hub-card-icon"><i class="fas fa-tags"></i></div>
+                                <div class="hub-card-title">Catálogo de Serviços</div>
+                            </div>
+                            <div class="hub-card-desc">Preços, escopo e pacotes que os atendentes de IA podem ofertar.</div>
+                        </div>
+                    </div>
+
+                    <!-- ACOMPANHAR O AGENTE -->
+                    <div class="hub-section-title"><i class="fas fa-chart-line"></i> Acompanhar o Agente</div>
+                    <div class="hub-grid">
+                        <div class="hub-card" onclick="switchTab('analytics')">
+                            <div class="hub-card-header">
+                                <div class="hub-card-icon"><i class="fas fa-history"></i></div>
+                                <div class="hub-card-title">Audit Log & Execuções</div>
+                            </div>
+                            <div class="hub-card-desc">O histórico que não se apaga: quem fez o quê, quando e como a IA respondeu.</div>
+                        </div>
+                        <div class="hub-card" onclick="switchTab('radar')">
+                            <div class="hub-card-header">
+                                <div class="hub-card-icon"><i class="fas fa-bell"></i></div>
+                                <div class="hub-card-title">Alertas do Radar</div>
+                            </div>
+                            <div class="hub-card-desc">O que a IA encontrou que precisa de uma decisão ou intervenção de um operador humano.</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 15. ABA ANÁLISE -->
+            <section id="tab-analytics" class="tab-content">
+                <div class="card" style="margin-bottom:24px;">
+                    <div style="margin-bottom:20px;">
+                        <h2 style="font-size:26px; font-weight:800; color:#fff; margin-bottom:4px;">
+                            <i class="fas fa-chart-pie" style="color:var(--neon-green); margin-right:8px;"></i> Análise Comercial
+                        </h2>
+                        <p style="font-size:13.5px; color:var(--text-secondary);">
+                            Como o negócio foi no período — faturamento, fontes de leads e histórico de auditoria.
+                        </p>
+                    </div>
+
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:16px; margin-bottom:24px;">
+                        <div class="stat-card">
+                            <div class="stat-label">Faturamento Total</div>
+                            <div class="stat-number" id="analytics-revenue" style="color:var(--neon-green);">R$ 0,00</div>
+                            <div class="stat-sub">Vendas concluídas</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Ticket Médio</div>
+                            <div class="stat-number" id="analytics-ticket" style="color:var(--neon-cyan);">R$ 0,00</div>
+                            <div class="stat-sub">Por cliente fechado</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Comandas Abertas</div>
+                            <div class="stat-number" id="analytics-comandas-count" style="color:var(--alert-orange);">0</div>
+                            <div class="stat-sub">Em processamento</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Tarefas Pendentes</div>
+                            <div class="stat-number" id="analytics-tasks-count" style="color:#fff;">0</div>
+                            <div class="stat-sub">Aguardando operador</div>
+                        </div>
+                    </div>
+
+                    <!-- Histórico e Auditoria -->
+                    <div class="hub-section-title"><i class="fas fa-shield-alt"></i> Histórico & Audit Log</div>
+                    <div id="analytics-audit-log" style="background:#090717; border:1px solid var(--border-color); border-radius:10px; padding:16px; max-height:400px; overflow-y:auto;">
+                        <div style="text-align:center; padding:20px; color:var(--text-muted); font-size:13px;">
+                            <i class="fas fa-spinner fa-spin"></i> Carregando registros de auditoria...
+                        </div>
+                    </div>
                 </div>
             </section>
 
@@ -1561,6 +2928,48 @@ Desenvolvemos páginas de alta velocidade para capturar clientes direto pelo cel
         </div>
     </div>
 
+    <!-- MODAL RÁPIDO DE QR CODE DO WHATSAPP (WAHA) -->
+    <div id="waha-qr-modal" class="modal-overlay">
+        <div class="modal-container" style="max-width: 440px; text-align: center;">
+            <div class="modal-header">
+                <div>
+                    <h2 style="font-size: 18px; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 8px;">
+                        <i class="fab fa-whatsapp" style="color:var(--neon-green);"></i> Conectar WhatsApp (WAHA)
+                    </h2>
+                    <span style="font-size: 12px; color: var(--text-secondary);">
+                        Pareie seu aparelho para liberar envios e disparos automáticos.
+                    </span>
+                </div>
+                <button type="button" class="modal-close" onclick="closeWahaQrModal()"><i class="fas fa-times"></i></button>
+            </div>
+
+            <div style="padding: 16px 0;">
+                <div style="background: rgba(255, 170, 0, 0.08); border: 1px solid rgba(255, 170, 0, 0.35); border-radius: 8px; padding: 10px 12px; text-align: left; margin-bottom: 14px;">
+                    <div style="color: var(--alert-orange); font-size: 12px; font-weight: 700; margin-bottom: 3px;">
+                        <i class="fas fa-camera"></i> Abra no WhatsApp do Celular:
+                    </div>
+                    <div style="font-size: 11.5px; color: #e2e8f0; line-height: 1.45;">
+                        Toque em <strong>⋮ (3 pontos)</strong> ou <strong>Configurações</strong> &gt; <strong>Aparelhos conectados</strong> &gt; <strong>Conectar um aparelho</strong> e aponte para o código abaixo:
+                    </div>
+                </div>
+
+                <!-- IMAGEM DO QR CODE -->
+                <div style="background: #ffffff; padding: 12px; border-radius: 12px; display: inline-block; box-shadow: 0 4px 20px rgba(0,0,0,0.5);">
+                    <img id="waha-modal-qr-img" src="" alt="QR Code WhatsApp" style="width: 240px; height: 240px; display: block; object-fit: contain;">
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 14px; padding: 0 6px;">
+                    <span id="waha-modal-qr-timer" style="font-size: 11.5px; color: var(--text-secondary); font-family: var(--font-mono);">
+                        Renovando em <strong id="waha-modal-secs" style="color: var(--neon-green);">20</strong>s
+                    </span>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="refreshModalQrCode()">
+                        <i class="fas fa-sync-alt"></i> Atualizar QR
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- MODAL DE NOVA CONVERSA DIRETA (WHATSAPP WEB & CRM) -->
     <div id="new-chat-modal" class="modal-overlay">
         <div class="modal-container" style="max-width: 520px;">
@@ -1670,7 +3079,10 @@ Desenvolvemos páginas de alta velocidade para capturar clientes direto pelo cel
                     </div>
                     <div class="form-group">
                         <label class="form-label">Cidade / Região</label>
-                        <input type="text" id="import-location" class="form-control" value="São José dos Campos - SP" placeholder="ex: São José dos Campos - SP">
+                        <div class="city-autocomplete-container">
+                            <input type="text" id="import-location" class="form-control" value="São José dos Campos - SP" placeholder="ex: São José dos Campos - SP" autocomplete="off">
+                            <div id="import-location-autocomplete-dropdown" class="city-autocomplete-dropdown" style="display: none;"></div>
+                        </div>
                     </div>
                 </div>
 
@@ -1804,6 +3216,314 @@ Desenvolvemos páginas de alta velocidade para capturar clientes direto pelo cel
                     </a>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- MODAL: NOVA TAREFA -->
+    <div id="modal-new-task" class="modal-overlay">
+        <div class="modal-container" style="max-width:500px;">
+            <div class="modal-header">
+                <div>
+                    <h3 style="font-size:18px; font-weight:800; color:#fff;"><i class="fas fa-tasks" style="color:var(--neon-cyan); margin-right:8px;"></i> Nova Tarefa</h3>
+                    <span style="font-size:12px; color:var(--text-muted);">Adicione um compromisso ou pendência operacional</span>
+                </div>
+                <button type="button" class="modal-close" onclick="closeModal('modal-new-task')"><i class="fas fa-times"></i></button>
+            </div>
+            <form onsubmit="handleCreateTask(event)">
+                <div class="form-group" style="margin-bottom:12px;">
+                    <label class="form-label">Título da Tarefa *</label>
+                    <input type="text" id="task-create-title" class="form-control" placeholder="Ex: Enviar proposta revisada para Dr. Marcos" required>
+                </div>
+                <div class="form-group" style="margin-bottom:12px;">
+                    <label class="form-label">Descrição / Contexto</label>
+                    <textarea id="task-create-desc" class="form-control" rows="3" placeholder="Detalhes do que foi alinhado..."></textarea>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+                    <div class="form-group">
+                        <label class="form-label">Prioridade</label>
+                        <select id="task-create-prio" class="form-control">
+                            <option value="alta">Alta</option>
+                            <option value="media" selected>Média</option>
+                            <option value="baixa">Baixa</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Prazo</label>
+                        <select id="task-create-due" class="form-control">
+                            <option value="hoje">Hoje</option>
+                            <option value="esta_semana">Esta semana</option>
+                            <option value="sem_prazo" selected>Sem prazo</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group" style="margin-bottom:16px;">
+                    <label class="form-label">Atribuído a</label>
+                    <input type="text" id="task-create-assignee" class="form-control" placeholder="Ex: Operador 1">
+                </div>
+                <div style="display:flex; justify-content:flex-end; gap:10px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-new-task')">Cancelar</button>
+                    <button type="submit" class="btn btn-neon"><i class="fas fa-check"></i> Criar Tarefa</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: NOVO PRODUTO -->
+    <div id="modal-new-product" class="modal-overlay">
+        <div class="modal-container" style="max-width:540px;">
+            <div class="modal-header">
+                <div>
+                    <h3 style="font-size:18px; font-weight:800; color:#fff;"><i class="fas fa-box-open" style="color:var(--neon-green); margin-right:8px;"></i> Novo Produto / Serviço</h3>
+                    <span style="font-size:12px; color:var(--text-muted);">Adicione ao catálogo para consultas comerciais e do agente de IA</span>
+                </div>
+                <button type="button" class="modal-close" onclick="closeModal('modal-new-product')"><i class="fas fa-times"></i></button>
+            </div>
+            <form onsubmit="handleCreateProduct(event)">
+                <div style="display:grid; grid-template-columns:120px 1fr; gap:12px; margin-bottom:12px;">
+                    <div class="form-group">
+                        <label class="form-label">Código *</label>
+                        <input type="text" id="prod-create-code" class="form-control" placeholder="SITE-01" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Nome do Serviço / Produto *</label>
+                        <input type="text" id="prod-create-name" class="form-control" placeholder="Site Institucional Completo" required>
+                    </div>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:12px;">
+                    <div class="form-group">
+                        <label class="form-label">Categoria</label>
+                        <input type="text" id="prod-create-cat" class="form-control" placeholder="Desenvolvimento">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Preço (R$)</label>
+                        <input type="number" step="0.01" id="prod-create-price" class="form-control" placeholder="2500.00" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Preço Promo (R$)</label>
+                        <input type="number" step="0.01" id="prod-create-promo" class="form-control" placeholder="2000.00">
+                    </div>
+                </div>
+                <div class="form-group" style="margin-bottom:16px;">
+                    <label class="form-label">Descrição para o Atendente de IA</label>
+                    <textarea id="prod-create-desc" class="form-control" rows="3" placeholder="Explique os benefícios e detalhes para a IA saber como vender..."></textarea>
+                </div>
+                <div style="display:flex; justify-content:flex-end; gap:10px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-new-product')">Cancelar</button>
+                    <button type="submit" class="btn btn-neon"><i class="fas fa-save"></i> Salvar Produto</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: NOVA COMANDA -->
+    <div id="modal-new-comanda" class="modal-overlay">
+        <div class="modal-container" style="max-width:520px;">
+            <div class="modal-header">
+                <div>
+                    <h3 style="font-size:18px; font-weight:800; color:#fff;"><i class="fas fa-receipt" style="color:var(--alert-orange); margin-right:8px;"></i> Nova Comanda</h3>
+                    <span style="font-size:12px; color:var(--text-muted);">Abra uma ordem de serviço para um cliente</span>
+                </div>
+                <button type="button" class="modal-close" onclick="closeModal('modal-new-comanda')"><i class="fas fa-times"></i></button>
+            </div>
+            <form onsubmit="handleCreateComanda(event)">
+                <div class="form-group" style="margin-bottom:12px;">
+                    <label class="form-label">Nome do Cliente *</label>
+                    <input type="text" id="comanda-create-cust" class="form-control" placeholder="Ex: Gleyson Sales" required>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+                    <div class="form-group">
+                        <label class="form-label">Serviço Inicial</label>
+                        <select id="comanda-create-serv" class="form-control">
+                            <option value="Redesign">Redesign de Site</option>
+                            <option value="Site Novo">Site do Zero</option>
+                            <option value="Landing Page">Landing Page</option>
+                            <option value="Hospedagem">Hospedagem & Manutenção</option>
+                            <option value="Avulso">Avulso</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Valor Inicial (R$)</label>
+                        <input type="number" step="0.01" id="comanda-create-val" class="form-control" placeholder="1800.00" required>
+                    </div>
+                </div>
+                <div class="form-group" style="margin-bottom:12px;">
+                    <label class="form-label">Forma de Pagamento</label>
+                    <select id="comanda-create-payment" class="form-control">
+                        <option value="pix">Pix (À vista)</option>
+                        <option value="cartao">Cartão de Crédito</option>
+                        <option value="boleto">Boleto Bancário</option>
+                        <option value="transferencia">Transferência Bancária</option>
+                    </select>
+                </div>
+                <div style="display:flex; justify-content:flex-end; gap:10px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-new-comanda')">Cancelar</button>
+                    <button type="submit" class="btn btn-neon"><i class="fas fa-check"></i> Abrir Comanda</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: NOVA RESPOSTA RÁPIDA -->
+    <div id="modal-new-quick-reply" class="modal-overlay">
+        <div class="modal-container" style="max-width:500px;">
+            <div class="modal-header">
+                <div>
+                    <h3 style="font-size:18px; font-weight:800; color:#fff;"><i class="fas fa-bolt" style="color:#ffcc00; margin-right:8px;"></i> Novo Template de Resposta</h3>
+                    <span style="font-size:12px; color:var(--text-muted);">Cadastre scripts rápidos para atendimento</span>
+                </div>
+                <button type="button" class="modal-close" onclick="closeModal('modal-new-quick-reply')"><i class="fas fa-times"></i></button>
+            </div>
+            <form onsubmit="handleCreateQuickReply(event)">
+                <div style="display:grid; grid-template-columns:1fr 140px; gap:12px; margin-bottom:12px;">
+                    <div class="form-group">
+                        <label class="form-label">Título do Script *</label>
+                        <input type="text" id="qr-create-title" class="form-control" placeholder="Ex: Proposta com Desconto" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Atalho *</label>
+                        <input type="text" id="qr-create-sc" class="form-control" placeholder="/promo" required>
+                    </div>
+                </div>
+                <div class="form-group" style="margin-bottom:12px;">
+                    <label class="form-label">Categoria</label>
+                    <input type="text" id="qr-create-cat" class="form-control" placeholder="Ex: Vendas">
+                </div>
+                <div class="form-group" style="margin-bottom:16px;">
+                    <label class="form-label">Conteúdo da Mensagem (Suporta {nome} e {empresa})</label>
+                    <textarea id="qr-create-content" class="form-control" rows="4" placeholder="Olá {nome}, tudo bem? Segue a proposta..." required></textarea>
+                </div>
+                <div style="display:flex; justify-content:flex-end; gap:10px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-new-quick-reply')">Cancelar</button>
+                    <button type="submit" class="btn btn-neon"><i class="fas fa-save"></i> Salvar Template</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: NOVO AGENDAMENTO -->
+    <div id="modal-new-calendar-event" class="modal-overlay">
+        <div class="modal-container" style="max-width:520px;">
+            <div class="modal-header">
+                <div>
+                    <h3 style="font-size:18px; font-weight:800; color:#fff;"><i class="fas fa-calendar-plus" style="color:var(--neon-green); margin-right:8px;"></i> Novo Agendamento</h3>
+                    <span style="font-size:12px; color:var(--text-muted);">Sincronizado automaticamente com o CRM</span>
+                </div>
+                <button type="button" class="modal-close" onclick="closeModal('modal-new-calendar-event')"><i class="fas fa-times"></i></button>
+            </div>
+            <form onsubmit="handleCreateCalendarEvent(event)">
+                <div class="form-group" style="margin-bottom:12px;">
+                    <label class="form-label">Título da Reunião / Atendimento *</label>
+                    <input type="text" id="ev-create-title" class="form-control" placeholder="Ex: Diagnóstico Digital - Sorriso Real" required>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+                    <div class="form-group">
+                        <label class="form-label">Tipo</label>
+                        <select id="ev-create-type" class="form-control">
+                            <option value="atendimento">Atendimento</option>
+                            <option value="consulta">Consulta</option>
+                            <option value="reuniao" selected>Reunião</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Data</label>
+                        <input type="date" id="ev-create-date" class="form-control" required>
+                    </div>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+                    <div class="form-group">
+                        <label class="form-label">Início</label>
+                        <input type="time" id="ev-create-start" class="form-control" value="10:00" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Fim</label>
+                        <input type="time" id="ev-create-end" class="form-control" value="11:00" required>
+                    </div>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
+                    <div class="form-group">
+                        <label class="form-label">Nome do Contato</label>
+                        <input type="text" id="ev-create-contact" class="form-control" placeholder="Dr. Marcos">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Telefone / WhatsApp</label>
+                        <input type="text" id="ev-create-phone" class="form-control" placeholder="11988887777">
+                    </div>
+                </div>
+                <div style="display:flex; justify-content:flex-end; gap:10px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-new-calendar-event')">Cancelar</button>
+                    <button type="submit" class="btn btn-neon"><i class="fas fa-check"></i> Agendar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: NOVO AGENTE DE IA -->
+    <div id="modal-new-ai-agent" class="modal-overlay">
+        <div class="modal-container" style="max-width:550px;">
+            <div class="modal-header">
+                <div>
+                    <h3 style="font-size:18px; font-weight:800; color:#fff;"><i class="fas fa-robot" style="color:var(--purple-light); margin-right:8px;"></i> Configurar Agente de IA</h3>
+                    <span style="font-size:12px; color:var(--text-muted);">Defina a persona e ferramentas de atendimento</span>
+                </div>
+                <button type="button" class="modal-close" onclick="closeModal('modal-new-ai-agent')"><i class="fas fa-times"></i></button>
+            </div>
+            <form onsubmit="handleCreateAIAgent(event)">
+                <div class="form-group" style="margin-bottom:12px;">
+                    <label class="form-label">Nome do Agente *</label>
+                    <input type="text" id="agent-create-name" class="form-control" placeholder="Ex: Closer Especialista de Sites" required>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+                    <div class="form-group">
+                        <label class="form-label">Provedor</label>
+                        <select id="agent-create-provider" class="form-control">
+                            <option value="google">Google Gemini</option>
+                            <option value="openai">OpenAI GPT</option>
+                            <option value="anthropic">Anthropic Claude</option>
+                            <option value="groq">Groq</option>
+                            <option value="ollama">Ollama Local</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Modelo</label>
+                        <input type="text" id="agent-create-model" class="form-control" value="gemini-2.5-flash">
+                    </div>
+                </div>
+                <div class="form-group" style="margin-bottom:16px;">
+                    <label class="form-label">Prompt de Instrução do Sistema (Persona)</label>
+                    <textarea id="agent-create-prompt" class="form-control" rows="5" placeholder="Você é o atendente de vendas da empresa. Seu objetivo é apresentar soluções e agendar reuniões..." required></textarea>
+                </div>
+                <div style="display:flex; justify-content:flex-end; gap:10px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-new-ai-agent')">Cancelar</button>
+                    <button type="submit" class="btn btn-neon"><i class="fas fa-save"></i> Salvar Agente</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: NOVO MATERIAL DO COFRE -->
+    <div id="modal-new-material" class="modal-overlay">
+        <div class="modal-container" style="max-width:500px;">
+            <div class="modal-header">
+                <div>
+                    <h3 style="font-size:18px; font-weight:800; color:#fff;"><i class="fas fa-book" style="color:var(--neon-cyan); margin-right:8px;"></i> Adicionar Material ao Cofre</h3>
+                    <span style="font-size:12px; color:var(--text-muted);">Alimente o cérebro dos agentes de IA</span>
+                </div>
+                <button type="button" class="modal-close" onclick="closeModal('modal-new-material')"><i class="fas fa-times"></i></button>
+            </div>
+            <form onsubmit="handleCreateKnowledgeItem(event)">
+                <div class="form-group" style="margin-bottom:12px;">
+                    <label class="form-label">Título do Material *</label>
+                    <input type="text" id="vault-create-title" class="form-control" placeholder="Ex: Perguntas Frequentes sobre Hospedagem e Prazos" required>
+                </div>
+                <div class="form-group" style="margin-bottom:16px;">
+                    <label class="form-label">Resumo / Conteúdo de Referência</label>
+                    <textarea id="vault-create-summary" class="form-control" rows="4" placeholder="Descreva os pontos principais ou cole o texto do procedimento aqui..." required></textarea>
+                </div>
+                <div style="display:flex; justify-content:flex-end; gap:10px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-new-material')">Cancelar</button>
+                    <button type="submit" class="btn btn-neon"><i class="fas fa-plus"></i> Indexar Material</button>
+                </div>
+            </form>
         </div>
     </div>
 

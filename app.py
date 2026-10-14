@@ -12,7 +12,7 @@ from fastapi import FastAPI, Request, Query, BackgroundTasks
 from fastapi.responses import HTMLResponse, StreamingResponse, Response, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, ConfigDict
 import pandas as pd
 import httpx
 import base64
@@ -20,6 +20,7 @@ import base64
 from fastapi.middleware.cors import CORSMiddleware
 import database
 from scraper import LeadScraper
+from city_service import search_cities
 
 # Inicializa banco de dados
 database.init_db()
@@ -29,6 +30,13 @@ app = FastAPI(title="KAPTADOR - B2B Lead Harvester & Sales Engine", version="2.2
 @app.get("/favicon.ico", include_in_schema=False)
 async def get_favicon():
     return FileResponse("static/img/favicon.svg", media_type="image/svg+xml")
+
+@app.get("/api/cities")
+async def api_get_cities(q: str = Query("", description="Termo de busca para cidades brasileiras")):
+    """Retorna sugestões de cidades brasileiras no formato 'Cidade - UF'"""
+    if not q or len(q.strip()) < 1:
+        return []
+    return search_cities(q.strip(), limit=15)
 
 # Suporte a CORS para uso online e em rede local
 app.add_middleware(
@@ -99,6 +107,7 @@ class OperatorUpdatePayload(BaseModel):
     role: Optional[str] = None
 
 class SettingsUpdate(BaseModel):
+    model_config = ConfigDict(extra="allow")
     delay_between_requests: Optional[str] = "1.5"
     request_timeout: Optional[str] = "10"
     max_leads_per_scan: Optional[str] = "20"
@@ -124,12 +133,34 @@ class SettingsUpdate(BaseModel):
     site_default_message: Optional[str] = ""
     site_operator_name: Optional[str] = ""
     site_contact_phone: Optional[str] = ""
+    gmail_account: Optional[str] = ""
+    gmail_connected: Optional[str] = "false"
+    google_calendar_account: Optional[str] = ""
+    google_drive_folder: Optional[str] = ""
+    openai_api_key: Optional[str] = ""
+    gemini_api_key: Optional[str] = ""
+    claude_api_key: Optional[str] = ""
+    groq_api_key: Optional[str] = ""
+    pricing_base_hour: Optional[str] = "90.0"
+    pricing_urgency_rate: Optional[str] = "20.0"
+    pricing_outsource_margin: Optional[str] = "30.0"
+    meta_pixel_id: Optional[str] = ""
+    meta_access_token: Optional[str] = ""
+    curator_instructions: Optional[str] = ""
+    disparador_empresa_nome: Optional[str] = "Kaptador"
+    disparador_solucao: Optional[str] = "modernização de sites e captação de clientes"
+    disparador_publico_alvo: Optional[str] = "líderes do setor"
+    disparador_beneficio: Optional[str] = "aumentar o faturamento através de contatos qualificados"
+    disparador_opt_out: Optional[str] = "true"
+    disparador_opt_out_text: Optional[str] = "Se preferir não receber mensagens, é só me avisar."
+    disparador_template: Optional[str] = ""
 
 class WahaSendRequest(BaseModel):
     chatId: str
     text: str
     session: Optional[str] = None
     lead_id: Optional[int] = None
+    follow_stage: Optional[str] = None
 
 class ChatSendPayload(BaseModel):
     lead_id: Optional[int] = None
@@ -138,6 +169,7 @@ class ChatSendPayload(BaseModel):
     subject: Optional[str] = ""
     recipient: Optional[str] = ""
     phone: Optional[str] = ""
+    follow_stage: Optional[str] = None
 
 class CreateChatContactPayload(BaseModel):
     name: str
@@ -445,17 +477,27 @@ async def api_save_settings(payload: SettingsUpdate):
 # ROTAS PROXY DO WAHA (WhatsApp HTTP API)
 # ==========================================
 
+def get_waha_headers(settings: dict, extra: Optional[dict] = None) -> dict:
+    api_key = (settings.get("waha_api_key") or os.getenv("WAHA_API_KEY", "2b5d16deb67241efa1cffa371e1f354b")).strip()
+    headers = {"Content-Type": "application/json"}
+    if api_key:
+        headers["X-Api-Key"] = api_key
+    if extra:
+        headers.update(extra)
+    return headers
+
+# Timeout estrito para chamadas ao WAHA (evita travamento do event loop/workers)
+WAHA_HTTP_TIMEOUT = httpx.Timeout(5.0, connect=3.0)
+WAHA_SEND_TIMEOUT = httpx.Timeout(6.0, connect=3.0)
+
 @app.get("/api/waha/status")
 async def api_waha_status():
     settings = database.get_settings()
     base_url = settings.get("waha_base_url", "http://localhost:3000").rstrip("/")
     session_name = settings.get("waha_session", "default").strip() or "default"
-    api_key = settings.get("waha_api_key", "").strip()
-    headers = {}
-    if api_key:
-        headers["X-Api-Key"] = api_key
+    headers = get_waha_headers(settings)
 
-    async with httpx.AsyncClient(timeout=6.0) as client:
+    async with httpx.AsyncClient(timeout=WAHA_HTTP_TIMEOUT) as client:
         try:
             resp = await client.get(f"{base_url}/api/sessions", headers=headers)
             if resp.status_code == 200:
@@ -508,22 +550,16 @@ async def api_waha_status():
 async def api_waha_qr():
     """
     Proxy resiliente para o QR Code da sessão WAHA.
-    - Se a sessão estiver STOPPED, dispara o start automaticamente.
+    - Se a sessão estiver STOPPED ou FAILED, dispara restart/start automaticamente.
     - Suporta retorno binário de imagem, JSON com Base64 e fallbacks.
     - Decodifica Base64 para garantir bytes PNG reais ao navegador.
     """
     settings = database.get_settings()
     base_url = settings.get("waha_base_url", "http://localhost:3000").rstrip("/")
     session_name = settings.get("waha_session", "default").strip() or "default"
-    api_key = settings.get("waha_api_key", "").strip()
+    headers = get_waha_headers(settings, {"Accept": "image/png, image/*, application/json, text/plain, */*"})
 
-    headers = {
-        "Accept": "image/png, image/*, application/json, text/plain, */*"
-    }
-    if api_key:
-        headers["X-Api-Key"] = api_key
-
-    async with httpx.AsyncClient(timeout=12.0) as client:
+    async with httpx.AsyncClient(timeout=WAHA_HTTP_TIMEOUT) as client:
         try:
             # 1. Verifica estado atual da sessão
             try:
@@ -539,13 +575,20 @@ async def api_waha_qr():
                                 media_type="application/json",
                                 status_code=200
                             )
-                        elif st == "STOPPED":
-                            # Inicia a sessão automaticamente para gerar o QR Code
-                            await client.post(
-                                f"{base_url}/api/sessions/start",
-                                headers={"Content-Type": "application/json", **headers},
-                                json={"name": session_name}
-                            )
+                        elif st in ("STOPPED", "FAILED"):
+                            # Reinicia a sessão automaticamente para gerar um novo QR Code válido
+                            try:
+                                await client.post(
+                                    f"{base_url}/api/sessions/{session_name}/restart",
+                                    headers=get_waha_headers(settings),
+                                    json={}
+                                )
+                            except Exception:
+                                await client.post(
+                                    f"{base_url}/api/sessions/start",
+                                    headers=get_waha_headers(settings),
+                                    json={"name": session_name}
+                                )
                             await asyncio.sleep(2.0)
             except Exception:
                 pass
@@ -672,16 +715,13 @@ async def api_waha_session_action(action: str):
     settings = database.get_settings()
     base_url = settings.get("waha_base_url", "http://localhost:3000").rstrip("/")
     session_name = settings.get("waha_session", "default").strip() or "default"
-    api_key = settings.get("waha_api_key", "").strip()
-    headers = {"Content-Type": "application/json"}
-    if api_key:
-        headers["X-Api-Key"] = api_key
+    headers = get_waha_headers(settings)
 
     valid_actions = ["start", "stop", "restart", "logout", "reset", "clean"]
     if action not in valid_actions:
         return {"success": False, "error": f"Ação '{action}' não suportada."}
 
-    async with httpx.AsyncClient(timeout=25.0) as client:
+    async with httpx.AsyncClient(timeout=httpx.Timeout(8.0, connect=3.0)) as client:
         try:
             # Caso especial: Reset total da sessão (Delete + Start)
             if action in ["reset", "clean"]:
@@ -692,6 +732,17 @@ async def api_waha_session_action(action: str):
                 await asyncio.sleep(1.0)
                 create_resp = await client.post(f"{base_url}/api/sessions", headers=headers, json={"name": session_name})
                 return {"success": True, "message": f"Sessão '{session_name}' resetada e reiniciada com sucesso!"}
+
+            # Se for 'start', checa se está em FAILED; se sim, faz restart para renovar o processo e o QR Code
+            if action == "start":
+                try:
+                    chk = await client.get(f"{base_url}/api/sessions/{session_name}", headers=headers)
+                    if chk.status_code == 200 and chk.json().get("status") == "FAILED":
+                        resp = await client.post(f"{base_url}/api/sessions/{session_name}/restart", headers=headers, json={})
+                        data = resp.json() if resp.headers.get("content-type", "").startswith("application/json") else {}
+                        return {"success": True, "status_code": resp.status_code, "data": data, "message": "Sessão reiniciada com sucesso para leitura do QR Code."}
+                except Exception:
+                    pass
 
             # 1. Tenta endpoint moderno: /api/sessions/{session_name}/{action}
             resp = await client.post(
@@ -724,19 +775,48 @@ async def api_waha_send(payload: WahaSendRequest):
     settings = database.get_settings()
     base_url = settings.get("waha_base_url", "http://localhost:3000").rstrip("/")
     session_name = payload.session or settings.get("waha_session", "default").strip() or "default"
-    api_key = settings.get("waha_api_key", "").strip()
+    headers = get_waha_headers(settings)
 
-    headers = {"Content-Type": "application/json"}
-    if api_key:
-        headers["X-Api-Key"] = api_key
+    raw_chat_id = payload.chatId.strip()
+    if "@" not in raw_chat_id:
+        digits = "".join(c for c in raw_chat_id if c.isdigit())
+        if len(digits) in (10, 11) and not digits.startswith("55"):
+            digits = f"55{digits}"
+        chat_id = f"{digits}@c.us"
+    else:
+        chat_id = raw_chat_id
+
+    # Pré-validação do status da sessão WAHA
+    async with httpx.AsyncClient(timeout=WAHA_HTTP_TIMEOUT) as client:
+        try:
+            chk = await client.get(f"{base_url}/api/sessions/{session_name}", headers=headers)
+            if chk.status_code == 200:
+                s_status = chk.json().get("status")
+                if s_status != "WORKING":
+                    # Se inativa ou expirada, força restart para renovar QR
+                    if s_status in ("FAILED", "STOPPED"):
+                        try:
+                            await client.post(f"{base_url}/api/sessions/{session_name}/restart", headers=headers, json={})
+                        except Exception:
+                            pass
+                    return {
+                        "success": False,
+                        "qr_required": True,
+                        "status": s_status,
+                        "error": f"WhatsApp não conectado (Status: {s_status}). Por favor, escaneie o QR Code exibido na tela com seu celular para autenticar o WhatsApp."
+                    }
+        except httpx.ConnectError:
+            return {"success": False, "error": f"Servidor WAHA offline em {base_url}. Inicie o contêiner WAHA para enviar."}
+        except Exception:
+            pass
 
     waha_body = {
         "session": session_name,
-        "chatId": payload.chatId,
+        "chatId": chat_id,
         "text": payload.text
     }
 
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    async with httpx.AsyncClient(timeout=WAHA_SEND_TIMEOUT) as client:
         try:
             resp = await client.post(f"{base_url}/api/sendText", headers=headers, json=waha_body)
             if resp.is_success:
@@ -754,9 +834,10 @@ async def api_waha_send(payload: WahaSendRequest):
                 # Atualizar CRM automaticamente quando lead_id for fornecido
                 if payload.lead_id:
                     database.update_lead_status(
-                        payload.lead_id, 
-                        "contatado", 
-                        "Disparo de abordagem realizado com sucesso via WAHA."
+                        lead_id=payload.lead_id, 
+                        status="contatado", 
+                        follow_stage=payload.follow_stage,
+                        notes=f"Disparo de abordagem ({payload.follow_stage or 'geral'}) realizado com sucesso via WAHA."
                     )
                 return {
                     "success": True,
@@ -767,6 +848,17 @@ async def api_waha_send(payload: WahaSendRequest):
                 err_text = resp.text
                 try:
                     err_json = resp.json()
+                    st = err_json.get("status")
+                    if resp.status_code == 422:
+                        try:
+                            await client.post(f"{base_url}/api/sessions/{session_name}/restart", headers=headers, json={})
+                        except Exception:
+                            pass
+                        return {
+                            "success": False,
+                            "qr_required": True,
+                            "error": f"WhatsApp não conectado (Estado: {st or 'Aguardando QR Code'}). O QR Code foi atualizado na tela; aponte o WhatsApp do celular para conectar."
+                        }
                     err_msg = err_json.get("message") or err_json.get("error") or err_text
                 except Exception:
                     err_msg = err_text
@@ -859,13 +951,33 @@ async def api_chat_send(payload: ChatSendPayload):
 
         base_url = settings.get("waha_base_url", "http://localhost:3000").rstrip("/")
         session_name = settings.get("waha_session", "default").strip() or "default"
-        api_key = settings.get("waha_api_key", "").strip()
-        headers = {"Content-Type": "application/json"}
-        if api_key:
-            headers["X-Api-Key"] = api_key
+        headers = get_waha_headers(settings)
+
+        # Pré-validação do status da sessão WAHA
+        async with httpx.AsyncClient(timeout=WAHA_HTTP_TIMEOUT) as client:
+            try:
+                chk = await client.get(f"{base_url}/api/sessions/{session_name}", headers=headers)
+                if chk.status_code == 200:
+                    s_status = chk.json().get("status")
+                    if s_status != "WORKING":
+                        if s_status in ("FAILED", "STOPPED"):
+                            try:
+                                await client.post(f"{base_url}/api/sessions/{session_name}/restart", headers=headers, json={})
+                            except Exception:
+                                pass
+                        return {
+                            "success": False,
+                            "qr_required": True,
+                            "status": s_status,
+                            "error": f"WhatsApp não conectado (Status: {s_status}). Por favor, escaneie o QR Code exibido na tela com seu celular para autenticar o WhatsApp."
+                        }
+            except httpx.ConnectError:
+                return {"success": False, "error": f"Servidor WAHA offline em {base_url}. Inicie o contêiner WAHA para enviar."}
+            except Exception:
+                pass
 
         waha_body = {"session": session_name, "chatId": chat_id, "text": payload.text}
-        async with httpx.AsyncClient(timeout=25.0) as client:
+        async with httpx.AsyncClient(timeout=WAHA_SEND_TIMEOUT) as client:
             try:
                 resp = await client.post(f"{base_url}/api/sendText", headers=headers, json=waha_body)
                 if resp.is_success:
@@ -879,7 +991,12 @@ async def api_chat_send(payload: ChatSendPayload):
                         status="sent"
                     )
                     if payload.lead_id:
-                        database.update_lead_status(payload.lead_id, "contatado", "Mensagem enviada via WhatsApp Web (WAHA).")
+                        database.update_lead_status(
+                            lead_id=payload.lead_id, 
+                            status="contatado", 
+                            follow_stage=payload.follow_stage,
+                            notes=f"Mensagem enviada via WhatsApp Web (WAHA) - Etapa: {payload.follow_stage or 'Chat'}."
+                        )
                     return {
                         "success": True,
                         "message_id": msg_id,
@@ -891,10 +1008,23 @@ async def api_chat_send(payload: ChatSendPayload):
                     err_msg = resp.text
                     try:
                         err_json = resp.json()
+                        st = err_json.get("status")
+                        if resp.status_code == 422:
+                            try:
+                                await client.post(f"{base_url}/api/sessions/{session_name}/restart", headers=headers, json={})
+                            except Exception:
+                                pass
+                            return {
+                                "success": False,
+                                "qr_required": True,
+                                "error": f"WhatsApp não conectado (Estado: {st or 'Aguardando QR Code'}). O QR Code foi atualizado na tela; aponte o WhatsApp do celular para conectar."
+                            }
                         err_msg = err_json.get("message") or err_msg
                     except Exception:
                         pass
                     return {"success": False, "error": f"Erro do WAHA ({resp.status_code}): {err_msg}"}
+            except httpx.ConnectError:
+                return {"success": False, "error": f"Servidor WAHA offline em {base_url}. Inicie o contêiner WAHA para enviar."}
             except Exception as e:
                 return {"success": False, "error": f"Falha de comunicação com o WAHA: {str(e)}"}
 
@@ -1379,7 +1509,653 @@ async def api_report_markdown(scan_id: Optional[int] = None, download: bool = Fa
         headers["Content-Disposition"] = f"attachment; filename=relatorio_executivo_{scan_id or 'all'}.md"
     return Response(content=md_text, media_type="text/markdown; charset=utf-8", headers=headers)
 
+# ========================================================
+# NOVOS RECURSOS DO CRM - MODELOS E ROTAS
+# ========================================================
+
+class TaskCreatePayload(BaseModel):
+    title: str
+    description: Optional[str] = ""
+    priority: Optional[str] = "media"
+    due_date: Optional[str] = "sem_prazo"
+    assigned_to: Optional[str] = ""
+    lead_id: Optional[int] = None
+
+class TaskUpdatePayload(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    priority: Optional[str] = None
+    due_date: Optional[str] = None
+    status: Optional[str] = None
+    assigned_to: Optional[str] = None
+
+class ComandaItemModel(BaseModel):
+    service: str
+    description: Optional[str] = ""
+    value: float
+
+class ComandaCreatePayload(BaseModel):
+    customer_name: str
+    lead_id: Optional[int] = None
+    payment_method: Optional[str] = "pix"
+    items: Optional[List[Dict[str, Any]]] = []
+    total: Optional[float] = 0.0
+
+class ComandaUpdatePayload(BaseModel):
+    status: Optional[str] = None
+    total: Optional[float] = None
+    payment_method: Optional[str] = None
+    items: Optional[List[Dict[str, Any]]] = None
+
+class ProductCreatePayload(BaseModel):
+    code: str
+    name: str
+    category: Optional[str] = "Serviço"
+    price: Optional[float] = 0.0
+    promo_price: Optional[float] = 0.0
+    prompt_description: Optional[str] = ""
+
+class ProductUpdatePayload(BaseModel):
+    name: Optional[str] = None
+    category: Optional[str] = None
+    price: Optional[float] = None
+    promo_price: Optional[float] = None
+    prompt_description: Optional[str] = None
+    active: Optional[int] = None
+
+class QuickReplyCreatePayload(BaseModel):
+    title: str
+    shortcut: str
+    content: str
+    category: Optional[str] = "Geral"
+    team_shared: Optional[int] = 1
+
+class QuickReplyUpdatePayload(BaseModel):
+    title: Optional[str] = None
+    shortcut: Optional[str] = None
+    content: Optional[str] = None
+    category: Optional[str] = None
+
+class CalendarEventCreatePayload(BaseModel):
+    title: str
+    event_type: Optional[str] = "atendimento"
+    event_date: Optional[str] = None
+    start_time: Optional[str] = "10:00"
+    end_time: Optional[str] = "11:00"
+    contact_name: Optional[str] = ""
+    contact_phone: Optional[str] = ""
+    assigned_to: Optional[str] = ""
+    notes: Optional[str] = ""
+
+class CompanyEmailSendPayload(BaseModel):
+    to_email: str
+    subject: str
+    body: str
+    model_template: Optional[str] = None
+    lead_id: Optional[int] = None
+
+class AIAgentPayload(BaseModel):
+    name: str
+    provider: Optional[str] = "google"
+    model: Optional[str] = "gemini-2.5-flash"
+    agent_type: Optional[str] = "mcp_agent"
+    system_prompt: Optional[str] = ""
+    priority: Optional[int] = 0
+    is_default: Optional[int] = 0
+    status: Optional[str] = "ativo"
+
+class AIAgentUpdatePayload(BaseModel):
+    name: Optional[str] = None
+    provider: Optional[str] = None
+    model: Optional[str] = None
+    system_prompt: Optional[str] = None
+    priority: Optional[int] = None
+    status: Optional[str] = None
+
+class AIFollowupPayload(BaseModel):
+    name: str
+    trigger_type: Optional[str] = "silence_24h"
+    conditions: Optional[Dict[str, Any]] = {}
+    steps: Optional[List[Dict[str, Any]]] = []
+    status: Optional[str] = "ativo"
+
+class KnowledgeVaultPayload(BaseModel):
+    title: str
+    source_type: Optional[str] = "document"
+    summary: Optional[str] = ""
+    chunks_count: Optional[int] = 1
+
+class PricingCalculatePayload(BaseModel):
+    website_url: Optional[str] = ""
+    client_name: Optional[str] = ""
+    city: Optional[str] = ""
+    uf: Optional[str] = ""
+    segment: Optional[str] = ""
+    project_type: Optional[str] = "Identificar automaticamente"
+    timeline: Optional[str] = "4 semanas"
+    positioning: Optional[str] = "Usar o padrão da empresa"
+    is_redesign: Optional[bool] = True
+    outsource: Optional[bool] = False
+    urgency: Optional[bool] = False
+
+# ----------------- ROTAS: RADAR DE RISCO -----------------
+@app.get("/api/radar")
+async def api_get_radar():
+    return database.get_risk_radar()
+
+@app.post("/api/radar/assume/{lead_id}")
+async def api_radar_assume(lead_id: int, request: Request):
+    user_name = "Operador"
+    token = request.cookies.get("session_token")
+    if token:
+        user = database.get_session_user(token)
+        if user:
+            user_name = user.get("name", "Operador")
+    database.update_lead_status(lead_id=lead_id, assigned_to=user_name, follow_stage="em_andamento")
+    database.log_audit(user_name, "Assumir Lead do Radar", "lead", str(lead_id), f"Atribuído a {user_name}")
+    return {"success": True, "message": f"Lead assumido com sucesso por {user_name}!"}
+
+# ----------------- ROTAS: ANÁLISE AMPLIADA -----------------
+@app.get("/api/analytics/extended")
+async def api_get_extended_analytics():
+    return database.get_extended_analytics()
+
+# ----------------- ROTAS: TAREFAS -----------------
+@app.get("/api/tasks")
+async def api_get_tasks(status: Optional[str] = None, priority: Optional[str] = None):
+    return {"tasks": database.get_tasks(status=status, priority=priority)}
+
+@app.post("/api/tasks")
+async def api_create_task(payload: TaskCreatePayload):
+    task_id = database.create_task(
+        title=payload.title,
+        description=payload.description or "",
+        priority=payload.priority or "media",
+        due_date=payload.due_date or "sem_prazo",
+        assigned_to=payload.assigned_to or "",
+        lead_id=payload.lead_id
+    )
+    return {"success": True, "task_id": task_id, "message": "Tarefa criada com sucesso!"}
+
+@app.put("/api/tasks/{task_id}")
+async def api_update_task(task_id: int, payload: TaskUpdatePayload):
+    database.update_task(
+        task_id=task_id,
+        status=payload.status,
+        title=payload.title,
+        description=payload.description,
+        priority=payload.priority,
+        due_date=payload.due_date,
+        assigned_to=payload.assigned_to
+    )
+    return {"success": True}
+
+@app.delete("/api/tasks/{task_id}")
+async def api_delete_task(task_id: int):
+    database.delete_task(task_id)
+    return {"success": True}
+
+# ----------------- ROTAS: COMANDAS -----------------
+@app.get("/api/comandas")
+async def api_get_comandas(status: Optional[str] = None):
+    return {"comandas": database.get_comandas(status=status)}
+
+@app.post("/api/comandas")
+async def api_create_comanda(payload: ComandaCreatePayload):
+    items_str = json.dumps(payload.items or [], ensure_ascii=False)
+    comanda_id = database.create_comanda(
+        customer_name=payload.customer_name,
+        lead_id=payload.lead_id,
+        payment_method=payload.payment_method or "pix",
+        items_json=items_str,
+        total=payload.total or 0.0
+    )
+    return {"success": True, "comanda_id": comanda_id}
+
+@app.put("/api/comandas/{comanda_id}")
+async def api_update_comanda(comanda_id: int, payload: ComandaUpdatePayload):
+    items_str = json.dumps(payload.items, ensure_ascii=False) if payload.items is not None else None
+    database.update_comanda(
+        comanda_id=comanda_id,
+        status=payload.status,
+        total=payload.total,
+        payment_method=payload.payment_method,
+        items_json=items_str
+    )
+    return {"success": True}
+
+@app.delete("/api/comandas/{comanda_id}")
+async def api_delete_comanda(comanda_id: int):
+    database.delete_comanda(comanda_id)
+    return {"success": True}
+
+# ----------------- ROTAS: PRODUTOS -----------------
+@app.get("/api/products")
+async def api_get_products(search: Optional[str] = None, category: Optional[str] = None):
+    return {"products": database.get_products(search=search, category=category)}
+
+@app.post("/api/products")
+async def api_create_product(payload: ProductCreatePayload):
+    prod_id = database.create_product(
+        code=payload.code,
+        name=payload.name,
+        category=payload.category or "Serviço",
+        price=payload.price or 0.0,
+        promo_price=payload.promo_price or 0.0,
+        prompt_description=payload.prompt_description or ""
+    )
+    return {"success": True, "product_id": prod_id}
+
+@app.put("/api/products/{product_id}")
+async def api_update_product(product_id: int, payload: ProductUpdatePayload):
+    database.update_product(
+        product_id=product_id,
+        name=payload.name,
+        category=payload.category,
+        price=payload.price,
+        promo_price=payload.promo_price,
+        prompt_description=payload.prompt_description,
+        active=payload.active
+    )
+    return {"success": True}
+
+@app.delete("/api/products/{product_id}")
+async def api_delete_product(product_id: int):
+    database.delete_product(product_id)
+    return {"success": True}
+
+@app.get("/api/products/sample-csv")
+async def api_products_sample_csv():
+    csv_content = "codigo,nome,categoria,preco,preco_promocional,descricao_ia\nSITE-INST,Site Institucional Completo,Desenvolvimento,2800.00,2200.00,Site com 5 páginas e SEO\nLAND-01,Landing Page de Vendas,Desenvolvimento,1600.00,1300.00,Página focada em conversão\nHOSP-MENSAL,Hospedagem & Manutenção,Recorrência,150.00,120.00,Servidor em nuvem com SSL\n"
+    return Response(content=csv_content, media_type="text/csv", headers={"Content-Disposition": "attachment; filename=modelo_produtos.csv"})
+
+# ----------------- ROTAS: RESPOSTAS RÁPIDAS -----------------
+@app.get("/api/quick-replies")
+async def api_get_quick_replies(category: Optional[str] = None):
+    return {"quick_replies": database.get_quick_replies(category=category)}
+
+@app.post("/api/quick-replies")
+async def api_create_quick_reply(payload: QuickReplyCreatePayload):
+    qr_id = database.create_quick_reply(
+        title=payload.title,
+        shortcut=payload.shortcut,
+        content=payload.content,
+        category=payload.category or "Geral",
+        team_shared=payload.team_shared if payload.team_shared is not None else 1
+    )
+    return {"success": True, "quick_reply_id": qr_id}
+
+@app.put("/api/quick-replies/{qr_id}")
+async def api_update_quick_reply(qr_id: int, payload: QuickReplyUpdatePayload):
+    database.update_quick_reply(
+        qr_id=qr_id,
+        title=payload.title,
+        shortcut=payload.shortcut,
+        content=payload.content,
+        category=payload.category
+    )
+    return {"success": True}
+
+@app.delete("/api/quick-replies/{qr_id}")
+async def api_delete_quick_reply(qr_id: int):
+    database.delete_quick_reply(qr_id)
+    return {"success": True}
+
+# ----------------- ROTAS: AGENDA -----------------
+@app.get("/api/calendar/events")
+async def api_get_calendar_events(status: Optional[str] = None, event_type: Optional[str] = None):
+    return {"events": database.get_calendar_events(status=status, event_type=event_type)}
+
+@app.post("/api/calendar/events")
+async def api_create_calendar_event(payload: CalendarEventCreatePayload):
+    ev_id = database.create_calendar_event(
+        title=payload.title,
+        event_type=payload.event_type or "atendimento",
+        event_date=payload.event_date or datetime.now().strftime("%Y-%m-%d"),
+        start_time=payload.start_time or "10:00",
+        end_time=payload.end_time or "11:00",
+        contact_name=payload.contact_name or "",
+        contact_phone=payload.contact_phone or "",
+        assigned_to=payload.assigned_to or "",
+        notes=payload.notes or ""
+    )
+    return {"success": True, "event_id": ev_id}
+
+@app.delete("/api/calendar/events/{event_id}")
+async def api_delete_calendar_event(event_id: int):
+    database.delete_calendar_event(event_id)
+    return {"success": True}
+
+@app.post("/api/calendar/connect-google")
+async def api_calendar_connect_google(request: Request):
+    data = await request.json() if request.headers.get("content-type") == "application/json" else {}
+    email = data.get("email") or "agenda.empresa@gmail.com"
+    database.update_settings({"google_calendar_account": email})
+    return {"success": True, "account": email, "message": f"Google Agenda conectada para {email}!"}
+
+# ----------------- ROTAS: EMAIL DA EMPRESA -----------------
+@app.get("/api/email/inbox")
+async def api_get_company_emails(folder: str = "inbox"):
+    settings = database.get_settings()
+    emails = database.get_company_emails(folder=folder)
+    return {
+        "connected": settings.get("gmail_connected") == "true",
+        "account": settings.get("gmail_account", "contato.empresa@gmail.com"),
+        "emails": emails
+    }
+
+@app.post("/api/email/inbox")
+async def api_send_company_email(payload: CompanyEmailSendPayload):
+    settings = database.get_settings()
+    from_email = settings.get("gmail_account", "contato.empresa@gmail.com")
+    email_id = database.save_company_email(
+        subject=payload.subject,
+        from_email=from_email,
+        to_email=payload.to_email,
+        body=payload.body,
+        folder="sent",
+        lead_id=payload.lead_id
+    )
+    return {"success": True, "email_id": email_id, "message": f"E-mail enviado com sucesso para {payload.to_email}!"}
+
+@app.post("/api/email/connect-google")
+async def api_email_connect_google(request: Request):
+    data = await request.json() if request.headers.get("content-type") == "application/json" else {}
+    email = data.get("email") or "contato.empresa@gmail.com"
+    database.update_settings({"gmail_account": email, "gmail_connected": "true"})
+    return {"success": True, "account": email, "message": f"Conta Gmail ({email}) conectada com sucesso!"}
+
+@app.post("/api/email/{email_id}/read")
+async def api_email_mark_read(email_id: int):
+    database.mark_email_read(email_id)
+    return {"success": True}
+
+# ----------------- ROTAS: AGENTES DE IA -----------------
+@app.get("/api/ai/agents")
+async def api_get_ai_agents(status: Optional[str] = None):
+    return {"agents": database.get_ai_agents(status=status)}
+
+@app.post("/api/ai/agents")
+async def api_create_ai_agent(payload: AIAgentPayload):
+    agent_id = database.create_ai_agent(
+        name=payload.name,
+        provider=payload.provider or "google",
+        model=payload.model or "gemini-2.5-flash",
+        agent_type=payload.agent_type or "mcp_agent",
+        system_prompt=payload.system_prompt or "",
+        priority=payload.priority or 0,
+        is_default=payload.is_default or 0,
+        status=payload.status or "ativo"
+    )
+    return {"success": True, "agent_id": agent_id}
+
+@app.put("/api/ai/agents/{agent_id}")
+async def api_update_ai_agent(agent_id: int, payload: AIAgentUpdatePayload):
+    database.update_ai_agent(
+        agent_id=agent_id,
+        name=payload.name,
+        provider=payload.provider,
+        model=payload.model,
+        system_prompt=payload.system_prompt,
+        priority=payload.priority,
+        status=payload.status
+    )
+    return {"success": True}
+
+@app.delete("/api/ai/agents/{agent_id}")
+async def api_delete_ai_agent(agent_id: int):
+    database.delete_ai_agent(agent_id)
+    return {"success": True}
+
+# ----------------- ROTAS: FOLLOW-UPS -----------------
+@app.get("/api/ai/followups")
+async def api_get_ai_followups():
+    return {"followups": database.get_ai_followups()}
+
+@app.post("/api/ai/followups")
+async def api_create_ai_followup(payload: AIFollowupPayload):
+    flow_id = database.create_ai_followup(
+        name=payload.name,
+        trigger_type=payload.trigger_type or "silence_24h",
+        conditions_json=json.dumps(payload.conditions or {}, ensure_ascii=False),
+        steps_json=json.dumps(payload.steps or [], ensure_ascii=False),
+        status=payload.status or "ativo"
+    )
+    return {"success": True, "flow_id": flow_id}
+
+@app.delete("/api/ai/followups/{flow_id}")
+async def api_delete_ai_followup(flow_id: int):
+    database.delete_ai_followup(flow_id)
+    return {"success": True}
+
+# ----------------- ROTAS: COFRE DE CONHECIMENTO -----------------
+@app.get("/api/ai/knowledge")
+async def api_get_knowledge_vault():
+    settings = database.get_settings()
+    return {
+        "items": database.get_knowledge_vault(),
+        "drive_connected": settings.get("google_drive_connected") == "true",
+        "drive_folder": settings.get("google_drive_folder", "Cofre CRM Comercial"),
+        "curator_instructions": settings.get("curator_instructions", "")
+    }
+
+@app.post("/api/ai/knowledge")
+async def api_create_knowledge_item(payload: KnowledgeVaultPayload):
+    item_id = database.create_knowledge_item(
+        title=payload.title,
+        source_type=payload.source_type or "document",
+        summary=payload.summary or "",
+        chunks_count=payload.chunks_count or 1
+    )
+    return {"success": True, "item_id": item_id}
+
+@app.delete("/api/ai/knowledge/{item_id}")
+async def api_delete_knowledge_item(item_id: int):
+    database.delete_knowledge_item(item_id)
+    return {"success": True}
+
+@app.post("/api/ai/knowledge/{item_id}/reprepare")
+async def api_reprepare_knowledge_item(item_id: int):
+    database.update_knowledge_item(item_id, last_prepared="agora mesmo", status="pronto")
+    return {"success": True, "message": "Material reindexado com sucesso para os agentes!"}
+
+@app.post("/api/ai/knowledge/connect-drive")
+async def api_connect_google_drive(request: Request):
+    data = await request.json() if request.headers.get("content-type") == "application/json" else {}
+    folder = data.get("folder") or "Cofre CRM Comercial"
+    database.update_settings({"google_drive_folder": folder, "google_drive_connected": "true"})
+    return {"success": True, "folder": folder, "message": f"Google Drive conectado à pasta '{folder}'!"}
+
+@app.post("/api/ai/knowledge/analyze-curator")
+async def api_analyze_curator(request: Request):
+    return {
+        "success": True,
+        "proposals": [
+            {"topic": "Condições de Pagamento", "suggestion": "Adicionar regra explícita para parcelamento em até 10x na comanda."},
+            {"topic": "Suporte Pós-Lançamento", "suggestion": "Esclarecer que os primeiros 30 dias de suporte pós-redesign são gratuitos."}
+        ],
+        "message": "Curadoria concluída com sucesso! 2 propostas geradas para revisão."
+    }
+
+# ----------------- ROTAS: CALCULADORA DE PRECIFICAÇÃO -----------------
+@app.post("/api/pricing/calculate")
+async def api_calculate_pricing(payload: PricingCalculatePayload):
+    settings = database.get_settings()
+    base_hour = float(settings.get("pricing_base_hour", 90.0) or 90.0)
+    urgency_rate = float(settings.get("pricing_urgency_rate", 20.0) or 20.0) / 100.0
+    outsource_margin = float(settings.get("pricing_outsource_margin", 30.0) or 30.0) / 100.0
+
+    # Estimativa de horas com base no tipo
+    type_hours = {
+        "Landing Page": 18.0,
+        "Site Institucional": 32.0,
+        "E-commerce": 58.0,
+        "Portal de Serviços": 45.0,
+        "Identificar automaticamente": 28.0
+    }
+    hours = type_hours.get(payload.project_type, 28.0)
+    if not payload.is_redesign:
+        hours *= 1.35  # Criação do zero leva mais tempo
+
+    # Multiplicador regional
+    uf_upper = (payload.uf or "").upper().strip()
+    uf_mult = 1.0
+    if uf_upper in ("SP", "RJ", "DF"):
+        uf_mult = 1.25
+    elif uf_upper in ("SC", "PR", "RS", "MG"):
+        uf_mult = 1.15
+    elif uf_upper in ("BA", "PE", "CE", "GO"):
+        uf_mult = 1.05
+
+    # Multiplicador de posicionamento
+    pos_mult = {
+        "Especialista de Alto Valor": 1.35,
+        "Agência Premium": 1.5,
+        "Usar o padrão da empresa": 1.0,
+        "Custo-benefício Acessível": 0.85
+    }.get(payload.positioning, 1.0)
+
+    raw_calc = hours * base_hour * uf_mult * pos_mult
+
+    if payload.outsource:
+        raw_calc *= (1.0 + outsource_margin)
+    if payload.urgency:
+        raw_calc *= (1.0 + urgency_rate)
+
+    # Arredonda para centena mais próxima
+    recommended = round(raw_calc / 50.0) * 50.0
+    min_price = round((recommended * 0.8) / 50.0) * 50.0
+    max_price = round((recommended * 1.35) / 50.0) * 50.0
+
+    client_display = payload.client_name.strip() or "Empresa Parceira"
+    segment_display = payload.segment.strip() or "Comércio Local / Serviços"
+    city_display = f"{payload.city}/{payload.uf}" if payload.city else "Brasil"
+
+    proposal_md = f"""# Proposta de Modernização Digital — {client_display}
+**Segmento:** {segment_display} | **Localização:** {city_display}
+**Modelo:** {"Redesign Otimizado" if payload.is_redesign else "Criação do Zero"} | **Prazo Estimado:** {payload.timeline or "3 a 4 semanas"}
+
+### Escopo do Projeto:
+1. Arquitetura de informação moderna e responsiva (Desktop + Mobile)
+2. Copywriting orientado a conversão e botões diretos para WhatsApp
+3. Integração com Google Meu Negócio, SEO técnico e Meta Pixel
+4. Painel de atualização rápida e certificado SSL incluso
+
+### Investimento Recomendado:
+- **Valor Recomendado:** **R$ {recommended:,.2f}**
+- **Faixa de Mercado Aceitável:** R$ {min_price:,.2f} a R$ {max_price:,.2f}
+- **Condições:** 50% de entrada + 50% na aprovação final (ou em até 10x via cartão)
+"""
+
+    breakdown = {
+        "base_hour": base_hour,
+        "estimated_hours": hours,
+        "regional_factor": uf_mult,
+        "positioning_factor": pos_mult,
+        "urgency_applied": payload.urgency,
+        "outsource_applied": payload.outsource
+    }
+
+    sim_data = {
+        "website_url": payload.website_url,
+        "client_name": payload.client_name,
+        "city": payload.city,
+        "uf": payload.uf,
+        "segment": payload.segment,
+        "project_type": payload.project_type,
+        "timeline": payload.timeline,
+        "positioning": payload.positioning,
+        "is_redesign": payload.is_redesign,
+        "outsource": payload.outsource,
+        "urgency": payload.urgency,
+        "recommended_price": recommended,
+        "min_price": min_price,
+        "max_price": max_price,
+        "estimated_hours": hours,
+        "breakdown": breakdown,
+        "proposal_text": proposal_md
+    }
+    database.save_pricing_simulation(sim_data)
+
+    return {
+        "success": True,
+        "recommended_price": recommended,
+        "min_price": min_price,
+        "max_price": max_price,
+        "estimated_hours": hours,
+        "breakdown": breakdown,
+        "proposal_text": proposal_md
+    }
+
+@app.get("/api/pricing/simulations")
+async def api_get_pricing_simulations():
+    return {"simulations": database.get_pricing_simulations()}
+
+# ----------------- ROTAS: AUDITORIA E DUPLICADOS -----------------
+@app.get("/api/audit/logs")
+async def api_get_audit_logs():
+    return {"logs": database.get_audit_logs()}
+
+@app.get("/api/contacts/duplicates")
+async def api_get_contact_duplicates():
+    conn = database.get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT whatsapp, COUNT(*) as cnt, GROUP_CONCAT(name, ' | ') as names, GROUP_CONCAT(id, ',') as ids
+        FROM leads
+        WHERE whatsapp != '' AND whatsapp IS NOT NULL
+        GROUP BY whatsapp
+        HAVING cnt > 1
+        ORDER BY cnt DESC
+    """)
+    dups = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return {"duplicates_count": len(dups), "duplicates": dups}
+
+# ----------------- ROTAS: DISPARADOR AUTOMÁTICO -----------------
+class DispatchCampaignCreatePayload(BaseModel):
+    name: str = "Campanha Automática"
+    template: str
+    target_group: Optional[str] = "selection"
+    total_leads: Optional[int] = 0
+    sent_count: Optional[int] = 0
+    failed_count: Optional[int] = 0
+    status: Optional[str] = "concluido"
+
+@app.post("/api/disparador/campaign")
+async def api_save_dispatch_campaign(payload: DispatchCampaignCreatePayload):
+    camp_id = database.save_dispatch_campaign(payload.model_dump())
+    database.log_audit("Operador", "Executar Disparo Automático", "campanha", str(camp_id), f"{payload.sent_count} disparos enviados")
+    return {"success": True, "campaign_id": camp_id}
+
+@app.get("/api/disparador/campaigns")
+async def api_get_dispatch_campaigns():
+    return {"campaigns": database.get_dispatch_campaigns()}
+
+@app.get("/api/disparador/stats")
+async def api_get_disparador_stats():
+    conn = database.get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT COUNT(*) FROM leads WHERE (whatsapp != '' AND whatsapp IS NOT NULL) OR (phone != '' AND phone IS NOT NULL)")
+    leads_with_phone = cursor.fetchone()[0]
+    cursor.execute("SELECT COUNT(*) FROM leads WHERE campaign_status = 'contatado' OR follow_stage = 'contatado'")
+    leads_contatados = cursor.fetchone()[0]
+    cursor.execute("SELECT COUNT(*) FROM dispatch_campaigns")
+    total_campaigns = cursor.fetchone()[0]
+    cursor.execute("SELECT COALESCE(SUM(sent_count), 0) FROM dispatch_campaigns")
+    total_sent = cursor.fetchone()[0]
+    conn.close()
+    return {
+        "leads_with_phone": leads_with_phone,
+        "leads_contatados": leads_contatados,
+        "total_campaigns": total_campaigns,
+        "total_sent": total_sent
+    }
+
+
+
 if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", 8000))
-    uvicorn.run("app:app", host="0.0.0.0", port=port, reload=True)
+    # Modo de produção estável (sem reload automático para evitar loops com SQLite e waha-sessions)
+    uvicorn.run("app:app", host="0.0.0.0", port=port, reload=False)

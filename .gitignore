@@ -64,3 +64,10 @@ desktop.ini
 .idea/
 *.swp
 *.swo
+
+# Subfolder clone
+leads_app/
+
+# Local screenshots & images
+imgs/
+

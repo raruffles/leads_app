@@ -34,5 +34,10 @@ services:
       - WAHA_API_KEY=2b5d16deb67241efa1cffa371e1f354b
       - WAHA_DASHBOARD_USERNAME=admin
       - WAHA_DASHBOARD_PASSWORD=admin
+    mem_limit: 1g
+    deploy:
+      resources:
+        limits:
+          memory: 1G
     volumes:
       - ./waha-sessions:/app/.sessions

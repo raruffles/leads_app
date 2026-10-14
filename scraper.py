@@ -169,6 +169,35 @@ def search_instagram_fallback(name: str, city: str, timeout: float = 4.0) -> str
         pass
     return ""
 
+def search_whatsapp_fallback(name: str, city: str, timeout: float = 4.5) -> str:
+    """Busca inteligente de WhatsApp comercial real via web search (DDG Lite)"""
+    try:
+        clean_name = re.sub(r'[\(\)\-\,\.\/]+', ' ', name).strip()
+        search_term = f'"{clean_name}" "{city}" whatsapp OR "wa.me"'
+        url = "https://lite.duckduckgo.com/lite/"
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+        }
+        with httpx.Client(timeout=timeout, follow_redirects=True) as client:
+            resp = client.post(url, data={"q": search_term}, headers=headers)
+            if resp.status_code == 200:
+                # 1. wa.me / api.whatsapp.com
+                wa_match = re.search(r'(?:wa\.me/|api\.whatsapp\.com/send\?phone=)(\d{10,13})', resp.text)
+                if wa_match:
+                    w_num = wa_match.group(1)
+                    if w_num.startswith("55") and len(w_num) in (12, 13):
+                        w_num = w_num[2:]
+                    if (len(w_num) == 11 and w_num[2] == '9') or len(w_num) == 10:
+                        return format_whatsapp_number(w_num)
+                # 2. Celular brasileiro no texto: (DD) 9xxxx-xxxx
+                cell_match = re.search(r'\(?([1-9]{2})\)?\s*9\s*(\d{4})[-\s]?(\d{4})', resp.text)
+                if cell_match:
+                    c_num = f"{cell_match.group(1)}9{cell_match.group(2)}{cell_match.group(3)}"
+                    return format_whatsapp_number(c_num)
+    except Exception:
+        pass
+    return ""
+
 def parse_instant_data_scraper_input(content: str) -> List[Dict[str, Any]]:
     """
     Interpreta dados exportados pelo Instant Data Scraper (CSV ou texto copiado via 'COPY ALL')
@@ -647,6 +676,8 @@ class LeadScraper:
             email = item.get("email", "")
             phone_raw = item.get("phone", "")
             digits = re.sub(r'\D', '', phone_raw)
+            if digits.startswith("55") and len(digits) in (12, 13):
+                digits = digits[2:]
             if len(digits) in (8, 9):
                 phone = clean_phone(f"{ddd}{digits}")
                 digits = f"{ddd}{digits}"
@@ -695,9 +726,19 @@ class LeadScraper:
                 instagram = search_instagram_fallback(name, cidade_nome)
 
             # Se temos telefone celular válido e ainda não temos WhatsApp, define o WhatsApp automaticamente
-            if phone and not whatsapp:
+            if not whatsapp and digits:
                 if len(digits) == 11 and digits[2] == '9':
                     whatsapp = format_whatsapp_number(digits)
+                elif len(digits) == 10 and digits[2] == '9':
+                    whatsapp = format_whatsapp_number(f"{digits[:2]}9{digits[2:]}")
+
+            # Se ainda não temos WhatsApp, tenta busca externa de WhatsApp real comercial
+            if not whatsapp:
+                external_wa = search_whatsapp_fallback(name, cidade_nome)
+                if external_wa:
+                    whatsapp = external_wa
+                    if not phone:
+                        phone = clean_phone(external_wa)
 
             photos = item.get("photos", [])
             lead_addr = item.get("address", f"{cidade_nome} - {loc_data.get('uf', 'SP')}")

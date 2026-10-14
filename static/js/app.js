@@ -54,7 +54,23 @@ function initNavigation() {
         'campaigns': 'Pipeline de Prospecção & CRM',
         'chat': 'WhatsApp Web & Central Multi-Canal',
         'whatsapp': 'Central de Automação WhatsApp (WAHA)',
-        'settings': 'Configurações do Sistema'
+        'settings': 'Configurações do Sistema',
+        'email': 'E-mail da Empresa (Gmail)',
+        'radar': 'Radar de Risco & Churn Prevention',
+        'agenda': 'Agenda & Compromissos',
+        'quick-replies': 'Respostas Rápidas & Templates',
+        'crm-hub': 'CRM — Ver Tudo em CRM',
+        'contacts': 'Contatos (Customer 360)',
+        'tasks': 'Tarefas & Compromissos',
+        'comandas': 'Comandas & Ordens de Venda',
+        'products': 'Catálogo de Produtos & Serviços',
+        'pricing': 'Calculadora de Precificação Inteligente',
+        'ai-agents': 'Agentes de IA & Atendimento',
+        'follow-ups': 'Follow-ups & Automações',
+        'knowledge': 'Cofre de Conhecimento & RAG',
+        'ai-hub': 'Agente de IA — Ver Tudo em IA',
+        'analytics': 'Métricas & Auditoria',
+        'disparador': 'Disparador Automático de Abordagem Comercial'
     };
 
     function switchTab(tabId) {
@@ -96,6 +112,21 @@ function initNavigation() {
         } else {
             if (typeof stopWahaTabPolling === 'function') stopWahaTabPolling();
         }
+
+        // Novos módulos do CRM
+        if (tabId === 'disparador' && typeof loadDisparadorView === 'function') loadDisparadorView();
+        if (tabId === 'email' && typeof loadCompanyEmails === 'function') loadCompanyEmails();
+        if (tabId === 'radar' && typeof loadRiskRadar === 'function') loadRiskRadar();
+        if (tabId === 'agenda' && typeof loadAgendaCalendar === 'function') loadAgendaCalendar();
+        if (tabId === 'quick-replies' && typeof loadQuickReplies === 'function') loadQuickReplies();
+        if (tabId === 'contacts' && typeof loadContacts360 === 'function') loadContacts360();
+        if (tabId === 'tasks' && typeof loadTasksView === 'function') loadTasksView();
+        if (tabId === 'comandas' && typeof loadComandasView === 'function') loadComandasView();
+        if (tabId === 'products' && typeof loadProductsView === 'function') loadProductsView();
+        if (tabId === 'ai-agents' && typeof loadAIAgentsView === 'function') loadAIAgentsView();
+        if (tabId === 'follow-ups' && typeof loadFollowupsView === 'function') loadFollowupsView();
+        if (tabId === 'knowledge' && typeof loadKnowledgeVault === 'function') loadKnowledgeVault();
+        if (tabId === 'analytics' && typeof loadAnalyticsView === 'function') loadAnalyticsView();
     }
 
     navItems.forEach(item => {
@@ -271,6 +302,147 @@ window.quickSendToCRM = function(e, leadId) {
     }, 250);
 };
 
+// 2.5 AUTOCOMPLETE DE CIDADES BRASILEIRAS (IBGE)
+function initCityAutocomplete(inputId, dropdownId, onSelect) {
+    const input = document.getElementById(inputId);
+    const dropdown = document.getElementById(dropdownId);
+    if (!input || !dropdown) return;
+
+    let debounceTimer = null;
+    let activeIndex = -1;
+    let currentResults = [];
+
+    const closeDropdown = () => {
+        dropdown.style.display = 'none';
+        dropdown.innerHTML = '';
+        activeIndex = -1;
+        currentResults = [];
+    };
+
+    const renderItems = (items) => {
+        currentResults = items || [];
+        activeIndex = -1;
+        if (!currentResults.length) {
+            dropdown.innerHTML = '<div class="city-autocomplete-empty"><i class="fas fa-search" style="margin-right:6px;"></i>Nenhuma cidade encontrada</div>';
+            dropdown.style.display = 'block';
+            return;
+        }
+
+        dropdown.innerHTML = currentResults.map((c, idx) => `
+            <div class="city-autocomplete-item" data-index="${idx}" data-label="${c.label}">
+                <div class="city-name">
+                    <i class="fas fa-city"></i>
+                    <span>${c.name}</span>
+                </div>
+                <span class="city-uf-badge">${c.uf}</span>
+            </div>
+        `).join('');
+        dropdown.style.display = 'block';
+    };
+
+    // Event delegation on dropdown for both mouse and touch/click
+    const handleItemPick = (e) => {
+        const itemEl = e.target.closest('.city-autocomplete-item');
+        if (!itemEl) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const label = itemEl.getAttribute('data-label');
+        if (label) selectCity(label);
+    };
+
+    dropdown.addEventListener('mousedown', handleItemPick);
+    dropdown.addEventListener('click', handleItemPick);
+
+    let isSelecting = false;
+
+    const selectCity = (label) => {
+        isSelecting = true;
+        clearTimeout(debounceTimer);
+        input.value = label;
+        closeDropdown();
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+        setTimeout(() => { isSelecting = false; }, 300);
+        if (typeof onSelect === 'function') {
+            onSelect(label);
+        }
+    };
+
+    const updateActiveItem = () => {
+        const items = dropdown.querySelectorAll('.city-autocomplete-item');
+        items.forEach((item, idx) => {
+            if (idx === activeIndex) {
+                item.classList.add('active');
+                item.scrollIntoView({ block: 'nearest' });
+            } else {
+                item.classList.remove('active');
+            }
+        });
+    };
+
+    input.addEventListener('input', (e) => {
+        if (isSelecting) return;
+        const query = e.target.value.trim();
+        clearTimeout(debounceTimer);
+
+        if (query.length < 1) {
+            closeDropdown();
+            return;
+        }
+
+        debounceTimer = setTimeout(async () => {
+            try {
+                const res = await fetch(`/api/cities?q=${encodeURIComponent(query)}`);
+                if (!res.ok) return;
+                const data = await res.json();
+                renderItems(data);
+            } catch (err) {
+                console.error('Erro ao buscar cidades:', err);
+            }
+        }, 120);
+    });
+
+    input.addEventListener('keydown', (e) => {
+        if (dropdown.style.display === 'none') {
+            if (e.key === 'ArrowDown' && input.value.trim().length >= 1) {
+                input.dispatchEvent(new Event('input'));
+            }
+            return;
+        }
+
+        const items = dropdown.querySelectorAll('.city-autocomplete-item');
+        if (items.length === 0) return;
+
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            activeIndex = (activeIndex + 1) % items.length;
+            updateActiveItem();
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            activeIndex = (activeIndex - 1 + items.length) % items.length;
+            updateActiveItem();
+        } else if (e.key === 'Enter') {
+            if (activeIndex >= 0 && activeIndex < currentResults.length) {
+                e.preventDefault();
+                selectCity(currentResults[activeIndex].label);
+            }
+        } else if (e.key === 'Escape') {
+            closeDropdown();
+        }
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!input.contains(e.target) && !dropdown.contains(e.target)) {
+            closeDropdown();
+        }
+    });
+
+    input.addEventListener('focus', () => {
+        if (input.value.trim().length >= 1 && dropdown.style.display === 'none') {
+            input.dispatchEvent(new Event('input'));
+        }
+    });
+}
+
 // 3. EVENT LISTENERS
 function setupEventListeners() {
     // Formulário de Varredura
@@ -278,6 +450,30 @@ function setupEventListeners() {
     if (form) {
         form.addEventListener('submit', handleScanSubmit);
     }
+
+    // Autocomplete Inteligente de Cidades Brasileiras (IBGE)
+    initCityAutocomplete('location-input', 'location-autocomplete-dropdown', (selected) => {
+        const badge = document.getElementById('cep-resolved-badge');
+        if (badge) badge.style.display = 'none';
+    });
+    initCityAutocomplete('import-location', 'import-location-autocomplete-dropdown');
+    initCityAutocomplete('pricing-city', 'pricing-city-autocomplete-dropdown', (selected) => {
+        const ufSelect = document.getElementById('pricing-uf');
+        const pCityInput = document.getElementById('pricing-city');
+        if (selected && selected.includes(' - ')) {
+            const parts = selected.split(' - ');
+            if (pCityInput) pCityInput.value = parts[0].trim();
+            if (ufSelect) {
+                const uf = parts[1].trim();
+                const option = Array.from(ufSelect.options).find(o => o.value.toUpperCase() === uf.toUpperCase());
+                if (option) {
+                    ufSelect.value = option.value;
+                } else {
+                    ufSelect.value = 'Outro';
+                }
+            }
+        }
+    });
 
     // Consulta de CEP em Tempo Real
     const cepInput = document.getElementById('cep-input');
@@ -1166,54 +1362,30 @@ window.updateModalFollowStage = async function() {
 function getPitchMessage(lead, type = 'contato') {
     if (!lead) return '';
     const name = lead.name || 'Empresa';
-    const site = lead.website || '';
-    const hasWeb = lead.has_website && site.trim().length > 0;
+    const primeiroNome = typeof extractLeadFirstName === 'function' ? extractLeadFirstName(lead) : (lead.name ? lead.name.split(' ')[0] : 'amigo');
 
     if (type === 'contato') {
-        if (!hasWeb) {
-            return `Olá equipe da ${name}! Tudo bem?
+        return `Olá ${primeiroNome}, tudo bem? Vi o perfil de vocês no Google Maps e achei excelente o projeto da ${name}!
 
-` +
-                   `Meu nome é especialista em presença digital e notei que a ${name} é uma referência na região, mas ainda não possui um site próprio institucional no Google.
-
-` +
-                   `Hoje, mais de 80% das pessoas pesquisam e fecham direto pelo celular. Desenvolvemos sites rápidos, modernos e integrados ao WhatsApp para empresas do seu nicho.
-
-` +
-                   `Gostaria de ver uma demonstração visual de como ficaria a presença digital da ${name} sem custo?`;
-        } else {
-            return `Olá equipe da ${name}! Tudo bem?
-
-` +
-                   `Estava analisando o site de vocês (${site}) e identifiquei oportunidades excelentes para acelerar o carregamento mobile e aumentar a taxa de contatos via WhatsApp.
-
-` +
-                   `Posso lhe enviar um diagnóstico gratuito de melhorias de conversão?`;
-        }
+Trabalho ajudando empresas da região a atraírem mais clientes com presença digital profissional e sites modernos no Google. Quem costuma cuidar dessa parte comercial ou de marketing por aí?`;
     } else if (type === 'follow1') {
-        return `Olá equipe da ${name}! Tudo bem por aí?
+        return `Olá ${primeiroNome}, tudo bem?
 
-` +
-               `Passando para saber se vocês conseguiram ver a mensagem que enviei anteriormente sobre a presença digital e criação do site.
+Passando para compartilhar uma proposta prática: analisamos o posicionamento da ${name} e preparamos um estudo com informações de estrutura para um site moderno, rápido e otimizado para o Google.
 
-` +
-               `Conseguem avaliar uma prévia rápida hoje de como ficaria o projeto para vocês?`;
+O melhor de tudo: esse diagnóstico e a prévia do projeto são 100% sem custo e sem compromisso nenhum! Posso te enviar os detalhes aqui por WhatsApp?`;
     } else if (type === 'follow2') {
-        return `Oi pessoal da ${name}! Tudo bem por aí?
+        return `Oi ${primeiroNome}, tudo bom?
 
-` +
-               `Imagino que a rotina esteja bem corrida. Estou finalizando a agenda de desenvolvimento de demonstrações desta semana e gostaria de saber se ainda faz sentido apresentar o modelo exclusivo para a ${name} ou se preferem que eu retome mais adiante.
+Passando rapidinho só para saber se você conseguiu ver minha mensagem anterior sobre a proposta para a ${name}.
 
-` +
-               `Um abraço!`;
+Posso te enviar uma prévia visual de como ficaria a presença digital de vocês no celular e no Google? Leva menos de 2 minutos para dar uma olhada e você já consegue ver na prática! Me avisa se fizer sentido.`;
     } else if (type === 'proposta') {
-        return `Olá equipe da ${name}! Tudo bem?
+        return `Olá ${primeiroNome}, tudo bem?
 
-` +
-               `Conforme alinhamos, preparei os detalhes da proposta para o desenvolvimento do site profissional da ${name}, otimizado para o Google e com captação direta no WhatsApp.
+Conforme conversamos, estruturei os detalhes da proposta para a modernização e desenvolvimento do site profissional da ${name}, otimizado para o Google e com captação direta de clientes no WhatsApp.
 
-` +
-               `Ficou alguma dúvida sobre o escopo ou condições para darmos início?`;
+Ficou alguma dúvida sobre o escopo ou condições para iniciarmos a criação?`;
     }
     return '';
 }
@@ -1275,7 +1447,29 @@ window.onColDrop = async function(e, colKey) {
     if (!draggedLeadId) return;
     
     const lead = currentLeads.find(l => l.id === draggedLeadId);
-    let payload = { status: colKey };
+    let payload = {};
+    
+    if (window.kanbanViewMode === 'stages') {
+        if (colKey === 'novo') {
+            payload = { status: 'novo', follow_stage: 'contato' };
+        } else if (colKey === 'contato') {
+            payload = { status: 'contatado', follow_stage: 'contato' };
+        } else if (colKey === 'follow1') {
+            payload = { status: 'contatado', follow_stage: 'follow1' };
+        } else if (colKey === 'follow2') {
+            payload = { status: 'contatado', follow_stage: 'follow2' };
+        } else if (colKey === 'proposta') {
+            payload = { status: 'proposta', follow_stage: 'proposta' };
+        } else if (colKey === 'fechado') {
+            payload = { status: 'fechado', follow_stage: 'fechado' };
+        } else if (colKey === 'perdido') {
+            payload = { status: 'perdido', follow_stage: 'perdido' };
+        } else {
+            payload = { status: colKey };
+        }
+    } else {
+        payload = { status: colKey };
+    }
     
     if (colKey === 'fechado') {
         const curVal = lead ? (lead.deal_value || 0) : 0;
@@ -1293,14 +1487,24 @@ window.onColDrop = async function(e, colKey) {
         });
         const data = await res.json();
         if (lead) {
-            lead.campaign_status = colKey;
+            if (payload.status) lead.campaign_status = payload.status;
+            if (payload.follow_stage) lead.follow_stage = payload.follow_stage;
             if (payload.deal_value !== undefined) lead.deal_value = payload.deal_value;
         }
         loadCampaignsView();
         loadDashboardStats();
         applyFiltersAndRender();
         if (typeof showToast === 'function') {
-            const colNames = { novo: 'Novos Leads', contatado: 'Em Contato', proposta: 'Proposta Enviada', fechado: 'Fechados / Clientes' };
+            const colNames = { 
+                novo: 'Novos Leads', 
+                contato: '1º Contato', 
+                follow1: 'Follow-up 1', 
+                follow2: 'Follow-up 2', 
+                proposta: 'Proposta Enviada', 
+                fechado: 'Fechados / Clientes', 
+                perdido: 'Sem Interesse / Desqualificado',
+                contatado: 'Em Contato'
+            };
             showToast(`Lead "${lead ? lead.name : 'selecionado'}" movido para ${colNames[colKey] || colKey}!`, 'success');
         }
     } catch (err) {
@@ -1394,8 +1598,64 @@ window.toggleKanbanNoSiteFilter = function() {
     loadCampaignsView();
 };
 
-window.filterKanbanCards = function() {
+// Modo de visualização do Kanban: 'stages' (Etapas de Contato / Cadência) ou 'pipeline' (Funil Geral)
+window.kanbanViewMode = 'stages';
+
+window.setKanbanViewMode = function(mode) {
+    window.kanbanViewMode = mode;
+    const btnStages = document.getElementById('btn-kanban-mode-stages');
+    const btnPipeline = document.getElementById('btn-kanban-mode-pipeline');
+    if (btnStages && btnPipeline) {
+        if (mode === 'stages') {
+            btnStages.classList.add('active');
+            btnStages.classList.remove('btn-secondary');
+            btnPipeline.classList.remove('active');
+            btnPipeline.classList.add('btn-secondary');
+        } else {
+            btnPipeline.classList.add('active');
+            btnPipeline.classList.remove('btn-secondary');
+            btnStages.classList.remove('active');
+            btnStages.classList.add('btn-secondary');
+        }
+    }
     loadCampaignsView();
+};
+
+window.triggerKanbanColumnDisparo = function(e, groupKey) {
+    if (e && e.stopPropagation) e.stopPropagation();
+    if (!groupKey) return;
+    
+    // Alterna para a aba do Disparador Automático
+    const tabItem = document.querySelector('.nav-item[data-tab="disparador"]');
+    if (tabItem) tabItem.click();
+    
+    setTimeout(() => {
+        const groupSelect = document.getElementById('disparador-target-group');
+        if (groupSelect) {
+            groupSelect.value = groupKey;
+            if (typeof updateDisparadorAudienceCount === 'function') updateDisparadorAudienceCount();
+            if (typeof updateDisparadorPreview === 'function') updateDisparadorPreview();
+        }
+        if (typeof showToast === 'function') {
+            showToast(`Audiência do disparador selecionada: "${groupKey}"!`, 'info');
+        }
+    }, 150);
+};
+
+window.openLeadChatQuick = function(e, leadId) {
+    if (e && e.stopPropagation) e.stopPropagation();
+    const lead = currentLeads.find(l => l.id === leadId);
+    if (!lead) return;
+    
+    // Abre a aba do WhatsApp Web / Chat
+    const chatTab = document.querySelector('.nav-item[data-tab="chat"]');
+    if (chatTab) chatTab.click();
+    
+    setTimeout(() => {
+        if (typeof selectLeadForChat === 'function') {
+            selectLeadForChat(leadId);
+        }
+    }, 150);
 };
 
 async function loadCampaignsView() {
@@ -1407,12 +1667,75 @@ async function loadCampaignsView() {
         const leads = await res.json();
         currentLeads = leads;
         
-        const cols = {
-            'novo': { title: 'Novos Leads', color: 'var(--neon-cyan)', dotColor: '#00d2ff', items: [] },
-            'contatado': { title: 'Em Contato', color: 'var(--purple-light)', dotColor: '#a855f7', items: [] },
-            'proposta': { title: 'Proposta Enviada', color: 'var(--alert-orange)', dotColor: '#ff7b00', items: [] },
-            'fechado': { title: 'Fechados / Clientes', color: 'var(--neon-green)', dotColor: '#00ff88', items: [] }
-        };
+        // Definição das colunas com base no modo selecionado
+        let cols = {};
+        if (window.kanbanViewMode === 'stages') {
+            cols = {
+                'novo': { 
+                    title: 'Novos Leads', 
+                    icon: 'fa-inbox', 
+                    color: 'var(--neon-cyan)', 
+                    dotColor: '#00d2ff', 
+                    shootGroup: 'novos', 
+                    items: [] 
+                },
+                'contato': { 
+                    title: '1º Contato', 
+                    icon: 'fa-phone-alt', 
+                    color: 'var(--purple-light)', 
+                    dotColor: '#a855f7', 
+                    shootGroup: 'stage-contato', 
+                    items: [] 
+                },
+                'follow1': { 
+                    title: 'Follow-up 1', 
+                    icon: 'fa-redo', 
+                    color: '#fbbf24', 
+                    dotColor: '#f59e0b', 
+                    shootGroup: 'stage-follow1', 
+                    items: [] 
+                },
+                'follow2': { 
+                    title: 'Follow-up 2', 
+                    icon: 'fa-clock', 
+                    color: 'var(--alert-orange)', 
+                    dotColor: '#ff7b00', 
+                    shootGroup: 'stage-follow2', 
+                    items: [] 
+                },
+                'proposta': { 
+                    title: 'Proposta / Negociação', 
+                    icon: 'fa-file-invoice-dollar', 
+                    color: '#38bdf8', 
+                    dotColor: '#0284c7', 
+                    shootGroup: 'stage-proposta', 
+                    items: [] 
+                },
+                'fechado': { 
+                    title: 'Fechados / Clientes', 
+                    icon: 'fa-trophy', 
+                    color: 'var(--neon-green)', 
+                    dotColor: '#00ff88', 
+                    shootGroup: 'all-whatsapp', 
+                    items: [] 
+                },
+                'perdido': { 
+                    title: 'Sem Interesse / Perdido', 
+                    icon: 'fa-ban', 
+                    color: 'var(--text-secondary)', 
+                    dotColor: '#64748b', 
+                    shootGroup: '', 
+                    items: [] 
+                }
+            };
+        } else {
+            cols = {
+                'novo': { title: 'Novos Leads', icon: 'fa-inbox', color: 'var(--neon-cyan)', dotColor: '#00d2ff', shootGroup: 'novos', items: [] },
+                'contatado': { title: 'Em Contato', icon: 'fa-comments', color: 'var(--purple-light)', dotColor: '#a855f7', shootGroup: 'stage-contato', items: [] },
+                'proposta': { title: 'Proposta Enviada', icon: 'fa-file-invoice-dollar', color: 'var(--alert-orange)', dotColor: '#ff7b00', shootGroup: 'stage-proposta', items: [] },
+                'fechado': { title: 'Fechados / Clientes', icon: 'fa-trophy', color: 'var(--neon-green)', dotColor: '#00ff88', shootGroup: 'all-whatsapp', items: [] }
+            };
+        }
 
         // Filtros rápidos no Kanban
         const searchInput = document.getElementById('kanban-search-input');
@@ -1445,15 +1768,42 @@ async function loadCampaignsView() {
             filteredLeads = filteredLeads.filter(l => !l.has_website || !l.website);
         }
 
-        filteredLeads.forEach((l, index) => {
-            let st = (l.campaign_status || 'novo').toLowerCase();
-            if (st === 'contato') st = 'contatado';
-            if (cols[st]) cols[st].items.push(l);
-            else cols['novo'].items.push(l);
-        });
+        // Distribuição dos leads nas colunas
+        if (window.kanbanViewMode === 'stages') {
+            filteredLeads.forEach(l => {
+                const st = (l.campaign_status || 'novo').toLowerCase();
+                const fstage = (l.follow_stage || '').toLowerCase();
+                
+                if (st === 'fechado') cols['fechado'].items.push(l);
+                else if (st === 'perdido') cols['perdido'].items.push(l);
+                else if (st === 'proposta' || fstage === 'proposta') cols['proposta'].items.push(l);
+                else if (fstage === 'follow2') cols['follow2'].items.push(l);
+                else if (fstage === 'follow1') cols['follow1'].items.push(l);
+                else if (st === 'contatado' || fstage === 'contato') cols['contato'].items.push(l);
+                else cols['novo'].items.push(l);
+            });
+        } else {
+            filteredLeads.forEach((l, index) => {
+                let st = (l.campaign_status || 'novo').toLowerCase();
+                if (st === 'contato') st = 'contatado';
+                if (cols[st]) cols[st].items.push(l);
+                else cols['novo'].items.push(l);
+            });
+        }
 
         container.innerHTML = Object.keys(cols).map(key => {
             const col = cols[key];
+            const colVal = col.items.reduce((sum, item) => sum + parseFloat(item.deal_value || 0), 0);
+            const colValHtml = colVal > 0 ? `<span class="badge-col-total-deal" title="Valor acumulado nesta etapa">${formatBRL(colVal)}</span>` : '';
+            const shootBtnHtml = col.shootGroup ? `
+                <button type="button" 
+                        class="btn-kanban-shoot" 
+                        onclick="triggerKanbanColumnDisparo(event, '${col.shootGroup}')" 
+                        title="Disparar abordagem comercial via WhatsApp para leads desta etapa">
+                    <i class="fab fa-whatsapp"></i> Disparar
+                </button>
+            ` : '';
+
             const cardsHtml = col.items.map((lead, idx) => {
                 let stage = lead.follow_stage;
                 if (!stage) {
@@ -1471,6 +1821,12 @@ async function loadCampaignsView() {
                     ? `<span class="badge-assigned" style="font-size:10px; padding:2px 6px;"><i class="fas fa-user"></i> ${escapeHtml(lead.assigned_to)}</span>`
                     : '';
 
+                const phoneDisplay = lead.phone ? `
+                    <div style="font-size:11px; color:var(--text-secondary); margin-bottom:4px; display:flex; align-items:center; gap:5px;">
+                        <i class="fas fa-phone-alt" style="font-size:10px; color:var(--neon-cyan);"></i> ${escapeHtml(lead.phone)}
+                    </div>
+                ` : '';
+
                 return `
                     <div class="kanban-card" 
                          draggable="true" 
@@ -1484,6 +1840,14 @@ async function loadCampaignsView() {
                                 <div style="font-weight:700; font-size:13.5px; line-height:1.3; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(lead.name)}</div>
                             </div>
                             <div style="display:flex; align-items:center; gap:4px; flex-shrink:0;">
+                                ${(lead.whatsapp || lead.phone) ? `
+                                    <button type="button" 
+                                            class="kanban-wa-quick-btn" 
+                                            onclick="openLeadChatQuick(event, ${lead.id})" 
+                                            title="Abrir WhatsApp Web para ${escapeHtml(lead.name)}">
+                                        <i class="fab fa-whatsapp"></i>
+                                    </button>
+                                ` : ''}
                                 <button type="button" 
                                         class="kanban-stage-btn ${stageInfo.cls}" 
                                         onclick="cycleLeadFollowStage(event, ${lead.id})" 
@@ -1498,6 +1862,8 @@ async function loadCampaignsView() {
                                 </button>
                             </div>
                         </div>
+
+                        ${phoneDisplay}
 
                         <div class="kanban-lead-address">
                             <i class="fas fa-map-marker-alt"></i>
@@ -1514,7 +1880,7 @@ async function loadCampaignsView() {
                                 ? `<span class="badge-no-site" style="font-size:10px; padding:2px 6px;">Sem Site</span>` 
                                 : `<span style="font-size:11px; color:var(--neon-cyan);"><i class="fas fa-globe"></i> Com Site</span>`}
                             ${lead.whatsapp 
-                                ? `<span style="font-size:11px; color:var(--neon-green);"><i class="fab fa-whatsapp"></i> WA</span>` 
+                                ? `<span style="font-size:11px; color:var(--neon-green);"><i class="fab fa-whatsapp"></i> ${escapeHtml(lead.whatsapp)}</span>` 
                                 : ''}
                         </div>
                     </div>
@@ -1526,11 +1892,15 @@ async function loadCampaignsView() {
                      ondragover="onColDragOver(event)" 
                      ondragleave="onColDragLeave(event)" 
                      ondrop="onColDrop(event, '${key}')">
-                    <div class="kanban-col-header">
-                        <span class="kanban-col-title" style="color:${col.color}">
-                            <i class="fas fa-circle" style="font-size:8px; color:${col.dotColor};"></i> ${col.title}
+                    <div class="kanban-col-header" style="display:flex; justify-content:space-between; align-items:center; gap:6px;">
+                        <span class="kanban-col-title" style="color:${col.color}; font-size:13px;">
+                            <i class="fas ${col.icon || 'fa-circle'}" style="font-size:11px; color:${col.dotColor};"></i> ${col.title}
                         </span>
-                        <span class="kanban-count">${col.items.length}</span>
+                        <div style="display:flex; align-items:center; gap:5px;">
+                            ${colValHtml}
+                            <span class="kanban-count">${col.items.length}</span>
+                            ${shootBtnHtml}
+                        </div>
                     </div>
                     <div class="kanban-items">
                         ${cardsHtml || '<div style="color:var(--text-secondary); font-size:12.5px; text-align:center; padding:20px; font-weight:500;">Nenhum lead</div>'}
@@ -1651,6 +2021,31 @@ async function loadSettings() {
         if (document.getElementById('cfg-site-operator-name')) document.getElementById('cfg-site-operator-name').value = settings.site_operator_name || '';
         if (document.getElementById('cfg-site-contact-phone')) document.getElementById('cfg-site-contact-phone').value = settings.site_contact_phone || '';
         if (document.getElementById('cfg-site-message')) document.getElementById('cfg-site-message').value = settings.site_default_message || '';
+
+        // Campos do Disparador Automático
+        if (document.getElementById('cfg-disp-company')) document.getElementById('cfg-disp-company').value = settings.disparador_empresa_nome || 'Kaptador';
+        if (document.getElementById('cfg-disp-solution')) document.getElementById('cfg-disp-solution').value = settings.disparador_solucao || 'modernização de sites e captação de clientes';
+        if (document.getElementById('cfg-disp-audience')) document.getElementById('cfg-disp-audience').value = settings.disparador_publico_alvo || '';
+        if (document.getElementById('cfg-disp-benefit')) document.getElementById('cfg-disp-benefit').value = settings.disparador_beneficio || 'aumentar o faturamento através de contatos qualificados';
+        if (document.getElementById('cfg-disp-template')) document.getElementById('cfg-disp-template').value = settings.disparador_template || '';
+        if (document.getElementById('cfg-disp-optout')) document.getElementById('cfg-disp-optout').checked = (settings.disparador_opt_out !== 'false');
+
+        // Sincroniza inputs no painel dedicado do Disparador Automático
+        if (document.getElementById('disp-my-company') && settings.disparador_empresa_nome) {
+            document.getElementById('disp-my-company').value = settings.disparador_empresa_nome;
+        }
+        if (document.getElementById('disp-solution') && settings.disparador_solucao) {
+            document.getElementById('disp-solution').value = settings.disparador_solucao;
+        }
+        if (document.getElementById('disp-target-audience') && settings.disparador_publico_alvo) {
+            document.getElementById('disp-target-audience').value = settings.disparador_publico_alvo;
+        }
+        if (document.getElementById('disp-benefit') && settings.disparador_beneficio) {
+            document.getElementById('disp-benefit').value = settings.disparador_beneficio;
+        }
+        if (document.getElementById('disparador-template') && settings.disparador_template) {
+            document.getElementById('disparador-template').value = settings.disparador_template;
+        }
     } catch (err) {
         console.error("Erro ao carregar configurações:", err);
     }
@@ -1682,7 +2077,13 @@ async function handleSaveSettings(e) {
         email_body_template: document.getElementById('cfg-email-body') ? document.getElementById('cfg-email-body').value : '',
         site_operator_name: document.getElementById('cfg-site-operator-name') ? document.getElementById('cfg-site-operator-name').value : '',
         site_contact_phone: document.getElementById('cfg-site-contact-phone') ? document.getElementById('cfg-site-contact-phone').value : '',
-        site_default_message: document.getElementById('cfg-site-message') ? document.getElementById('cfg-site-message').value : ''
+        site_default_message: document.getElementById('cfg-site-message') ? document.getElementById('cfg-site-message').value : '',
+        disparador_empresa_nome: document.getElementById('cfg-disp-company') ? document.getElementById('cfg-disp-company').value : 'Kaptador',
+        disparador_solucao: document.getElementById('cfg-disp-solution') ? document.getElementById('cfg-disp-solution').value : '',
+        disparador_publico_alvo: document.getElementById('cfg-disp-audience') ? document.getElementById('cfg-disp-audience').value : '',
+        disparador_beneficio: document.getElementById('cfg-disp-benefit') ? document.getElementById('cfg-disp-benefit').value : '',
+        disparador_template: document.getElementById('cfg-disp-template') ? document.getElementById('cfg-disp-template').value : '',
+        disparador_opt_out: document.getElementById('cfg-disp-optout') ? (document.getElementById('cfg-disp-optout').checked ? 'true' : 'false') : 'true'
     };
 
     try {
@@ -1926,33 +2327,119 @@ function extractCity(address) {
     return 'sua região';
 }
 
+function extractLeadFirstName(lead) {
+    if (!lead) return 'amigo(a)';
+    const raw = lead.contact_name || lead.person_name || lead.name || '';
+    if (!raw) return 'amigo(a)';
+    let clean = raw.replace(/^(Dr\.|Dra\.|Sr\.|Sra\.|Prof\.|Adv\.|Eng\.)\s+/i, '').trim();
+    const genericPrefixes = /^(Clínica|Clinica|Consultório|Consultorio|Escritório|Escritorio|Oficina|Auto\s+Mecânica|Auto\s+Mecanica|Auto|Centro|Instituto|Restaurante|Pizzaria|Padaria|Bar|Hotel|Pousada|Academia|Studio|Espaço|Espaco|Loja|Boutique|Laboratório|Laboratorio|Farmácia|Farmacia|Hospital|Mercado|Supermercado)\s+/i;
+    if (genericPrefixes.test(clean)) {
+        clean = clean.replace(genericPrefixes, '').trim();
+    }
+    const parts = clean.split(/\s+/);
+    return parts[0] || 'amigo(a)';
+}
+
+function getSaudacaoHorario() {
+    const hour = new Date().getHours();
+    if (hour >= 5 && hour < 12) return 'Bom dia';
+    if (hour >= 12 && hour < 18) return 'Boa tarde';
+    return 'Boa noite';
+}
+
 /**
- * Monta mensagem dinâmica personalizada
+ * Monta mensagem dinâmica personalizada com suporte total a:
+ * [{saudacao}], [{primeiro_nome}], [NOME_DA_EMPRESA], [SOLUCAO_CONFIRMADA], [PUBLICO_ALVO], [BENEFICIO_CONFIRMADO],
+ * {empresa}, {cidade}, {status}, {telefone} e Spintax {Opção 1|Opção 2}.
  */
-function buildPersonalizedMessage(lead, customTemplate = null) {
+function buildPersonalizedMessage(lead, customTemplate = null, options = {}) {
+    if (!lead) lead = {};
     const empresa = lead.name || 'Empresa';
-    const cidade = extractCity(lead.address);
+    const cidade = extractCity(lead.address) || 'sua região';
     const semSite = !lead.has_website || !lead.website;
     const statusText = semSite ? 'Sem Site Oficial' : 'Site precisando de otimização mobile';
+    const primeiroNome = extractLeadFirstName(lead);
+    const saudacao = getSaudacaoHorario();
+
+    // Valores padrão das tags globais da campanha
+    const myCompany = options.myCompany || 
+                      (document.getElementById('disp-my-company') ? document.getElementById('disp-my-company').value.trim() : '') || 
+                      'Kaptador';
+    const solucao = options.solution || 
+                    (document.getElementById('disp-solution') ? document.getElementById('disp-solution').value.trim() : '') || 
+                    'modernização de sites e captação de clientes';
+    const publicoAlvo = options.targetAudience || 
+                        (document.getElementById('disp-target-audience') ? document.getElementById('disp-target-audience').value.trim() : '') || 
+                        lead.category || lead.niche || 'empresas do seu segmento';
+    const beneficio = options.benefit || 
+                      (document.getElementById('disp-benefit') ? document.getElementById('disp-benefit').value.trim() : '') || 
+                      'aumentar o faturamento através de contatos qualificados';
 
     let template = customTemplate;
     if (!template) {
-        if (semSite) {
-            template = `{Olá|Oi|Olá, tudo bem?} equipe da *{empresa}*!\n\n` +
-                       `Percebi que vocês atendem a região de *{cidade}*, mas atualmente estão marcados como *{status}* no Google.\n\n` +
-                       `Mais de 80% das pessoas pesquisam e fecham direto pelo celular. Desenvolvemos sites modernos e integrados ao WhatsApp para o seu nicho.\n\n` +
-                       `Gostaria de ver uma demonstração sem custo?`;
-        } else {
-            template = `{Olá|Oi|Tudo bem?} equipe da *{empresa}*!\n\n` +
-                       `Estava analisando o site de vocês (${lead.website}) em *{cidade}* e identifiquei oportunidades excelentes para acelerar a captação de contatos via WhatsApp.\n\n` +
-                       `Posso lhe enviar um diagnóstico visual rápido?`;
+        template = `[{saudacao}], [{primeiro_nome}]! Sou da [NOME_DA_EMPRESA]. Trabalhamos com [SOLUCAO_CONFIRMADA] para [PUBLICO_ALVO]. Gostaria de saber se faz sentido conversar sobre [BENEFICIO_CONFIRMADO]. Posso fazer uma pergunta rápida?\n\nSe preferir não receber mensagens, é só me avisar.`;
+    }
+
+    // 1. Processa Spintax primeiro: {Opção 1|Opção 2}
+    let res = parseSpintax(template);
+
+    // 2. Substituições com suporte aos múltiplos formatos da interface e do usuário
+    // [{saudacao}]
+    res = res.replace(/\[\{\s*saudacao\s*\}\]/gi, saudacao)
+             .replace(/\{\{\s*saudacao\s*\}\}/gi, saudacao)
+             .replace(/\{\s*saudacao\s*\}/gi, saudacao)
+             .replace(/\[\s*saudacao\s*\]/gi, saudacao);
+
+    // [{primeiro_nome}]
+    res = res.replace(/\[\{\s*primeiro_nome\s*\}\]/gi, primeiroNome)
+             .replace(/\{\{\s*primeiro_nome\s*\}\}/gi, primeiroNome)
+             .replace(/\{\s*primeiro_nome\s*\}/gi, primeiroNome)
+             .replace(/\[\s*primeiro_nome\s*\]/gi, primeiroNome);
+
+    // [NOME_DA_EMPRESA]
+    res = res.replace(/\[\s*NOME_DA_EMPRESA\s*\]/gi, myCompany)
+             .replace(/\[\{\s*nome_da_empresa\s*\}\]/gi, myCompany)
+             .replace(/\{\{\s*nome_da_empresa\s*\}\}/gi, myCompany)
+             .replace(/\{\s*minha_empresa\s*\}/gi, myCompany);
+
+    // [SOLUCAO_CONFIRMADA]
+    res = res.replace(/\[\s*SOLUCAO_CONFIRMADA\s*\]/gi, solucao)
+             .replace(/\[\{\s*solucao_confirmada\s*\}\]/gi, solucao)
+             .replace(/\{\{\s*solucao_confirmada\s*\}\}/gi, solucao)
+             .replace(/\{\s*solucao\s*\}/gi, solucao);
+
+    // [PUBLICO_ALVO]
+    res = res.replace(/\[\s*PUBLICO_ALVO\s*\]/gi, publicoAlvo)
+             .replace(/\[\{\s*publico_alvo\s*\}\]/gi, publicoAlvo)
+             .replace(/\{\{\s*publico_alvo\s*\}\}/gi, publicoAlvo)
+             .replace(/\{\s*nicho\s*\}/gi, publicoAlvo);
+
+    // [BENEFICIO_CONFIRMADO]
+    res = res.replace(/\[\s*BENEFICIO_CONFIRMADO\s*\]/gi, beneficio)
+             .replace(/\[\{\s*beneficio_confirmada?\s*\}\]/gi, beneficio)
+             .replace(/\{\{\s*beneficio_confirmado\s*\}\}/gi, beneficio)
+             .replace(/\{\s*beneficio\s*\}/gi, beneficio);
+
+    // Tags legadas e diretas
+    res = res.replace(/\[\{\s*empresa\s*\}\]/gi, empresa)
+             .replace(/\{\s*empresa\s*\}/gi, empresa)
+             .replace(/\[\{\s*cidade\s*\}\]/gi, cidade)
+             .replace(/\{\s*cidade\s*\}/gi, cidade)
+             .replace(/\[\{\s*status\s*\}\]/gi, statusText)
+             .replace(/\{\s*status\s*\}/gi, statusText)
+             .replace(/\{\s*telefone\s*\}/gi, lead.whatsapp || lead.phone || '');
+
+    // 3. Garantia do rodapé anti-bloqueio / LGPD se a opção estiver marcada
+    const optOutCheckbox = document.getElementById('disp-opt-out-cb');
+    const wantsOptOut = options.includeOptOut !== undefined ? options.includeOptOut : (optOutCheckbox ? optOutCheckbox.checked : true);
+    if (wantsOptOut) {
+        const lower = res.toLowerCase();
+        if (!lower.includes('não receber mensagens') && !lower.includes('nao receber mensagens') && !lower.includes('sair da lista')) {
+            res = res.trim() + '\n\nSe preferir não receber mensagens, é só me avisar.';
         }
     }
 
-    return parseSpintax(template)
-        .replace(/{empresa}/g, empresa)
-        .replace(/{cidade}/g, cidade)
-        .replace(/{status}/g, statusText);
+    return res;
 }
 
 /**
@@ -2059,6 +2546,7 @@ async function checkWahaStatus(showFeedback = false) {
 
         if (data.online) {
             const st = (data.session_status || 'UNKNOWN').toUpperCase();
+            window.wahaCurrentStatus = st;
             if (stateDisp) stateDisp.textContent = st;
 
             const previousState = lastKnownWahaState;
@@ -2077,6 +2565,9 @@ async function checkWahaStatus(showFeedback = false) {
                 if (connectedCard) connectedCard.style.display = 'flex';
 
                 stopQrTimers();
+                if (typeof closeWahaQrModal === 'function') {
+                    closeWahaQrModal();
+                }
 
                 if (connectedDetails && data.details && data.details.me) {
                     const me = data.details.me;
@@ -2126,6 +2617,26 @@ async function checkWahaStatus(showFeedback = false) {
                 stopQrTimers();
             }
 
+            // Atualiza indicadores do WhatsApp Web (Chat)
+            const chatIndicator = document.getElementById('chat-waha-indicator');
+            const chatBanner = document.getElementById('chat-waha-qr-banner');
+            const wahaModal = document.getElementById('waha-qr-modal');
+
+            if (st === 'WORKING') {
+                if (chatIndicator) chatIndicator.innerHTML = `<span style="color:var(--neon-green); font-weight:700;"><i class="fab fa-whatsapp"></i> WA Conectado</span>`;
+                if (chatBanner) chatBanner.style.display = 'none';
+                if (wahaModal && wahaModal.classList.contains('active')) {
+                    closeWahaQrModal();
+                    showToast('🎉 WhatsApp Pareado e Conectado com Sucesso!', 'success');
+                }
+            } else if (st === 'SCAN_QR_CODE') {
+                if (chatIndicator) chatIndicator.innerHTML = `<span style="color:var(--alert-orange); font-weight:700;"><i class="fas fa-qrcode"></i> Ler QR Code</span>`;
+                if (chatBanner) chatBanner.style.display = 'flex';
+            } else {
+                if (chatIndicator) chatIndicator.innerHTML = `<span style="color:var(--alert-red); font-weight:700;"><i class="fas fa-power-off"></i> Reconectar</span>`;
+                if (chatBanner) chatBanner.style.display = 'flex';
+            }
+
             if (showFeedback) showToast(`WAHA Online! Sessão "${data.session}": ${st}`, 'success');
         } else {
             if (sidebarDot) sidebarDot.style.background = 'var(--alert-red)';
@@ -2155,6 +2666,62 @@ async function checkWahaStatus(showFeedback = false) {
         if (showFeedback) showToast("Erro de comunicação com o backend ao consultar WAHA.", "error");
     }
 }
+
+let modalQrCountdownTimer = null;
+
+window.openWahaQrModal = function() {
+    const modal = document.getElementById('waha-qr-modal');
+    if (!modal) return;
+    modal.classList.add('active');
+    refreshModalQrCode();
+};
+
+window.closeWahaQrModal = function() {
+    const modal = document.getElementById('waha-qr-modal');
+    if (modal) modal.classList.remove('active');
+    if (modalQrCountdownTimer) {
+        clearInterval(modalQrCountdownTimer);
+        modalQrCountdownTimer = null;
+    }
+};
+
+window.refreshModalQrCode = async function() {
+    const img = document.getElementById('waha-modal-qr-img');
+    const timerEl = document.getElementById('waha-modal-secs');
+    if (!img) return;
+
+    try {
+        const resp = await fetch(`/api/waha/qr?t=${Date.now()}`);
+        const cType = resp.headers.get("content-type") || "";
+        if (resp.ok && (cType.includes("image") || cType.includes("octet-stream"))) {
+            const blob = await resp.blob();
+            img.src = URL.createObjectURL(blob);
+            img.style.display = 'block';
+        } else {
+            const data = await resp.json().catch(() => ({}));
+            if (data.authenticated) {
+                checkWahaStatus(false);
+                closeWahaQrModal();
+                return;
+            }
+        }
+    } catch (e) {
+        console.warn("Erro ao buscar QR:", e);
+    }
+
+    checkWahaStatus(false);
+
+    if (modalQrCountdownTimer) clearInterval(modalQrCountdownTimer);
+    let secs = 20;
+    if (timerEl) timerEl.textContent = secs;
+    modalQrCountdownTimer = setInterval(() => {
+        secs--;
+        if (timerEl) timerEl.textContent = secs;
+        if (secs <= 0) {
+            refreshModalQrCode();
+        }
+    }, 1000);
+};
 
 /**
  * Carrega o QR Code da sessão do WAHA com suporte a renovação suave (sem piscar a tela)
@@ -2362,7 +2929,13 @@ window.handleWahaSessionAction = async function(action) {
 /**
  * Disparo Individual usando o Proxy Backend (/api/waha/send)
  */
-async function sendSingleWhatsApp(lead, customMessage = null) {
+async function sendSingleWhatsApp(lead, customMessage = null, nextStage = null) {
+    if (window.wahaCurrentStatus && window.wahaCurrentStatus !== 'WORKING') {
+        showToast("WhatsApp não conectado. Aponte a câmera no QR Code para conectar antes de disparar.", "warning");
+        if (typeof openWahaQrModal === 'function') openWahaQrModal();
+        return false;
+    }
+
     const rawNumber = lead.whatsapp || lead.phone;
     const chatId = formatWhatsAppChatId(rawNumber);
 
@@ -2377,7 +2950,8 @@ async function sendSingleWhatsApp(lead, customMessage = null) {
     const payload = {
         chatId: chatId,
         text: messageText,
-        lead_id: lead.id || null
+        lead_id: lead.id || null,
+        follow_stage: nextStage || lead.follow_stage || 'contato'
     };
 
     appendWahaLog(`Disparando WhatsApp para "${lead.name}" (${chatId})...`, 'info');
@@ -2392,6 +2966,9 @@ async function sendSingleWhatsApp(lead, customMessage = null) {
         const data = await res.json();
 
         if (!res.ok || !data.success) {
+            if (data.qr_required && typeof openWahaQrModal === 'function') {
+                openWahaQrModal();
+            }
             const errDesc = data.error || `Erro HTTP ${res.status}`;
             throw new Error(errDesc);
         }
@@ -2399,8 +2976,13 @@ async function sendSingleWhatsApp(lead, customMessage = null) {
         showToast(`Mensagem enviada com sucesso para ${lead.name}!`, 'success');
         appendWahaLog(`✅ Mensagem entregue com sucesso para ${lead.name} (${chatId})`, 'success');
 
-        // Atualiza status local do lead para 'contatado'
+        // Atualiza status local do lead para 'contatado' e nova etapa do funil
         lead.campaign_status = 'contatado';
+        if (nextStage) {
+            lead.follow_stage = nextStage;
+            appendWahaLog(`📌 Lead "${lead.name}" avançado para a etapa: ${nextStage}`, 'info');
+        }
+        if (typeof applyFiltersAndRender === 'function') applyFiltersAndRender();
         if (typeof loadCampaignsView === 'function') loadCampaignsView();
         if (typeof loadDashboardStats === 'function') loadDashboardStats();
 
@@ -2470,35 +3052,59 @@ window.selectAllLeads = function(selectAll) {
     updateSelectedLeadsCount();
 };
 
+// FUNÇÃO CENTRALIZADA DE FILTRAGEM POR GRUPO DE DISPARO
+window.getLeadsForAudienceGroup = function(group) {
+    if (!Array.isArray(currentLeads)) return [];
+    
+    if (group === 'selection') {
+        const selectedIds = Array.from(document.querySelectorAll('.lead-select-checkbox:checked'))
+                                 .map(cb => parseInt(cb.value));
+        return currentLeads.filter(l => selectedIds.includes(l.id) && (l.whatsapp || l.phone));
+    } else if (group === 'novos') {
+        // Apenas leads nunca abordados (status novo)
+        return currentLeads.filter(l => ((l.campaign_status || 'novo').toLowerCase() === 'novo') && (l.whatsapp || l.phone));
+    } else if (group === 'no-site') {
+        return currentLeads.filter(l => (!l.has_website || !l.website) && (l.whatsapp || l.phone));
+    } else if (group === 'with-site') {
+        return currentLeads.filter(l => (l.has_website || l.website) && (l.whatsapp || l.phone));
+    } else if (group === 'stage-contato') {
+        return currentLeads.filter(l => (l.follow_stage === 'contato' || ((l.campaign_status || '').toLowerCase() === 'contatado' && !l.follow_stage)) && (l.whatsapp || l.phone) && l.campaign_status !== 'fechado' && l.campaign_status !== 'perdido');
+    } else if (group === 'stage-follow1') {
+        return currentLeads.filter(l => l.follow_stage === 'follow1' && (l.whatsapp || l.phone) && l.campaign_status !== 'fechado' && l.campaign_status !== 'perdido');
+    } else if (group === 'stage-follow2') {
+        return currentLeads.filter(l => l.follow_stage === 'follow2' && (l.whatsapp || l.phone) && l.campaign_status !== 'fechado' && l.campaign_status !== 'perdido');
+    } else if (group === 'stage-follow-todos') {
+        return currentLeads.filter(l => (l.follow_stage === 'follow1' || l.follow_stage === 'follow2') && (l.whatsapp || l.phone) && l.campaign_status !== 'fechado' && l.campaign_status !== 'perdido');
+    } else if (group === 'stage-proposta') {
+        return currentLeads.filter(l => ((l.campaign_status || '').toLowerCase() === 'proposta' || l.follow_stage === 'proposta') && (l.whatsapp || l.phone));
+    } else {
+        // all-whatsapp ou padrão
+        return currentLeads.filter(l => l.whatsapp || l.phone);
+    }
+};
+
 window.updateBulkAudienceCount = function() {
     const groupSelect = document.getElementById('bulk-target-group');
     const summary = document.getElementById('bulk-audience-summary');
     if (!groupSelect || !summary) return;
 
     const group = groupSelect.value;
-    let leadsToCount = [];
+    const leadsToCount = window.getLeadsForAudienceGroup(group);
 
-    if (group === 'selection') {
-        const selectedIds = Array.from(document.querySelectorAll('.lead-select-checkbox:checked'))
-                                 .map(cb => parseInt(cb.value));
-        leadsToCount = currentLeads.filter(l => selectedIds.includes(l.id) && (l.whatsapp || l.phone));
-        summary.textContent = `${leadsToCount.length} lead(s) selecionados com telefone/WhatsApp prontos para disparo.`;
-    } else if (group === 'no-site') {
-        leadsToCount = currentLeads.filter(l => (!l.has_website || !l.website) && (l.whatsapp || l.phone));
-        summary.textContent = `${leadsToCount.length} lead(s) 'SEM SITE' identificados na base para abordagem.`;
-    } else if (group === 'stage-contato') {
-        leadsToCount = currentLeads.filter(l => (l.follow_stage || 'contato') === 'contato' && (l.whatsapp || l.phone));
-        summary.textContent = `${leadsToCount.length} lead(s) na etapa '1º Contato' prontos para abordagem.`;
-    } else if (group === 'stage-follow1') {
-        leadsToCount = currentLeads.filter(l => l.follow_stage === 'follow1' && (l.whatsapp || l.phone));
-        summary.textContent = `${leadsToCount.length} lead(s) na etapa 'Follow 1' aguardando retorno.`;
-    } else if (group === 'stage-follow2') {
-        leadsToCount = currentLeads.filter(l => l.follow_stage === 'follow2' && (l.whatsapp || l.phone));
-        summary.textContent = `${leadsToCount.length} lead(s) na etapa 'Follow 2' para encerramento.`;
-    } else {
-        leadsToCount = currentLeads.filter(l => l.whatsapp || l.phone);
-        summary.textContent = `${leadsToCount.length} lead(s) com contato telefônico cadastrados.`;
-    }
+    const descriptions = {
+        'novos': `📥 <strong>${leadsToCount.length} novo(s) lead(s)</strong> (nunca abordados) prontos para primeiro disparo.`,
+        'stage-contato': `📞 <strong>${leadsToCount.length} lead(s)</strong> na etapa '1º Contato'.`,
+        'stage-follow1': `🔄 <strong>${leadsToCount.length} lead(s)</strong> na etapa 'Follow-up 1' (aguardando retorno).`,
+        'stage-follow2': `⏰ <strong>${leadsToCount.length} lead(s)</strong> na etapa 'Follow-up 2' (cobrança final).`,
+        'stage-follow-todos': `🔁 <strong>${leadsToCount.length} lead(s)</strong> em Follow-up (Follow 1 + Follow 2).`,
+        'stage-proposta': `📑 <strong>${leadsToCount.length} lead(s)</strong> com proposta em negociação.`,
+        'no-site': `🔥 <strong>${leadsToCount.length} lead(s) SEM SITE</strong> (oportunidades quentes).`,
+        'with-site': `🌐 <strong>${leadsToCount.length} lead(s) COM SITE</strong> (reforma/otimização).`,
+        'selection': `🎯 <strong>${leadsToCount.length} lead(s)</strong> marcados na tabela com telefone/WhatsApp.`,
+        'all-whatsapp': `📱 <strong>${leadsToCount.length} lead(s)</strong> cadastrados com número telefônico.`
+    };
+
+    summary.innerHTML = descriptions[group] || `📱 <strong>${leadsToCount.length} lead(s)</strong> prontos para disparo.`;
 };
 
 window.previewBulkSpintax = function() {
@@ -2581,36 +3187,23 @@ window.handleBulkSendAction = function(btn) {
         return;
     }
 
-    // Muda para a aba WhatsApp com o filtro "selection" já ativo
-    const waTab = document.querySelector('[data-tab="whatsapp"]');
-    if (waTab) waTab.click();
+    if (window.switchTab) {
+        window.switchTab('disparador');
+    } else {
+        const dTab = document.querySelector('[data-tab="disparador"]');
+        if (dTab) dTab.click();
+    }
 
-    const targetGroup = document.getElementById('bulk-target-group');
+    const targetGroup = document.getElementById('disparador-target-group');
     if (targetGroup) {
         targetGroup.value = 'selection';
-        updateBulkAudienceCount();
+        if (typeof updateDisparadorAudienceCount === 'function') updateDisparadorAudienceCount();
     }
 };
 
 window.handleStartBulkCampaign = function() {
     const group = document.getElementById('bulk-target-group').value;
-    let targetLeads = [];
-
-    if (group === 'selection') {
-        const selectedIds = Array.from(document.querySelectorAll('.lead-select-checkbox:checked'))
-                                 .map(cb => parseInt(cb.value));
-        targetLeads = currentLeads.filter(l => selectedIds.includes(l.id) && (l.whatsapp || l.phone));
-    } else if (group === 'no-site') {
-        targetLeads = currentLeads.filter(l => (!l.has_website || !l.website) && (l.whatsapp || l.phone));
-    } else if (group === 'stage-contato') {
-        targetLeads = currentLeads.filter(l => (l.follow_stage || 'contato') === 'contato' && (l.whatsapp || l.phone));
-    } else if (group === 'stage-follow1') {
-        targetLeads = currentLeads.filter(l => l.follow_stage === 'follow1' && (l.whatsapp || l.phone));
-    } else if (group === 'stage-follow2') {
-        targetLeads = currentLeads.filter(l => l.follow_stage === 'follow2' && (l.whatsapp || l.phone));
-    } else {
-        targetLeads = currentLeads.filter(l => l.whatsapp || l.phone);
-    }
+    const targetLeads = window.getLeadsForAudienceGroup(group);
 
     if (targetLeads.length === 0) {
         showToast("Nenhum lead com telefone/WhatsApp encontrado para o grupo selecionado.", "warning");
@@ -2620,7 +3213,7 @@ window.handleStartBulkCampaign = function() {
     const minSec = parseInt(document.getElementById('bulk-delay-min').value) || 15;
     const maxSec = parseInt(document.getElementById('bulk-delay-max').value) || 35;
 
-    if (confirm(`Iniciar disparo em massa para ${targetLeads.length} leads com delay humano entre ${minSec}s e ${maxSec}s?`)) {
+    if (confirm(`Iniciar disparo em massa para ${targetLeads.length} leads do grupo selecionado com delay humano entre ${minSec}s e ${maxSec}s?`)) {
         sendBulkWhatsApp(targetLeads, document.getElementById('btn-start-bulk'));
     }
 };
@@ -3812,6 +4405,15 @@ window.sendChatMessage = async function() {
     let recipient = '';
 
     if (activeChatChannel === 'whatsapp') {
+        if (window.wahaCurrentStatus && window.wahaCurrentStatus !== 'WORKING') {
+            if (typeof showToast === 'function') {
+                showToast("WhatsApp não conectado. Aponte a câmera no QR Code para conectar antes de enviar.", "warning");
+            } else {
+                alert("WhatsApp não conectado. Aponte a câmera no QR Code para conectar antes de enviar.");
+            }
+            if (typeof openWahaQrModal === 'function') openWahaQrModal();
+            return;
+        }
         const waInput = document.getElementById('chat-wa-input');
         text = waInput ? waInput.value.trim() : '';
         if (!text) {
@@ -3892,7 +4494,14 @@ window.sendChatMessage = async function() {
             await loadChatMessages(activeChatLead.id);
             await loadChatConversations(activeChatLead.id);
         } else {
-            alert("❌ " + (data.error || "Falha ao enviar mensagem."));
+            if (data.qr_required && typeof openWahaQrModal === 'function') {
+                openWahaQrModal();
+            }
+            if (typeof showToast === 'function') {
+                showToast("❌ " + (data.error || "Falha ao enviar mensagem."), "error");
+            } else {
+                alert("❌ " + (data.error || "Falha ao enviar mensagem."));
+            }
         }
     } catch (err) {
         alert("Erro na conexão: " + err.message);
@@ -3944,6 +4553,25 @@ window.applyChatTemplate = function(templateType) {
         const si = document.getElementById('chat-site-body');
         if (si) { si.value = pitch; si.focus(); }
     }
+};
+
+window.applyImageTemplateInChat = function() {
+    if (!activeChatLead) {
+        showToast("Selecione um lead antes de aplicar o template.", "warning");
+        return;
+    }
+    const resolved = buildPersonalizedMessage(activeChatLead);
+    if (activeChatChannel === 'whatsapp') {
+        const wa = document.getElementById('chat-wa-input');
+        if (wa) { wa.value = resolved; wa.focus(); }
+    } else if (activeChatChannel === 'email') {
+        const em = document.getElementById('chat-email-body');
+        if (em) { em.value = resolved; em.focus(); }
+    } else if (activeChatChannel === 'site') {
+        const si = document.getElementById('chat-site-body');
+        if (si) { si.value = resolved; si.focus(); }
+    }
+    showToast("Template da imagem aplicado!", "success");
 };
 
 window.openNewChatModal = function() {
@@ -4192,5 +4820,1873 @@ window.stopChatPolling = function() {
         chatPollingInterval = null;
     }
 };
+
+/* ========================================================
+   NOVAS FUNÇÕES DO CRM (CORTEX EXTENSION MODULES)
+   ======================================================== */
+
+// Utilitário genérico de fechamento de modais
+window.closeModal = function(modalId) {
+    const m = document.getElementById(modalId);
+    if (m) m.classList.remove('active');
+};
+
+// ----------------- 1. E-MAIL DA EMPRESA (GMAIL) -----------------
+window.loadCompanyEmails = async function(folder = 'inbox') {
+    try {
+        const res = await fetch(`/api/email/inbox?folder=${folder}`);
+        const data = await res.json();
+        
+        const accountLabel = document.getElementById('gmail-account-label');
+        const btnText = document.getElementById('gmail-btn-text');
+        if (accountLabel) {
+            accountLabel.textContent = data.account || 'Nenhuma conta conectada';
+            accountLabel.style.color = data.connected ? 'var(--neon-green)' : '#fff';
+        }
+        if (btnText) {
+            btnText.textContent = data.connected ? 'Gmail Conectado' : 'Conectar Gmail';
+        }
+
+        const listEl = document.getElementById('company-email-list');
+        if (!listEl) return;
+
+        if (!data.emails || data.emails.length === 0) {
+            listEl.innerHTML = `
+                <div style="text-align:center; padding:35px 20px; color:var(--text-muted); font-size:13px;">
+                    <i class="fas fa-inbox" style="font-size:28px; margin-bottom:10px; display:block; opacity:0.4;"></i>
+                    Nenhum e-mail no histórico. Conecte sua conta e sincronize a caixa para começar.
+                </div>
+            `;
+            return;
+        }
+
+        listEl.innerHTML = data.emails.map(e => `
+            <div style="background:#110e24; border:1px solid ${e.is_read ? 'rgba(157,78,221,0.2)' : 'var(--neon-cyan)'}; border-radius:8px; padding:12px; cursor:pointer; transition:all 0.2s;" onclick="openEmailDetail(${e.id}, '${encodeURIComponent(e.subject)}', '${encodeURIComponent(e.from_email)}', '${encodeURIComponent(e.body)}')">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                    <strong style="font-size:13px; color:#fff;">${e.from_email || 'Remetente'}</strong>
+                    <span style="font-size:11px; color:var(--text-muted);">${e.date_str || ''}</span>
+                </div>
+                <div style="font-size:12.5px; font-weight:600; color:var(--neon-cyan); margin-bottom:2px;">${e.subject || 'Sem assunto'}</div>
+                <div style="font-size:11.5px; color:var(--text-secondary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${e.snippet || e.body || ''}</div>
+            </div>
+        `).join('');
+    } catch (err) {
+        console.error("Erro ao carregar e-mails:", err);
+    }
+};
+
+window.connectGmailAccount = async function() {
+    const email = prompt("Informe o e-mail do Gmail para conectar ao CRM:", "contato.empresa@gmail.com");
+    if (!email) return;
+    try {
+        const res = await fetch('/api/email/connect-google', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ email })
+        });
+        const data = await res.json();
+        if (data.success) {
+            if (typeof showToast === 'function') showToast(data.message, "success");
+            loadCompanyEmails();
+        }
+    } catch (err) {
+        alert("Erro ao conectar Gmail: " + err.message);
+    }
+};
+
+window.applyEmailTemplate = function(type) {
+    const toInput = document.getElementById('email-compose-to');
+    const subjInput = document.getElementById('email-compose-subject');
+    const bodyInput = document.getElementById('email-compose-body');
+    if (!subjInput || !bodyInput) return;
+
+    if (type === 'apresentacao') {
+        subjInput.value = "Oportunidade Comercial: Modernização Digital para sua empresa";
+        bodyInput.value = "Olá!\n\nAcompanhamos o crescimento da sua empresa e identificamos um excelente potencial para atração de novos clientes através de um site institucional de alta conversão.\n\nPodemos enviar uma prévia exclusiva sem compromisso?\n\nAtenciosamente,\nEquipe Comercial";
+    } else if (type === 'retorno') {
+        subjInput.value = "Retorno sobre a proposta de modernização digital";
+        bodyInput.value = "Olá!\n\nPassando para saber se você conseguiu analisar a prévia do projeto que conversamos anteriormente. Ficou alguma dúvida sobre o escopo ou prazos de entrega?\n\nSeguimos à disposição!";
+    } else if (type === 'proximo_passo') {
+        subjInput.value = "Próximo passo: Início do desenvolvimento e alinhamento";
+        bodyInput.value = "Olá!\n\nEstamos prontos para formalizar a comanda e iniciar o desenvolvimento da sua presença digital. Seguem os dados para alinhamento da reunião inicial.\n\nQual horário fica melhor para você nesta semana?";
+    }
+};
+
+window.handleSendCompanyEmail = async function(e) {
+    e.preventDefault();
+    const to = document.getElementById('email-compose-to').value.trim();
+    const subject = document.getElementById('email-compose-subject').value.trim();
+    const body = document.getElementById('email-compose-body').value.trim();
+    if (!to || !subject || !body) return;
+
+    try {
+        const res = await fetch('/api/email/inbox', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ to_email: to, subject, body })
+        });
+        const data = await res.json();
+        if (data.success) {
+            if (typeof showToast === 'function') showToast("E-mail enviado com sucesso!", "success");
+            document.getElementById('form-send-company-email').reset();
+            loadCompanyEmails('inbox');
+        }
+    } catch (err) {
+        alert("Erro ao enviar e-mail: " + err.message);
+    }
+};
+
+window.openEmailDetail = function(id, subjEnc, fromEnc, bodyEnc) {
+    const subject = decodeURIComponent(subjEnc);
+    const from = decodeURIComponent(fromEnc);
+    const body = decodeURIComponent(bodyEnc);
+    fetch(`/api/email/${id}/read`, { method: 'POST' });
+    alert(`De: ${from}\nAssunto: ${subject}\n\n${body}`);
+};
+
+// ----------------- 2. RADAR DE RISCO -----------------
+let currentRadarTier = 'critico';
+let radarDataCache = null;
+
+window.loadRiskRadar = async function() {
+    try {
+        const res = await fetch('/api/radar');
+        const data = await res.json();
+        radarDataCache = data;
+
+        const countCrit = document.getElementById('radar-count-critico');
+        const countRisc = document.getElementById('radar-count-risco');
+        const countVoo = document.getElementById('radar-count-voo');
+        if (countCrit) countCrit.textContent = data.critical_count || 0;
+        if (countRisc) countRisc.textContent = data.at_risk_count || 0;
+        if (countVoo) countVoo.textContent = data.in_flight_count || 0;
+
+        renderRadarLeads();
+    } catch (err) {
+        console.error("Erro ao carregar radar:", err);
+    }
+};
+
+window.filterRadarTab = function(tier) {
+    currentRadarTier = tier;
+    ['critico', 'risco', 'voo'].forEach(t => {
+        const chip = document.getElementById(`chip-radar-${t}`);
+        if (chip) {
+            if (t === tier) chip.classList.add('active');
+            else chip.classList.remove('active');
+        }
+    });
+    renderRadarLeads();
+};
+
+function renderRadarLeads() {
+    const container = document.getElementById('radar-leads-container');
+    if (!container || !radarDataCache) return;
+
+    let leads = [];
+    let badgeClass = 'critico';
+    let badgeLabel = 'Crítico';
+
+    if (currentRadarTier === 'critico') {
+        leads = radarDataCache.critical_leads || [];
+        badgeClass = 'critico';
+        badgeLabel = 'Crítico';
+    } else if (currentRadarTier === 'risco') {
+        leads = radarDataCache.at_risk_leads || [];
+        badgeClass = 'em_risco';
+        badgeLabel = 'Em risco';
+    } else {
+        leads = radarDataCache.in_flight_leads || [];
+        badgeClass = 'em_voo';
+        badgeLabel = 'Em voo';
+    }
+
+    if (leads.length === 0) {
+        container.innerHTML = `
+            <div style="text-align:center; padding:35px; color:var(--text-muted); font-size:13.5px;">
+                <i class="fas fa-check-circle" style="color:var(--neon-green); font-size:26px; margin-bottom:10px; display:block;"></i>
+                Nenhum lead nessa categoria de risco no momento. Tudo sob controle!
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = leads.map(l => `
+        <div class="radar-card">
+            <div style="display:flex; align-items:center; gap:16px;">
+                <span class="radar-badge ${badgeClass}">${badgeLabel}</span>
+                <div>
+                    <strong style="font-size:15px; color:#fff; display:block; margin-bottom:3px;">${l.name}</strong>
+                    <div style="display:flex; align-items:center; gap:12px; font-size:12px; color:var(--text-secondary); flex-wrap:wrap;">
+                        <span><i class="far fa-clock"></i> parado há ${l.days_stale || 9}d</span>
+                        <span><i class="far fa-user"></i> ${l.assigned_to || 'Sem dono'}</span>
+                        <span style="color:${currentRadarTier === 'voo' ? 'var(--neon-cyan)' : 'var(--alert-orange)'};">
+                            <i class="fas ${currentRadarTier === 'voo' ? 'fa-plane' : 'fa-exclamation-triangle'}"></i> ${l.next_step}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <div>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="assumeRiskLead(${l.id})">
+                    Assumir <i class="fas fa-arrow-right" style="font-size:11px; margin-left:4px;"></i>
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+window.assumeRiskLead = async function(leadId) {
+    try {
+        const res = await fetch(`/api/radar/assume/${leadId}`, { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+            if (typeof showToast === 'function') showToast(data.message, "success");
+            loadRiskRadar();
+        }
+    } catch (err) {
+        alert("Erro ao assumir lead: " + err.message);
+    }
+};
+
+// ----------------- 3. AGENDA & COMPROMISSOS -----------------
+let agendaWeekOffset = 0;
+
+window.loadAgendaCalendar = async function() {
+    try {
+        const res = await fetch('/api/calendar/events');
+        const data = await res.json();
+        const events = data.events || [];
+
+        const grid = document.getElementById('agenda-calendar-grid');
+        if (!grid) return;
+
+        // Renderiza cabeçalho de dias da semana
+        const days = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+        const today = new Date();
+        const startOfWeek = new Date(today);
+        startOfWeek.setDate(today.getDate() - today.getDay() + (agendaWeekOffset * 7));
+
+        let headerHtml = `<div class="agenda-header-cell" style="background:#0c0a1a;">Horário</div>`;
+        for (let i = 0; i < 7; i++) {
+            const d = new Date(startOfWeek);
+            d.setDate(startOfWeek.getDate() + i);
+            const isToday = d.toDateString() === today.toDateString();
+            headerHtml += `
+                <div class="agenda-header-cell ${isToday ? 'today' : ''}">
+                    <div>${days[i]}</div>
+                    <div style="font-size:15px; font-weight:800;">${d.getDate()}</div>
+                </div>
+            `;
+        }
+
+        // Intervalo de horas das 08h às 18h
+        let bodyHtml = '';
+        for (let h = 8; h <= 18; h++) {
+            const hourStr = h < 10 ? `0${h}:00` : `${h}:00`;
+            bodyHtml += `<div class="agenda-cell" style="background:#0c0a1a; font-weight:700; color:var(--text-muted); text-align:center;">${hourStr}</div>`;
+            
+            for (let dayIdx = 0; dayIdx < 7; dayIdx++) {
+                const dayDate = new Date(startOfWeek);
+                dayDate.setDate(startOfWeek.getDate() + dayIdx);
+                const dateKey = dayDate.toISOString().split('T')[0];
+
+                const dayEvents = events.filter(e => {
+                    return (e.event_date === dateKey || !e.event_date) && e.start_time.startsWith(h < 10 ? `0${h}` : `${h}`);
+                });
+
+                let eventPills = dayEvents.map(ev => `
+                    <div class="agenda-event-pill ${ev.event_type || 'atendimento'}" onclick="alert('Compromisso: ${ev.title}\\nHorário: ${ev.start_time} - ${ev.end_time}\\nContato: ${ev.contact_name || ''}')">
+                        <i class="fas fa-clock" style="font-size:9px;"></i>
+                        <span>${ev.title}</span>
+                    </div>
+                `).join('');
+
+                bodyHtml += `<div class="agenda-cell">${eventPills}</div>`;
+            }
+        }
+
+        grid.innerHTML = headerHtml + bodyHtml;
+
+        // Atualiza label da semana
+        const endOfWeek = new Date(startOfWeek);
+        endOfWeek.setDate(startOfWeek.getDate() + 6);
+        const labelEl = document.getElementById('agenda-week-label');
+        if (labelEl) {
+            labelEl.textContent = `${startOfWeek.getDate()} de ${startOfWeek.toLocaleString('pt-BR', { month: 'short' })} — ${endOfWeek.getDate()} de ${endOfWeek.toLocaleString('pt-BR', { month: 'short' })}`;
+        }
+    } catch (err) {
+        console.error("Erro ao carregar agenda:", err);
+    }
+};
+
+window.shiftAgendaWeek = function(delta) {
+    agendaWeekOffset += delta;
+    loadAgendaCalendar();
+};
+
+window.resetAgendaToday = function() {
+    agendaWeekOffset = 0;
+    loadAgendaCalendar();
+};
+
+window.openNewEventModal = function() {
+    const d = document.getElementById('ev-create-date');
+    if (d) d.value = new Date().toISOString().split('T')[0];
+    const m = document.getElementById('modal-new-calendar-event');
+    if (m) m.classList.add('active');
+};
+
+window.handleCreateCalendarEvent = async function(e) {
+    e.preventDefault();
+    const title = document.getElementById('ev-create-title').value.trim();
+    const event_type = document.getElementById('ev-create-type').value;
+    const event_date = document.getElementById('ev-create-date').value;
+    const start_time = document.getElementById('ev-create-start').value;
+    const end_time = document.getElementById('ev-create-end').value;
+    const contact_name = document.getElementById('ev-create-contact').value.trim();
+    const contact_phone = document.getElementById('ev-create-phone').value.trim();
+
+    try {
+        const res = await fetch('/api/calendar/events', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ title, event_type, event_date, start_time, end_time, contact_name, contact_phone })
+        });
+        const data = await res.json();
+        if (data.success) {
+            closeModal('modal-new-calendar-event');
+            if (typeof showToast === 'function') showToast("Compromisso agendado com sucesso!", "success");
+            loadAgendaCalendar();
+        }
+    } catch (err) {
+        alert("Erro ao criar compromisso: " + err.message);
+    }
+};
+
+window.connectGoogleCalendar = async function() {
+    const email = prompt("Informe o e-mail Google para sincronização de agenda:", "agenda.empresa@gmail.com");
+    if (!email) return;
+    try {
+        const res = await fetch('/api/calendar/connect-google', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ email })
+        });
+        const data = await res.json();
+        if (data.success) {
+            const accLabel = document.getElementById('agenda-account-label');
+            if (accLabel) accLabel.textContent = email;
+            if (typeof showToast === 'function') showToast(data.message, "success");
+        }
+    } catch (err) {
+        alert("Erro: " + err.message);
+    }
+};
+
+// ----------------- 4. RESPOSTAS RÁPIDAS -----------------
+window.loadQuickReplies = async function() {
+    try {
+        const res = await fetch('/api/quick-replies');
+        const data = await res.json();
+        const list = document.getElementById('quick-replies-list');
+        if (!list) return;
+
+        if (!data.quick_replies || data.quick_replies.length === 0) {
+            list.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:30px; color:var(--text-muted);">Nenhum template cadastrado ainda.</div>`;
+            return;
+        }
+
+        list.innerHTML = data.quick_replies.map(qr => `
+            <div style="background:#110e24; border:1px solid var(--border-color); border-radius:10px; padding:16px; display:flex; flex-direction:column; justify-content:space-between; gap:12px;">
+                <div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                        <span style="font-size:12px; font-family:var(--font-mono); font-weight:700; color:var(--neon-green); background:rgba(0,255,136,0.1); border:1px solid rgba(0,255,136,0.3); padding:2px 8px; border-radius:4px;">${qr.shortcut}</span>
+                        <span style="font-size:11px; color:var(--text-muted);">${qr.category}</span>
+                    </div>
+                    <strong style="font-size:14px; color:#fff; display:block; margin-bottom:6px;">${qr.title}</strong>
+                    <p style="font-size:12.5px; color:var(--text-secondary); line-height:1.45; margin:0; white-space:pre-wrap;">${qr.content}</p>
+                </div>
+                <div style="display:flex; gap:8px; border-top:1px solid rgba(157,78,221,0.15); padding-top:10px;">
+                    <button type="button" class="btn btn-secondary btn-sm" style="flex:1;" onclick="copyQuickReply('${encodeURIComponent(qr.content)}')">
+                        <i class="far fa-copy"></i> Copiar
+                    </button>
+                    <button type="button" class="btn btn-neon btn-sm" style="flex:1;" onclick="useQuickReplyInChat('${encodeURIComponent(qr.content)}')">
+                        <i class="fab fa-whatsapp"></i> No Chat
+                    </button>
+                </div>
+            </div>
+        `).join('');
+    } catch (err) {
+        console.error("Erro ao carregar respostas rápidas:", err);
+    }
+};
+
+window.openNewQuickReplyModal = function() {
+    const m = document.getElementById('modal-new-quick-reply');
+    if (m) m.classList.add('active');
+};
+
+window.handleCreateQuickReply = async function(e) {
+    e.preventDefault();
+    const title = document.getElementById('qr-create-title').value.trim();
+    const shortcut = document.getElementById('qr-create-sc').value.trim();
+    const category = document.getElementById('qr-create-cat').value.trim() || 'Geral';
+    const content = document.getElementById('qr-create-content').value.trim();
+
+    try {
+        const res = await fetch('/api/quick-replies', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ title, shortcut, category, content })
+        });
+        const data = await res.json();
+        if (data.success) {
+            closeModal('modal-new-quick-reply');
+            if (typeof showToast === 'function') showToast("Template salvo com sucesso!", "success");
+            loadQuickReplies();
+        }
+    } catch (err) {
+        alert("Erro ao criar resposta rápida: " + err.message);
+    }
+};
+
+window.copyQuickReply = function(enc) {
+    const text = decodeURIComponent(enc);
+    navigator.clipboard.writeText(text);
+    if (typeof showToast === 'function') showToast("Texto copiado para a área de transferência!", "success");
+};
+
+window.useQuickReplyInChat = function(enc) {
+    const text = decodeURIComponent(enc);
+    switchTab('chat');
+    const input = document.getElementById('chat-message-input');
+    if (input) {
+        input.value = text;
+        input.focus();
+    }
+};
+
+// ----------------- 5. CONTATOS (CUSTOMER 360) -----------------
+let contactsCache = [];
+
+window.loadContacts360 = async function() {
+    try {
+        const res = await fetch('/api/leads');
+        const data = await res.json();
+        contactsCache = data.leads || [];
+        renderContactsTable(contactsCache);
+    } catch (err) {
+        console.error("Erro ao carregar contatos:", err);
+    }
+};
+
+function renderContactsTable(list) {
+    const tbody = document.getElementById('contacts-table-body');
+    if (!tbody) return;
+
+    if (!list || list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:30px; color:var(--text-muted);">Nenhum contato encontrado.</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = list.slice(0, 50).map(c => `
+        <tr>
+            <td>
+                <strong style="color:#fff; font-size:13.5px;">${c.name}</strong>
+                ${c.address ? `<div style="font-size:11px; color:var(--text-muted);">${c.address}</div>` : ''}
+            </td>
+            <td><span style="font-size:12.5px; color:var(--text-secondary);">${c.email || '—'}</span></td>
+            <td><code style="color:var(--neon-green); font-size:12px;">${c.whatsapp || c.phone || '—'}</code></td>
+            <td><span class="badge" style="background:#110e24; border:1px solid var(--border-color);">${c.category || 'Lead B2B'}</span></td>
+            <td><span class="badge" style="background:rgba(0,255,136,0.12); color:var(--neon-green); border:1px solid var(--neon-green);">${c.campaign_status || 'Ativo'}</span></td>
+            <td>
+                <div style="display:flex; gap:6px;">
+                    ${c.whatsapp ? `<a href="https://wa.me/${c.whatsapp}" target="_blank" class="btn btn-secondary btn-sm" title="Abrir WhatsApp"><i class="fab fa-whatsapp" style="color:var(--neon-green);"></i></a>` : ''}
+                    <button type="button" class="btn btn-secondary btn-sm" title="Abrir no Chat Kaptador" onclick="openChatWithLead(${c.id})"><i class="fas fa-comment-dots" style="color:var(--neon-cyan);"></i></button>
+                    <button type="button" class="btn btn-secondary btn-sm" title="Ver Detalhes" onclick="openLeadModal(${c.id})"><i class="fas fa-eye"></i></button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+window.filterContactsNiche = function(niche) {
+    if (!niche) {
+        renderContactsTable(contactsCache);
+    } else {
+        const filtered = contactsCache.filter(c => {
+            const cat = (c.category || '').toLowerCase();
+            const name = (c.name || '').toLowerCase();
+            return cat.includes(niche.toLowerCase()) || name.includes(niche.toLowerCase());
+        });
+        renderContactsTable(filtered);
+    }
+};
+
+window.debounceContactsSearch = function() {
+    const query = document.getElementById('contacts-search-input').value.toLowerCase().trim();
+    if (!query) {
+        renderContactsTable(contactsCache);
+        return;
+    }
+    const filtered = contactsCache.filter(c => {
+        return (c.name && c.name.toLowerCase().includes(query)) ||
+               (c.phone && c.phone.includes(query)) ||
+               (c.whatsapp && c.whatsapp.includes(query)) ||
+               (c.email && c.email.toLowerCase().includes(query));
+    });
+    renderContactsTable(filtered);
+};
+
+window.checkContactDuplicates = async function() {
+    try {
+        const res = await fetch('/api/contacts/duplicates');
+        const data = await res.json();
+        if (data.duplicates_count === 0) {
+            alert("Nenhum contato duplicado encontrado na base!");
+        } else {
+            alert(`Foram identificados ${data.duplicates_count} contatos com telefones repetidos na base.`);
+        }
+    } catch (err) {
+        alert("Erro ao verificar duplicados: " + err.message);
+    }
+};
+
+window.openChatWithLead = function(leadId) {
+    switchTab('chat');
+    if (typeof loadChatConversations === 'function') {
+        loadChatConversations(leadId);
+    }
+};
+
+// ----------------- 6. TAREFAS -----------------
+window.loadTasksView = async function() {
+    try {
+        const status = document.getElementById('tasks-filter-status')?.value || 'pendente';
+        const res = await fetch(`/api/tasks?status=${status}`);
+        const data = await res.json();
+        const tasks = data.tasks || [];
+
+        const container = document.getElementById('tasks-list-container');
+        if (!container) return;
+
+        if (tasks.length === 0) {
+            container.innerHTML = `
+                <div style="text-align:center; padding:35px; color:var(--text-muted);">
+                    <i class="fas fa-clipboard-check" style="font-size:28px; color:var(--neon-green); margin-bottom:10px; display:block;"></i>
+                    Nenhuma tarefa pendente! Tudo em dia.
+                </div>
+            `;
+            return;
+        }
+
+        // Agrupa tarefas
+        const semPrazo = tasks.filter(t => t.due_date === 'sem_prazo' || !t.due_date);
+        const hoje = tasks.filter(t => t.due_date === 'hoje');
+        const estaSemana = tasks.filter(t => t.due_date === 'esta_semana');
+        const concluidas = tasks.filter(t => t.status === 'concluida');
+
+        let html = '';
+
+        const renderTaskItem = (t) => `
+            <div class="task-card ${t.status === 'concluida' ? 'completed' : ''}">
+                <input type="checkbox" style="width:18px; height:18px; margin-top:2px; accent-color:var(--neon-green); cursor:pointer;" ${t.status === 'concluida' ? 'checked' : ''} onchange="toggleTaskStatus(${t.id}, '${t.status}')">
+                <div style="flex:1;">
+                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+                        <strong style="font-size:14px; color:#fff;">${t.title}</strong>
+                        <span class="badge" style="background:${t.priority === 'alta' ? 'rgba(255,77,109,0.2)' : t.priority === 'media' ? 'rgba(255,159,28,0.2)' : 'rgba(0,210,255,0.2)'}; color:${t.priority === 'alta' ? 'var(--alert-red)' : t.priority === 'media' ? 'var(--alert-orange)' : 'var(--neon-cyan)'}; border:1px solid currentColor;">
+                            ${t.priority.toUpperCase()}
+                        </span>
+                        ${t.due_date ? `<span style="font-size:11px; color:var(--text-muted);">${t.due_date.replace('_', ' ')}</span>` : ''}
+                    </div>
+                    ${t.description ? `<p style="font-size:12.5px; color:var(--text-secondary); margin:0 0 4px 0; line-height:1.4;">${t.description}</p>` : ''}
+                    ${t.assigned_to ? `<span style="font-size:11px; color:var(--neon-cyan);"><i class="far fa-user"></i> ${t.assigned_to}</span>` : ''}
+                </div>
+                <button type="button" class="btn btn-secondary btn-sm" style="color:var(--alert-red); border:none; background:transparent;" onclick="deleteTaskItem(${t.id})">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+            </div>
+        `;
+
+        if (hoje.length > 0) {
+            html += `<div class="task-group-title"><i class="fas fa-calendar-day" style="color:var(--neon-green); margin-right:6px;"></i> Hoje</div>`;
+            html += hoje.map(renderTaskItem).join('');
+        }
+        if (estaSemana.length > 0) {
+            html += `<div class="task-group-title"><i class="fas fa-calendar-week" style="color:var(--neon-cyan); margin-right:6px;"></i> Esta Semana</div>`;
+            html += estaSemana.map(renderTaskItem).join('');
+        }
+        if (semPrazo.length > 0) {
+            html += `<div class="task-group-title"><i class="fas fa-inbox" style="margin-right:6px;"></i> Sem Prazo Definido</div>`;
+            html += semPrazo.map(renderTaskItem).join('');
+        }
+        if (status === 'todos' && concluidas.length > 0) {
+            html += `<div class="task-group-title"><i class="fas fa-check-double" style="color:var(--neon-green); margin-right:6px;"></i> Concluídas</div>`;
+            html += concluidas.map(renderTaskItem).join('');
+        }
+
+        container.innerHTML = html;
+    } catch (err) {
+        console.error("Erro ao carregar tarefas:", err);
+    }
+};
+
+window.openNewTaskModal = function() {
+    const m = document.getElementById('modal-new-task');
+    if (m) m.classList.add('active');
+};
+
+window.handleCreateTask = async function(e) {
+    e.preventDefault();
+    const title = document.getElementById('task-create-title').value.trim();
+    const description = document.getElementById('task-create-desc').value.trim();
+    const priority = document.getElementById('task-create-prio').value;
+    const due_date = document.getElementById('task-create-due').value;
+    const assigned_to = document.getElementById('task-create-assignee').value.trim();
+
+    try {
+        const res = await fetch('/api/tasks', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ title, description, priority, due_date, assigned_to })
+        });
+        const data = await res.json();
+        if (data.success) {
+            closeModal('modal-new-task');
+            if (typeof showToast === 'function') showToast("Tarefa criada com sucesso!", "success");
+            loadTasksView();
+        }
+    } catch (err) {
+        alert("Erro ao criar tarefa: " + err.message);
+    }
+};
+
+window.toggleTaskStatus = async function(taskId, currentStatus) {
+    const newStatus = currentStatus === 'concluida' ? 'pendente' : 'concluida';
+    try {
+        await fetch(`/api/tasks/${taskId}`, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ status: newStatus })
+        });
+        loadTasksView();
+    } catch (err) {
+        console.error("Erro ao atualizar tarefa:", err);
+    }
+};
+
+window.deleteTaskItem = async function(taskId) {
+    if (!confirm("Deseja realmente remover esta tarefa?")) return;
+    try {
+        await fetch(`/api/tasks/${taskId}`, { method: 'DELETE' });
+        loadTasksView();
+    } catch (err) {
+        console.error("Erro ao deletar tarefa:", err);
+    }
+};
+
+// ----------------- 7. COMANDAS -----------------
+let activeComanda = null;
+
+window.loadComandasView = async function() {
+    try {
+        const res = await fetch('/api/comandas');
+        const data = await res.json();
+        const comandas = data.comandas || [];
+
+        const sidebarList = document.getElementById('comandas-sidebar-list');
+        if (!sidebarList) return;
+
+        if (comandas.length === 0) {
+            sidebarList.innerHTML = `<div style="padding:20px; color:var(--text-muted); font-size:13px;">Nenhuma comanda aberta.</div>`;
+            return;
+        }
+
+        sidebarList.innerHTML = comandas.map(c => `
+            <div class="comanda-card-item ${activeComanda && activeComanda.id === c.id ? 'active' : ''}" onclick="selectComanda(${c.id})">
+                <div>
+                    <strong style="color:#fff; font-size:13.5px;">${c.comanda_number}</strong>
+                    <div style="font-size:12px; color:var(--text-muted);">${c.customer_name}</div>
+                    <span class="badge" style="font-size:10px; background:${c.status === 'aberta' ? 'rgba(0,255,136,0.1)' : 'rgba(255,255,255,0.05)'}; color:${c.status === 'aberta' ? 'var(--neon-green)' : 'var(--text-muted)'};">
+                        ${c.status.toUpperCase()}
+                    </span>
+                </div>
+                <div style="text-align:right;">
+                    <div style="font-size:14px; font-weight:700; color:var(--neon-green); font-family:var(--font-mono);">
+                        R$ ${parseFloat(c.total || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </div>
+                </div>
+            </div>
+        `).join('');
+
+        if (!activeComanda && comandas.length > 0) {
+            selectComanda(comandas[0].id);
+        }
+    } catch (err) {
+        console.error("Erro ao carregar comandas:", err);
+    }
+};
+
+window.selectComanda = async function(comandaId) {
+    try {
+        const res = await fetch('/api/comandas');
+        const data = await res.json();
+        const c = (data.comandas || []).find(x => x.id === comandaId);
+        if (!c) return;
+        activeComanda = c;
+
+        // Atualiza seleção visual na lista
+        document.querySelectorAll('.comanda-card-item').forEach(el => el.classList.remove('active'));
+
+        const detailArea = document.getElementById('comanda-detail-area');
+        if (!detailArea) return;
+
+        let items = [];
+        try {
+            items = typeof c.items_json === 'string' ? JSON.parse(c.items_json) : (c.items_json || []);
+        } catch (e) { items = []; }
+
+        detailArea.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(157,78,221,0.2); padding-bottom:14px; margin-bottom:16px;">
+                <div>
+                    <h3 style="font-size:20px; font-weight:800; color:#fff;">Comanda ${c.comanda_number} — ${c.customer_name}</h3>
+                    <span style="font-size:12px; color:var(--text-muted);">Status: <strong style="color:var(--neon-green);">${c.status.toUpperCase()}</strong></span>
+                </div>
+                <div style="font-size:22px; font-weight:900; color:var(--neon-green); font-family:var(--font-mono);">
+                    R$ ${parseFloat(c.total || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </div>
+            </div>
+
+            <!-- Formulário para Incluir Item -->
+            ${c.status === 'aberta' ? `
+                <div style="background:#110e24; border:1px solid var(--border-color); border-radius:10px; padding:16px; margin-bottom:18px;">
+                    <span style="font-size:12px; font-weight:700; color:var(--neon-cyan); text-transform:uppercase; display:block; margin-bottom:10px;">Incluir Serviço na Comanda</span>
+                    <div style="display:grid; grid-template-columns:140px 1fr 110px auto; gap:10px; align-items:flex-end;">
+                        <div>
+                            <label class="form-label" style="font-size:11px;">Serviço</label>
+                            <select id="comanda-add-service" class="form-control" style="font-size:12.5px; padding:6px 10px;">
+                                <option value="Redesign">Redesign</option>
+                                <option value="Hospedagem">Hospedagem</option>
+                                <option value="Manutenção">Manutenção</option>
+                                <option value="Tráfego">Tráfego Pago</option>
+                                <option value="Avulso">Avulso</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="form-label" style="font-size:11px;">Descrição do Item</label>
+                            <input type="text" id="comanda-add-desc" class="form-control" style="font-size:12.5px; padding:6px 10px;" placeholder="Ex: Criação de 5 banners">
+                        </div>
+                        <div>
+                            <label class="form-label" style="font-size:11px;">Valor (R$)</label>
+                            <input type="number" step="0.01" id="comanda-add-val" class="form-control" style="font-size:12.5px; padding:6px 10px;" placeholder="0,00">
+                        </div>
+                        <button type="button" class="btn btn-secondary btn-sm" style="height:35px;" onclick="addComandaItem(${c.id})">
+                            <i class="fas fa-plus"></i> Incluir
+                        </button>
+                    </div>
+                </div>
+            ` : ''}
+
+            <!-- Tabela de Itens da Comanda -->
+            <div style="margin-bottom:20px;">
+                <table style="width:100%; border-collapse:collapse; font-size:13px;">
+                    <thead>
+                        <tr style="border-bottom:1px solid var(--border-color); color:var(--text-muted); text-align:left;">
+                            <th style="padding:8px;">Serviço</th>
+                            <th style="padding:8px;">Descrição</th>
+                            <th style="padding:8px; text-align:right;">Valor</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${items.map(it => `
+                            <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                                <td style="padding:10px 8px; color:var(--neon-cyan); font-weight:600;">${it.service || 'Item'}</td>
+                                <td style="padding:10px 8px; color:var(--text-secondary);">${it.description || '—'}</td>
+                                <td style="padding:10px 8px; text-align:right; font-family:var(--font-mono); color:#fff;">R$ ${parseFloat(it.value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Forma de Pagamento e Finalização -->
+            ${c.status === 'aberta' ? `
+                <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid rgba(157,78,221,0.2); padding-top:16px;">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <span style="font-size:12.5px; color:var(--text-muted);">Forma de pagamento:</span>
+                        <select id="comanda-final-payment" class="form-control" style="width:auto; font-size:12.5px; padding:6px 10px;">
+                            <option value="pix" ${c.payment_method === 'pix' ? 'selected' : ''}>Pix</option>
+                            <option value="cartao" ${c.payment_method === 'cartao' ? 'selected' : ''}>Cartão de Crédito</option>
+                            <option value="boleto" ${c.payment_method === 'boleto' ? 'selected' : ''}>Boleto</option>
+                        </select>
+                    </div>
+                    <div style="display:flex; gap:10px;">
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="cancelComanda(${c.id})">Cancelar Comanda</button>
+                        <button type="button" class="btn btn-neon btn-sm" onclick="finalizeComanda(${c.id})"><i class="fas fa-check"></i> Finalizar Comanda</button>
+                    </div>
+                </div>
+            ` : `
+                <div style="padding:12px; background:rgba(0,255,136,0.1); border:1px solid var(--neon-green); border-radius:8px; color:var(--neon-green); font-size:13px;">
+                    <i class="fas fa-check-circle"></i> Comanda finalizada em ${c.closed_at || 'data recente'}.
+                </div>
+            `}
+        `;
+    } catch (err) {
+        console.error("Erro ao selecionar comanda:", err);
+    }
+};
+
+window.openNewComandaModal = function() {
+    const m = document.getElementById('modal-new-comanda');
+    if (m) m.classList.add('active');
+};
+
+window.handleCreateComanda = async function(e) {
+    e.preventDefault();
+    const customer_name = document.getElementById('comanda-create-cust').value.trim();
+    const service = document.getElementById('comanda-create-serv').value;
+    const value = parseFloat(document.getElementById('comanda-create-val').value) || 0;
+    const payment_method = document.getElementById('comanda-create-payment').value;
+
+    const items = [{ service, description: `${service} contratado`, value }];
+
+    try {
+        const res = await fetch('/api/comandas', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ customer_name, payment_method, items, total: value })
+        });
+        const data = await res.json();
+        if (data.success) {
+            closeModal('modal-new-comanda');
+            if (typeof showToast === 'function') showToast("Comanda aberta com sucesso!", "success");
+            loadComandasView();
+        }
+    } catch (err) {
+        alert("Erro ao criar comanda: " + err.message);
+    }
+};
+
+window.addComandaItem = async function(comandaId) {
+    const service = document.getElementById('comanda-add-service').value;
+    const desc = document.getElementById('comanda-add-desc').value.trim();
+    const val = parseFloat(document.getElementById('comanda-add-val').value) || 0;
+    if (val <= 0) return alert("Informe um valor válido.");
+
+    let items = [];
+    try {
+        items = typeof activeComanda.items_json === 'string' ? JSON.parse(activeComanda.items_json) : (activeComanda.items_json || []);
+    } catch(e) { items = []; }
+
+    items.push({ service, description: desc || service, value: val });
+    const newTotal = items.reduce((acc, it) => acc + (parseFloat(it.value) || 0), 0);
+
+    try {
+        await fetch(`/api/comandas/${comandaId}`, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ items, total: newTotal })
+        });
+        selectComanda(comandaId);
+    } catch (err) {
+        alert("Erro ao adicionar item: " + err.message);
+    }
+};
+
+window.finalizeComanda = async function(comandaId) {
+    const payment = document.getElementById('comanda-final-payment')?.value || 'pix';
+    if (!confirm("Confirmar a finalização e recebimento desta comanda?")) return;
+    try {
+        await fetch(`/api/comandas/${comandaId}`, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ status: 'finalizada', payment_method: payment })
+        });
+        if (typeof showToast === 'function') showToast("Comanda finalizada com sucesso!", "success");
+        loadComandasView();
+    } catch (err) {
+        alert("Erro ao finalizar comanda: " + err.message);
+    }
+};
+
+window.cancelComanda = async function(comandaId) {
+    if (!confirm("Deseja realmente cancelar esta comanda?")) return;
+    try {
+        await fetch(`/api/comandas/${comandaId}`, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ status: 'cancelada' })
+        });
+        loadComandasView();
+    } catch (err) {
+        alert("Erro ao cancelar comanda: " + err.message);
+    }
+};
+
+// ----------------- 8. PRODUTOS & CATÁLOGO -----------------
+let productsCache = [];
+
+window.loadProductsView = async function() {
+    try {
+        const res = await fetch('/api/products');
+        const data = await res.json();
+        productsCache = data.products || [];
+        renderProductsGrid(productsCache);
+    } catch (err) {
+        console.error("Erro ao carregar produtos:", err);
+    }
+};
+
+function renderProductsGrid(list) {
+    const grid = document.getElementById('products-grid-container');
+    if (!grid) return;
+
+    if (!list || list.length === 0) {
+        grid.innerHTML = `
+            <div style="grid-column:1/-1; text-align:center; padding:50px 20px; color:var(--text-muted);">
+                <i class="fas fa-box-open" style="font-size:32px; opacity:0.4; margin-bottom:12px; display:block;"></i>
+                <h4 style="font-size:16px; color:#fff; margin-bottom:4px;">Nenhum produto cadastrado ainda</h4>
+                <p style="font-size:13px; max-width:400px; margin:0 auto;">Enquanto o catálogo estiver vazio, o atendente de IA responde que não encontrou o produto.</p>
+            </div>
+        `;
+        return;
+    }
+
+    grid.innerHTML = list.map(p => `
+        <div class="product-card">
+            <div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                    <span style="font-size:11px; font-family:var(--font-mono); font-weight:700; color:var(--neon-cyan); background:rgba(0,210,255,0.1); border:1px solid rgba(0,210,255,0.25); padding:2px 8px; border-radius:4px;">${p.code}</span>
+                    <span style="font-size:11.5px; color:var(--text-muted);">${p.category}</span>
+                </div>
+                <h4 style="font-size:16px; font-weight:800; color:#fff; margin-bottom:8px;">${p.name}</h4>
+                <p style="font-size:12px; color:var(--text-secondary); line-height:1.45; margin-bottom:14px;">${p.prompt_description || 'Sem descrição cadastrada.'}</p>
+            </div>
+            <div>
+                <div style="display:flex; align-items:baseline; gap:8px; margin-bottom:12px;">
+                    <span style="font-size:20px; font-weight:900; color:var(--neon-green); font-family:var(--font-mono);">
+                        R$ ${parseFloat(p.promo_price || p.price).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </span>
+                    ${p.promo_price && p.promo_price < p.price ? `<span style="font-size:12.5px; color:var(--text-muted); text-decoration:line-through;">R$ ${parseFloat(p.price).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>` : ''}
+                </div>
+                <div style="display:flex; gap:8px;">
+                    <button type="button" class="btn btn-secondary btn-sm" style="flex:1;" onclick="deleteProductItem(${p.id})">Excluir</button>
+                    <button type="button" class="btn btn-neon btn-sm" style="flex:1;" onclick="alert('Código do produto copiado!')">Copiar</button>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+window.openNewProductModal = function() {
+    const m = document.getElementById('modal-new-product');
+    if (m) m.classList.add('active');
+};
+
+window.handleCreateProduct = async function(e) {
+    e.preventDefault();
+    const code = document.getElementById('prod-create-code').value.trim();
+    const name = document.getElementById('prod-create-name').value.trim();
+    const category = document.getElementById('prod-create-cat').value.trim() || 'Serviço';
+    const price = parseFloat(document.getElementById('prod-create-price').value) || 0;
+    const promo_price = parseFloat(document.getElementById('prod-create-promo').value) || price;
+    const prompt_description = document.getElementById('prod-create-desc').value.trim();
+
+    try {
+        const res = await fetch('/api/products', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ code, name, category, price, promo_price, prompt_description })
+        });
+        const data = await res.json();
+        if (data.success) {
+            closeModal('modal-new-product');
+            if (typeof showToast === 'function') showToast("Produto cadastrado com sucesso!", "success");
+            loadProductsView();
+        }
+    } catch (err) {
+        alert("Erro ao cadastrar produto: " + err.message);
+    }
+};
+
+window.deleteProductItem = async function(productId) {
+    if (!confirm("Deseja remover este produto do catálogo?")) return;
+    try {
+        await fetch(`/api/products/${productId}`, { method: 'DELETE' });
+        loadProductsView();
+    } catch (err) {
+        alert("Erro ao deletar produto: " + err.message);
+    }
+};
+
+window.debounceProductsSearch = function() {
+    const query = document.getElementById('products-search-input').value.toLowerCase().trim();
+    if (!query) {
+        renderProductsGrid(productsCache);
+        return;
+    }
+    const filtered = productsCache.filter(p => {
+        return (p.name && p.name.toLowerCase().includes(query)) ||
+               (p.code && p.code.toLowerCase().includes(query)) ||
+               (p.category && p.category.toLowerCase().includes(query));
+    });
+    renderProductsGrid(filtered);
+};
+
+// ----------------- 9. CALCULADORA DE PRECIFICAÇÃO -----------------
+let lastPricingProposal = '';
+
+window.calculatePricing = async function() {
+    const website_url = document.getElementById('pricing-url-input').value.trim();
+    if (!website_url) return alert("Por favor, informe a URL do site (ex: https://empresa.com.br)");
+
+    const client_name = document.getElementById('pricing-client-name').value.trim();
+    const city = document.getElementById('pricing-city').value.trim();
+    const uf = document.getElementById('pricing-uf').value;
+    const segment = document.getElementById('pricing-segment').value.trim();
+    const project_type = document.getElementById('pricing-project-type').value;
+    const timeline = document.getElementById('pricing-timeline').value;
+    const positioning = document.getElementById('pricing-positioning').value;
+    const is_redesign = document.getElementById('pricing-mode-redesign').checked;
+    const outsource = document.getElementById('pricing-outsource').checked;
+    const urgency = document.getElementById('pricing-urgency').checked;
+
+    const resultBox = document.getElementById('pricing-result-area');
+    resultBox.style.display = 'block';
+    resultBox.innerHTML = `
+        <div style="text-align:center; padding:30px; color:var(--text-muted);">
+            <i class="fas fa-spinner fa-spin" style="font-size:24px; color:var(--neon-green); margin-bottom:10px; display:block;"></i>
+            Analisando parâmetros de mercado, posicionamento e escopo...
+        </div>
+    `;
+
+    try {
+        const res = await fetch('/api/pricing/calculate', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                website_url, client_name, city, uf, segment, project_type, timeline,
+                positioning, is_redesign, outsource, urgency
+            })
+        });
+        const data = await res.json();
+        lastPricingProposal = data.proposal_text;
+
+        resultBox.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px; margin-bottom:18px;">
+                <div>
+                    <span style="font-size:11.5px; text-transform:uppercase; letter-spacing:1px; color:var(--neon-cyan); font-weight:700;">Diagnóstico Concluído</span>
+                    <h3 style="font-size:22px; font-weight:800; color:#fff; margin:2px 0;">Investimento Recomendado</h3>
+                </div>
+                <div style="text-align:right;">
+                    <div style="font-size:28px; font-weight:900; color:var(--neon-green); font-family:var(--font-mono);">
+                        R$ ${parseFloat(data.recommended_price).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </div>
+                    <span style="font-size:12px; color:var(--text-muted);">Faixa aceitável: R$ ${parseFloat(data.min_price).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} — R$ ${parseFloat(data.max_price).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:12px; margin-bottom:20px; background:#0c0a1a; padding:14px; border-radius:8px; border:1px solid rgba(157,78,221,0.2);">
+                <div>
+                    <span style="font-size:11px; color:var(--text-muted); display:block;">Horas Estimadas</span>
+                    <strong style="font-size:14px; color:#fff;">${data.estimated_hours}h de execução</strong>
+                </div>
+                <div>
+                    <span style="font-size:11px; color:var(--text-muted); display:block;">Fator Regional</span>
+                    <strong style="font-size:14px; color:var(--neon-cyan);">${data.breakdown.regional_factor}x (${uf})</strong>
+                </div>
+                <div>
+                    <span style="font-size:11px; color:var(--text-muted); display:block;">Posicionamento</span>
+                    <strong style="font-size:14px; color:#fff;">${data.breakdown.positioning_factor}x</strong>
+                </div>
+                <div>
+                    <span style="font-size:11px; color:var(--text-muted); display:block;">Adicionais</span>
+                    <strong style="font-size:14px; color:var(--neon-green);">${urgency ? '+25% Urgência ' : ''}${outsource ? '+30% Terceirização' : (urgency ? '' : 'Padrão')}</strong>
+                </div>
+            </div>
+
+            <div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                    <strong style="font-size:13px; color:#fff;"><i class="fab fa-markdown"></i> Proposta Comercial Gerada</strong>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="copyPricingProposal()">
+                        <i class="far fa-copy"></i> Copiar Proposta
+                    </button>
+                </div>
+                <textarea class="form-control" rows="8" readonly style="font-family:var(--font-mono); font-size:12px; background:#07060e;">${data.proposal_text}</textarea>
+            </div>
+        `;
+    } catch (err) {
+        resultBox.innerHTML = `<div style="color:var(--alert-red); padding:20px;">Erro ao calcular preço: ${err.message}</div>`;
+    }
+};
+
+window.copyPricingProposal = function() {
+    if (!lastPricingProposal) return;
+    navigator.clipboard.writeText(lastPricingProposal);
+    if (typeof showToast === 'function') showToast("Proposta comercial copiada com sucesso!", "success");
+};
+
+// ----------------- 10. AGENTES DE IA -----------------
+window.loadAIAgentsView = async function() {
+    try {
+        const res = await fetch('/api/ai/agents');
+        const data = await res.json();
+        const grid = document.getElementById('ai-agents-grid');
+        if (!grid) return;
+
+        if (!data.agents || data.agents.length === 0) {
+            grid.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:30px; color:var(--text-muted);">Nenhum agente cadastrado.</div>`;
+            return;
+        }
+
+        grid.innerHTML = data.agents.map(a => `
+            <div style="background:#110e24; border:1px solid var(--border-color); border-radius:12px; padding:18px; display:flex; flex-direction:column; justify-content:space-between; gap:14px;">
+                <div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                        <span style="font-size:11px; background:rgba(121,40,202,0.25); color:var(--purple-light); border:1px solid rgba(192,132,252,0.3); padding:2px 8px; border-radius:4px; font-weight:700;">
+                            ${a.provider} • ${a.model}
+                        </span>
+                        <span class="badge" style="background:${a.status === 'ativo' ? 'rgba(0,255,136,0.1)' : 'rgba(255,159,28,0.1)'}; color:${a.status === 'ativo' ? 'var(--neon-green)' : 'var(--alert-orange)'};">
+                            ${a.status.toUpperCase()}
+                        </span>
+                    </div>
+                    <strong style="font-size:16px; color:#fff; display:block; margin-bottom:4px;">${a.name}</strong>
+                    <p style="font-size:12.5px; color:var(--text-secondary); line-height:1.45; margin-bottom:12px;">${a.system_prompt}</p>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid rgba(157,78,221,0.15); padding-top:10px;">
+                    <div style="font-size:11.5px; color:var(--text-muted);">
+                        Prioridade: <strong style="color:var(--neon-cyan);">${a.priority}</strong>
+                    </div>
+                    <div style="display:flex; gap:6px;">
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="alert('Prompt do agente:\\n\\n' + '${encodeURIComponent(a.system_prompt)}')">Ver Prompt</button>
+                        <button type="button" class="btn btn-secondary btn-sm" style="color:var(--alert-red);" onclick="deleteAIAgentItem(${a.id})"><i class="fas fa-trash-alt"></i></button>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    } catch (err) {
+        console.error("Erro ao carregar agentes:", err);
+    }
+};
+
+window.openNewAgentModal = function() {
+    const m = document.getElementById('modal-new-ai-agent');
+    if (m) m.classList.add('active');
+};
+
+window.handleCreateAIAgent = async function(e) {
+    e.preventDefault();
+    const name = document.getElementById('agent-create-name').value.trim();
+    const provider = document.getElementById('agent-create-provider').value;
+    const model = document.getElementById('agent-create-model').value.trim();
+    const system_prompt = document.getElementById('agent-create-prompt').value.trim();
+
+    try {
+        const res = await fetch('/api/ai/agents', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ name, provider, model, system_prompt, priority: 50, status: 'ativo' })
+        });
+        const data = await res.json();
+        if (data.success) {
+            closeModal('modal-new-ai-agent');
+            if (typeof showToast === 'function') showToast("Agente cadastrado com sucesso!", "success");
+            loadAIAgentsView();
+        }
+    } catch (err) {
+        alert("Erro ao criar agente: " + err.message);
+    }
+};
+
+window.deleteAIAgentItem = async function(agentId) {
+    if (!confirm("Deseja realmente excluir este agente?")) return;
+    try {
+        await fetch(`/api/ai/agents/${agentId}`, { method: 'DELETE' });
+        loadAIAgentsView();
+    } catch (err) {
+        alert("Erro ao excluir agente: " + err.message);
+    }
+};
+
+// ----------------- 11. FOLLOW-UPS -----------------
+window.loadFollowupsView = async function() {
+    try {
+        const res = await fetch('/api/ai/followups');
+        const data = await res.json();
+        const container = document.getElementById('followups-list-container');
+        if (!container) return;
+
+        if (!data.followups || data.followups.length === 0) {
+            container.innerHTML = `
+                <div style="text-align:center; padding:35px; color:var(--text-muted);">
+                    <i class="fas fa-project-diagram" style="font-size:28px; opacity:0.4; margin-bottom:10px; display:block;"></i>
+                    Nenhum fluxo de follow-up cadastrado ainda.
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = data.followups.map(f => `
+            <div style="background:#110e24; border:1px solid var(--border-color); border-radius:10px; padding:16px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+                        <strong style="font-size:14.5px; color:#fff;">${f.name}</strong>
+                        <span class="badge" style="background:rgba(0,210,255,0.15); color:var(--neon-cyan);">${f.trigger_type}</span>
+                    </div>
+                    <div style="font-size:12px; color:var(--text-secondary);">Gatilho automatizado ativo no WhatsApp e CRM</div>
+                </div>
+                <div style="display:flex; gap:8px;">
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="alert('Fluxo ativo monitorando leads sem resposta!')">Testar Fluxo</button>
+                    <button type="button" class="btn btn-secondary btn-sm" style="color:var(--alert-red);" onclick="deleteFollowupItem(${f.id})"><i class="fas fa-trash-alt"></i></button>
+                </div>
+            </div>
+        `).join('');
+    } catch (err) {
+        console.error("Erro ao carregar follow-ups:", err);
+    }
+};
+
+window.applyFollowupTemplate = async function() {
+    try {
+        await fetch('/api/ai/followups', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                name: "Reengajamento 48h com Oferta de Diagnóstico Gratuito",
+                trigger_type: "silence_48h",
+                conditions: { tempo: "48h" },
+                steps: [{ step: 1, action: "whatsapp", message: "Oi {nome}, tudo bem? Temos uma condição especial para iniciar seu site ainda este mês." }]
+            })
+        });
+        if (typeof showToast === 'function') showToast("Modelo de fluxo adicionado com sucesso!", "success");
+        loadFollowupsView();
+    } catch (err) {
+        alert("Erro ao adicionar modelo: " + err.message);
+    }
+};
+
+window.deleteFollowupItem = async function(flowId) {
+    if (!confirm("Remover este fluxo?")) return;
+    try {
+        await fetch(`/api/ai/followups/${flowId}`, { method: 'DELETE' });
+        loadFollowupsView();
+    } catch (err) {
+        alert("Erro ao deletar fluxo: " + err.message);
+    }
+};
+
+// ----------------- 12. COFRE DE CONHECIMENTO -----------------
+window.loadKnowledgeVault = async function() {
+    try {
+        const res = await fetch('/api/ai/knowledge');
+        const data = await res.json();
+        const container = document.getElementById('vault-materials-container');
+        if (!container) return;
+
+        if (!data.items || data.items.length === 0) {
+            container.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:30px; color:var(--text-muted);">Nenhum material no acervo.</div>`;
+            return;
+        }
+
+        container.innerHTML = data.items.map(m => `
+            <div class="vault-card">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <i class="fas fa-file-alt" style="color:var(--neon-cyan); font-size:16px;"></i>
+                        <strong style="font-size:14px; color:#fff;">${m.title}</strong>
+                    </div>
+                    <span class="badge" style="background:rgba(0,255,136,0.1); color:var(--neon-green); font-size:10px;">O agente já sabe</span>
+                </div>
+                <p style="font-size:12px; color:var(--text-secondary); line-height:1.4; margin:0;">${m.summary || 'Documento preparado para consulta contextual.'}</p>
+                <div style="display:flex; justify-content:space-between; align-items:center; font-size:11.5px; color:var(--text-muted); border-top:1px solid rgba(157,78,221,0.15); padding-top:8px;">
+                    <span>Trechos: <strong style="color:#fff;">${m.chunks_count || 7}</strong></span>
+                    <span>Preparado: <strong style="color:#fff;">${m.last_prepared || 'recentemente'}</strong></span>
+                </div>
+                <div style="display:flex; gap:6px;">
+                    <button type="button" class="btn btn-secondary btn-sm" style="flex:1;" onclick="reprepareKnowledgeItem(${m.id})">
+                        <i class="fas fa-sync-alt"></i> Preparar de novo
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-sm" style="color:var(--alert-red);" onclick="deleteKnowledgeItem(${m.id})">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </div>
+            </div>
+        `).join('');
+    } catch (err) {
+        console.error("Erro ao carregar cofre:", err);
+    }
+};
+
+window.openNewMaterialModal = function() {
+    const m = document.getElementById('modal-new-material');
+    if (m) m.classList.add('active');
+};
+
+window.handleCreateKnowledgeItem = async function(e) {
+    e.preventDefault();
+    const title = document.getElementById('vault-create-title').value.trim();
+    const summary = document.getElementById('vault-create-summary').value.trim();
+
+    try {
+        const res = await fetch('/api/ai/knowledge', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ title, summary, source_type: 'document' })
+        });
+        const data = await res.json();
+        if (data.success) {
+            closeModal('modal-new-material');
+            if (typeof showToast === 'function') showToast("Material indexado no cofre!", "success");
+            loadKnowledgeVault();
+        }
+    } catch (err) {
+        alert("Erro ao adicionar material: " + err.message);
+    }
+};
+
+window.reprepareKnowledgeItem = async function(itemId) {
+    try {
+        const res = await fetch(`/api/ai/knowledge/${itemId}/reprepare`, { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+            if (typeof showToast === 'function') showToast(data.message, "success");
+            loadKnowledgeVault();
+        }
+    } catch (err) {
+        alert("Erro ao reindexar: " + err.message);
+    }
+};
+
+window.connectGoogleDrive = async function() {
+    const folder = prompt("Informe o nome da pasta do Google Drive a ser sincronizada:", "Cofre CRM Comercial");
+    if (!folder) return;
+    try {
+        const res = await fetch('/api/ai/knowledge/connect-drive', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ folder })
+        });
+        const data = await res.json();
+        if (data.success) {
+            if (typeof showToast === 'function') showToast(data.message, "success");
+        }
+    } catch (err) {
+        alert("Erro ao conectar Google Drive: " + err.message);
+    }
+};
+
+window.runCuratorAnalysis = async function() {
+    try {
+        const res = await fetch('/api/ai/knowledge/analyze-curator', { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+            const listStr = data.proposals.map(p => `• [${p.topic}]: ${p.suggestion}`).join('\n\n');
+            alert(`Curadoria de IA Concluída!\n\nSugestões encontradas:\n\n${listStr}`);
+        }
+    } catch (err) {
+        alert("Erro ao analisar acervo: " + err.message);
+    }
+};
+
+// ----------------- 13. ANÁLISE & AUDITORIA -----------------
+window.loadAnalyticsView = async function() {
+    try {
+        const [statsRes, auditRes] = await Promise.all([
+            fetch('/api/analytics/extended'),
+            fetch('/api/audit/logs')
+        ]);
+        const stats = await statsRes.json();
+        const audit = await auditRes.json();
+
+        const revEl = document.getElementById('analytics-revenue');
+        const tickEl = document.getElementById('analytics-ticket');
+        const comEl = document.getElementById('analytics-comandas-count');
+        const taskEl = document.getElementById('analytics-tasks-count');
+
+        if (revEl) revEl.textContent = `R$ ${parseFloat(stats.valor_ganho || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+        if (tickEl) tickEl.textContent = `R$ ${parseFloat(stats.ticket_medio || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+        if (comEl) comEl.textContent = stats.comandas_abertas || 0;
+        if (taskEl) taskEl.textContent = stats.tarefas_pendentes || 0;
+
+        const auditBox = document.getElementById('analytics-audit-log');
+        if (auditBox) {
+            const logs = audit.logs || [];
+            if (logs.length === 0) {
+                auditBox.innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-muted);">Nenhum evento registrado ainda.</div>`;
+            } else {
+                auditBox.innerHTML = logs.map(l => `
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.05); font-size:12.5px;">
+                        <div>
+                            <span style="color:var(--neon-cyan); font-weight:700; margin-right:8px;">[${l.action}]</span>
+                            <span style="color:#fff;">${l.details || l.entity_type}</span>
+                            <span style="font-size:11px; color:var(--text-muted); margin-left:6px;">por ${l.user_name}</span>
+                        </div>
+                        <span style="font-size:11px; color:var(--text-muted);">${l.created_at}</span>
+                    </div>
+                `).join('');
+            }
+        }
+    } catch (err) {
+        console.error("Erro ao carregar análise:", err);
+    }
+};
+
+// ========================================================
+// 15. MÓDULO: DISPARADOR AUTOMÁTICO DE ABORDAGEM B2B
+// ========================================================
+
+let isDisparadorActive = false;
+
+window.loadDisparadorView = async function() {
+    // 1. Carregar métricas
+    try {
+        const res = await fetch('/api/disparador/stats');
+        const data = await res.json();
+        if (document.getElementById('disp-metric-ready')) {
+            document.getElementById('disp-metric-ready').textContent = data.leads_with_phone || 0;
+        }
+        if (document.getElementById('disp-metric-contacted')) {
+            document.getElementById('disp-metric-contacted').textContent = data.leads_contatados || 0;
+        }
+        if (document.getElementById('disp-metric-campaigns')) {
+            document.getElementById('disp-metric-campaigns').textContent = data.total_campaigns || 0;
+        }
+    } catch (e) {
+        console.warn("Falha ao carregar métricas do disparador:", e);
+    }
+
+    // 2. Atualizar status da conexão WAHA
+    const wahaBadge = document.getElementById('disp-waha-badge');
+    const wahaText = document.getElementById('disp-waha-status-text');
+    if (wahaBadge && wahaText) {
+        if (typeof wahaCurrentStatus !== 'undefined' && wahaCurrentStatus === 'WORKING') {
+            wahaBadge.style.borderColor = 'var(--neon-green)';
+            wahaBadge.style.color = 'var(--neon-green)';
+            wahaBadge.style.background = 'rgba(0,255,136,0.12)';
+            wahaText.textContent = 'ONLINE';
+        } else if (typeof wahaCurrentStatus !== 'undefined' && wahaCurrentStatus === 'SCAN_QR_CODE') {
+            wahaBadge.style.borderColor = 'var(--alert-orange)';
+            wahaBadge.style.color = 'var(--alert-orange)';
+            wahaBadge.style.background = 'rgba(255,179,0,0.12)';
+            wahaText.textContent = 'AGUARDANDO QR CODE';
+        } else {
+            wahaBadge.style.borderColor = 'var(--alert-red)';
+            wahaBadge.style.color = 'var(--alert-red)';
+            wahaBadge.style.background = 'rgba(255,59,87,0.12)';
+            wahaText.textContent = 'DESCONECTADO';
+        }
+    }
+
+    // 3. Preencher seletor de lead de simulação
+    const sampleSelect = document.getElementById('disp-sample-lead-select');
+    if (sampleSelect && Array.isArray(currentLeads) && currentLeads.length > 0) {
+        sampleSelect.innerHTML = currentLeads.slice(0, 15).map((l) => `
+            <option value="${l.id}">${escapeHtml(l.name.substring(0, 22))}</option>
+        `).join('');
+    }
+
+    if (typeof updateDisparadorAudienceCount === 'function') updateDisparadorAudienceCount();
+    if (typeof updateDisparadorPreview === 'function') updateDisparadorPreview();
+};
+
+window.insertTagIntoDisparador = function(tag) {
+    const textarea = document.getElementById('disparador-template');
+    if (!textarea) return;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = textarea.value;
+    textarea.value = text.substring(0, start) + tag + text.substring(end);
+    textarea.selectionStart = textarea.selectionEnd = start + tag.length;
+    textarea.focus();
+    updateDisparadorPreview();
+};
+
+window.currentDisparadorSection = 'contato';
+
+window.disparadorSectionTemplates = {
+    'contato': {
+        name: '1º Contato (Google Maps)',
+        badge: 'ETAPA 1',
+        nextStage: 'follow1',
+        targetGroup: 'stage-contato',
+        template: `{Olá|Oi|Olá tudo bem?}, [{primeiro_nome}]! Tudo bem? Vi o perfil de vocês no Google Maps e gostei muito do projeto da [{empresa}]!\n\nTrabalho ajudando empresas da área de [PUBLICO_ALVO] a se destacarem e atraírem mais clientes pela internet. Quem costuma cuidar dessa parte comercial ou de presença digital por aí?\n\nSe preferir não receber mensagens, é só me avisar.`
+    },
+    'follow1': {
+        name: 'Follow 1 (Proposta Sem Custo)',
+        badge: 'ETAPA 2',
+        nextStage: 'follow2',
+        targetGroup: 'stage-follow1',
+        template: `{Olá|Oi}, [{primeiro_nome}]! Tudo bem?\n\nPassando para compartilhar uma proposta prática: analisamos o posicionamento da [{empresa}] e preparamos um estudo com informações de estrutura para um site moderno, rápido e otimizado para o Google.\n\nO melhor de tudo: esse diagnóstico e a prévia do projeto são 100% sem custo e sem compromisso nenhum! Posso te enviar os detalhes aqui por WhatsApp?\n\nSe preferir não receber mensagens, é só me avisar.`
+    },
+    'follow2': {
+        name: 'Follow 2 (Cobrança & Prévia)',
+        badge: 'ETAPA 3',
+        nextStage: 'proposta',
+        targetGroup: 'stage-follow2',
+        template: `{Oi|Olá}, [{primeiro_nome}]! Tudo bom?\n\nPassando rapidinho só para saber se você conseguiu ver minha mensagem anterior sobre a proposta para a [{empresa}].\n\nPosso te enviar uma prévia visual de como ficaria a presença digital de vocês no celular e no Google? Leva menos de 2 minutos para dar uma olhada e você já consegue ver na prática!\n\nMe avisa se fizer sentido. Um abraço!\n\nSe preferir não receber mensagens, é só me avisar.`
+    }
+};
+
+window.selectDisparadorSection = function(sectionKey) {
+    const section = window.disparadorSectionTemplates[sectionKey];
+    if (!section) return;
+
+    window.currentDisparadorSection = sectionKey;
+
+    // Atualiza cards visuais da seção
+    document.querySelectorAll('.disp-section-card').forEach(c => c.classList.remove('active'));
+    const activeCard = document.getElementById(`sec-card-${sectionKey}`);
+    if (activeCard) activeCard.classList.add('active');
+
+    // Atualiza badge de seção ativa no topo
+    const pill = document.getElementById('disp-active-section-pill');
+    if (pill) {
+        pill.textContent = `Seção Ativa: ${section.name}`;
+    }
+
+    // Carrega o template correspondente
+    const templateInput = document.getElementById('disparador-template');
+    if (templateInput) {
+        templateInput.value = section.template;
+    }
+
+    // Atualiza o target group do disparador automaticamente para corresponder à etapa
+    const targetSelect = document.getElementById('disparador-target-group');
+    if (targetSelect) {
+        targetSelect.value = section.targetGroup;
+    }
+
+    // Atualiza audiência e prévia no smartphone
+    updateDisparadorAudienceCount();
+    updateDisparadorPreview();
+
+    if (typeof showToast === 'function') {
+        showToast(`Seção ativa: "${section.name}". Script e audiência carregados!`, 'info');
+    }
+};
+
+window.applyDisparadorPreset = function(type) {
+    if (window.disparadorSectionTemplates && window.disparadorSectionTemplates[type]) {
+        selectDisparadorSection(type);
+        return;
+    }
+
+    const textarea = document.getElementById('disparador-template');
+    if (!textarea) return;
+
+    if (type === 'image' || type === 'contato') {
+        selectDisparadorSection('contato');
+        return;
+    } else if (type === 'sem_site') {
+        textarea.value = `[{saudacao}], [{primeiro_nome}]! Vi a [{empresa}] no Google Maps e gostei muito da estrutura de vocês.\n\nNotei que atualmente vocês não possuem um site oficial cadastrado no Google.\n\nTrabalhamos com modernização de presença digital para [PUBLICO_ALVO] e criamos páginas rápidas para celular com botão direto para WhatsApp.\n\nPosso enviar uma demonstração visual do site de vocês sem custo nenhum?\n\nSe preferir não receber mensagens, é só me avisar.`;
+    } else if (type === 'redesign') {
+        textarea.value = `[{saudacao}], [{primeiro_nome}]! Vi a [{empresa}] no Google Maps e estava analisando a presença digital de vocês em [{cidade}].\n\nIdentifiquei melhorias imediatas para acelerar o carregamento no celular e dobrar a captação de clientes no WhatsApp.\n\nGostaria de receber um diagnóstico rápido com informações de estrutura sem custo?\n\nSe preferir não receber mensagens, é só me avisar.`;
+    }
+    updateDisparadorPreview();
+    showToast("Template carregado!", "info");
+};
+
+window.toggleDisparadorOptOut = function() {
+    updateDisparadorPreview();
+};
+
+window.updateDisparadorPreview = function() {
+    const template = document.getElementById('disparador-template') ? document.getElementById('disparador-template').value : '';
+    const sampleSelect = document.getElementById('disp-sample-lead-select');
+    let sampleLead = null;
+
+    if (sampleSelect && sampleSelect.value && Array.isArray(currentLeads)) {
+        const id = parseInt(sampleSelect.value);
+        sampleLead = currentLeads.find(l => l.id === id);
+    }
+    if (!sampleLead && Array.isArray(currentLeads) && currentLeads.length > 0) {
+        sampleLead = currentLeads[0];
+    }
+    if (!sampleLead) {
+        sampleLead = {
+            name: 'Clínica Odonto Prime',
+            address: 'Av. Paulista, 1000 - São Paulo - SP',
+            category: 'Odontologia & Saúde',
+            has_website: 0,
+            website: '',
+            whatsapp: '11999998888',
+            phone: '11999998888'
+        };
+    }
+
+    const resolved = buildPersonalizedMessage(sampleLead, template);
+    const mockupText = document.getElementById('disp-mockup-text');
+    if (mockupText) {
+        mockupText.textContent = resolved;
+    }
+
+    const contactName = document.getElementById('disp-mockup-contact-name');
+    if (contactName) {
+        contactName.textContent = sampleLead.name || 'Contato da Empresa';
+    }
+
+    const timeSpan = document.getElementById('disp-mockup-time');
+    if (timeSpan) {
+        const now = new Date();
+        const hh = String(now.getHours()).padStart(2, '0');
+        const mm = String(now.getMinutes()).padStart(2, '0');
+        timeSpan.textContent = `${hh}:${mm}`;
+    }
+};
+
+window.updateDisparadorAudienceCount = function() {
+    const groupSelect = document.getElementById('disparador-target-group');
+    const summary = document.getElementById('disparador-audience-summary');
+    if (!groupSelect || !summary) return;
+
+    const group = groupSelect.value;
+    const leadsToCount = window.getLeadsForAudienceGroup(group);
+
+    const descriptions = {
+        'novos': `📥 <strong>${leadsToCount.length} novo(s) lead(s)</strong> (nunca abordados) prontos para abordagem comercial.`,
+        'stage-contato': `📞 <strong>${leadsToCount.length} lead(s)</strong> na etapa '1º Contato'.`,
+        'stage-follow1': `🔄 <strong>${leadsToCount.length} lead(s)</strong> na etapa 'Follow-up 1' (reforço de valor).`,
+        'stage-follow2': `⏰ <strong>${leadsToCount.length} lead(s)</strong> na etapa 'Follow-up 2' (cobrança & prévia).`,
+        'stage-follow-todos': `🔁 <strong>${leadsToCount.length} lead(s)</strong> em Follow-up (Follow 1 + Follow 2).`,
+        'stage-proposta': `📑 <strong>${leadsToCount.length} lead(s)</strong> com proposta em negociação.`,
+        'no-site': `🔥 <strong>${leadsToCount.length} lead(s) SEM SITE</strong> (oportunidades quentes de venda).`,
+        'with-site': `🌐 <strong>${leadsToCount.length} lead(s) COM SITE</strong> (proposta de modernização).`,
+        'selection': `🎯 <strong>${leadsToCount.length} lead(s)</strong> marcados na tabela prontos para disparo.`,
+        'all-whatsapp': `📱 <strong>${leadsToCount.length} lead(s)</strong> cadastrados com WhatsApp.`
+    };
+
+    summary.innerHTML = descriptions[group] || `📱 <strong>${leadsToCount.length} lead(s)</strong> prontos para disparo.`;
+};
+
+function appendDisparadorLog(msg, type = 'info') {
+    const consoleBox = document.getElementById('disparador-console-logs');
+    if (!consoleBox) return;
+    const now = new Date();
+    const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+    const entry = document.createElement('div');
+    entry.className = `log-${type}`;
+    entry.textContent = `[${timeStr}] ${msg}`;
+    consoleBox.appendChild(entry);
+    consoleBox.scrollTop = consoleBox.scrollHeight;
+}
+
+window.clearDisparadorLogs = function() {
+    const consoleBox = document.getElementById('disparador-console-logs');
+    if (consoleBox) consoleBox.innerHTML = '';
+};
+
+window.handleStartDisparador = async function() {
+    const group = document.getElementById('disparador-target-group').value;
+    const targetLeads = window.getLeadsForAudienceGroup(group);
+
+    if (targetLeads.length === 0) {
+        showToast("Nenhum lead com telefone/WhatsApp encontrado para o grupo selecionado.", "warning");
+        return;
+    }
+
+    const minSec = parseInt(document.getElementById('disp-delay-min').value) || 15;
+    const maxSec = parseInt(document.getElementById('disp-delay-max').value) || 35;
+
+    // Define para qual etapa o lead vai avançar
+    const activeSectionKey = window.currentDisparadorSection || 'contato';
+    const sectionDef = window.disparadorSectionTemplates[activeSectionKey];
+    let nextStage = sectionDef ? sectionDef.nextStage : 'follow1';
+    if (group === 'novos') nextStage = 'contato';
+    else if (group === 'stage-contato') nextStage = 'follow1';
+    else if (group === 'stage-follow1') nextStage = 'follow2';
+    else if (group === 'stage-follow2') nextStage = 'proposta';
+    else if (group === 'stage-follow-todos') nextStage = 'follow2';
+    else if (group === 'stage-proposta') nextStage = 'proposta';
+
+    if (!confirm(`Iniciar disparo automático da seção "${sectionDef ? sectionDef.name : 'Geral'}" para ${targetLeads.length} leads?\n\nApós o envio bem-sucedido, os leads avançarão automaticamente para a etapa: "${nextStage}".\nDelay anti-banimento configurado: ${minSec}s a ${maxSec}s.`)) {
+        return;
+    }
+
+    isDisparadorActive = true;
+    const customTemplate = document.getElementById('disparador-template').value;
+    const startBtn = document.getElementById('btn-start-disparador');
+    const stopBtn = document.getElementById('btn-stop-disparador');
+    const statusContainer = document.getElementById('disparador-status-container');
+    const progressBar = document.getElementById('disparador-progress-bar');
+    const progressText = document.getElementById('disparador-progress-text');
+    const countdownText = document.getElementById('disparador-countdown-text');
+
+    const origHtml = startBtn.innerHTML;
+    startBtn.disabled = true;
+    if (stopBtn) stopBtn.style.display = 'inline-flex';
+    if (statusContainer) statusContainer.style.display = 'block';
+
+    let successCount = 0;
+    let failCount = 0;
+    const total = targetLeads.length;
+
+    appendDisparadorLog(`🚀 Iniciando campanha da seção "${sectionDef ? sectionDef.name : 'Geral'}" (${total} leads)...`, 'info');
+
+    try {
+        for (let i = 0; i < total; i++) {
+            if (!isDisparadorActive) {
+                appendDisparadorLog("🛑 Disparo interrompido pelo usuário.", "warn");
+                break;
+            }
+
+            const lead = targetLeads[i];
+            const currentIdx = i + 1;
+            const pct = Math.round((currentIdx / total) * 100);
+
+            if (progressBar) progressBar.style.width = `${pct}%`;
+            if (progressText) progressText.textContent = `Progresso: ${currentIdx} de ${total} (${pct}%)`;
+            if (countdownText) countdownText.textContent = `Enviando para ${lead.name}...`;
+
+            startBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Enviando (${currentIdx}/${total})...`;
+
+            const message = buildPersonalizedMessage(lead, customTemplate);
+            const success = await sendSingleWhatsApp(lead, message, nextStage);
+
+            if (success) {
+                successCount++;
+                appendDisparadorLog(`✅ Enviado para "${lead.name}" (${lead.whatsapp || lead.phone}) -> Avançado para [${nextStage}]`, 'success');
+            } else {
+                failCount++;
+                appendDisparadorLog(`❌ Falha no envio para "${lead.name}"`, 'error');
+            }
+
+            // Aguarda delay humano se houver próximo
+            if (i < total - 1 && isDisparadorActive) {
+                const randomDelayMs = Math.floor(Math.random() * ((maxSec - minSec) * 1000 + 1)) + (minSec * 1000);
+                const delaySecs = Math.round(randomDelayMs / 1000);
+
+                appendDisparadorLog(`⏳ Aguardando delay anti-banimento de ${delaySecs}s antes do próximo contato...`, 'info');
+
+                let remaining = delaySecs;
+                while (remaining > 0 && isDisparadorActive) {
+                    if (countdownText) countdownText.textContent = `Delay anti-ban: ${remaining}s...`;
+                    startBtn.innerHTML = `<i class="fas fa-clock"></i> Aguardando ${remaining}s (${currentIdx}/${total})...`;
+                    await new Promise(r => setTimeout(r, 1000));
+                    remaining--;
+                }
+            }
+        }
+
+        // Salva histórico de campanha no banco
+        try {
+            const campName = sectionDef ? `Disparo Automático - ${sectionDef.name} (${new Date().toLocaleDateString('pt-BR')})` : `Campanha Automática ${new Date().toLocaleDateString('pt-BR')}`;
+            await fetch('/api/disparador/campaign', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: campName,
+                    template: customTemplate,
+                    target_group: group,
+                    total_leads: total,
+                    sent_count: successCount,
+                    failed_count: failCount,
+                    status: isDisparadorActive ? 'concluido' : 'pausado'
+                })
+            });
+        } catch (e) {
+            console.warn("Falha ao registrar log da campanha:", e);
+        }
+
+        showToast(`Disparos da seção finalizados! ${successCount} enviados com sucesso e avançados no funil.`, successCount > 0 ? 'success' : 'warning', 7000);
+        appendDisparadorLog(`🏁 Campanha finalizada: ${successCount} entregues, ${failCount} falhas.`, 'success');
+
+    } catch (err) {
+        showToast(`Erro durante o disparo: ${err.message}`, 'error');
+        appendDisparadorLog(`Erro crítico: ${err.message}`, 'error');
+    } finally {
+        isDisparadorActive = false;
+        startBtn.disabled = false;
+        startBtn.innerHTML = origHtml;
+        if (stopBtn) stopBtn.style.display = 'none';
+        if (countdownText) countdownText.textContent = 'Concluído';
+        if (typeof loadDisparadorView === 'function') loadDisparadorView();
+    }
+};
+
+window.handleStopDisparador = function() {
+    isDisparadorActive = false;
+    showToast("Interrupção solicitada. O envio será pausado no próximo ciclo.", "warning");
+    appendDisparadorLog("Interrupção solicitada pelo usuário.", "warn");
+};
+
+window.handleDisparadorTestSend = async function() {
+    if (window.wahaCurrentStatus && window.wahaCurrentStatus !== 'WORKING') {
+        showToast("WhatsApp não conectado. Aponte a câmera no QR Code para conectar antes de testar.", "warning");
+        if (typeof openWahaQrModal === 'function') openWahaQrModal();
+        return;
+    }
+
+    const template = document.getElementById('disparador-template') ? document.getElementById('disparador-template').value : '';
+    if (!template) {
+        showToast("O template da abordagem não pode estar vazio.", "warning");
+        return;
+    }
+
+    const sampleSelect = document.getElementById('disp-sample-lead-select');
+    let sampleLead = null;
+    if (sampleSelect && sampleSelect.value && Array.isArray(currentLeads)) {
+        const id = parseInt(sampleSelect.value);
+        sampleLead = currentLeads.find(l => l.id === id);
+    }
+    if (!sampleLead && Array.isArray(currentLeads) && currentLeads.length > 0) {
+        sampleLead = currentLeads[0];
+    }
+    if (!sampleLead) {
+        sampleLead = {
+            name: 'Clínica Odonto Prime',
+            address: 'Av. Paulista, 1000 - São Paulo - SP',
+            category: 'Odontologia',
+            has_website: 0,
+            website: ''
+        };
+    }
+
+    const text = buildPersonalizedMessage(sampleLead, template);
+
+    let defaultNum = '12988801327';
+    if (typeof activeChatLead !== 'undefined' && activeChatLead && (activeChatLead.whatsapp || activeChatLead.phone)) {
+        defaultNum = activeChatLead.whatsapp || activeChatLead.phone;
+    }
+    const destPhone = prompt("Digite o número de WhatsApp (com DDD) para receber este disparo de teste agora:", defaultNum);
+    if (!destPhone) return;
+
+    const chatId = formatWhatsAppChatId(destPhone);
+    if (!chatId) {
+        showToast("Número inválido. Digite DDD + número (ex: 12988801327).", "error");
+        return;
+    }
+
+    appendDisparadorLog(`📤 Disparando mensagem de teste para ${chatId}...`, 'info');
+    showToast(`Enviando mensagem de teste para ${chatId}...`, 'info');
+
+    try {
+        const res = await fetch('/api/waha/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                chatId: chatId,
+                text: text,
+                lead_id: sampleLead.id || null
+            })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast("✅ Mensagem de teste entregue com sucesso no WhatsApp!", "success");
+            appendDisparadorLog(`✅ Teste entregue com sucesso para ${chatId}!`, 'success');
+        } else {
+            if (data.qr_required && typeof openWahaQrModal === 'function') {
+                openWahaQrModal();
+            }
+            showToast(`❌ Falha no envio: ${data.error || 'Erro desconhecido'}`, "error");
+            appendDisparadorLog(`❌ Falha no teste para ${chatId}: ${data.error || 'Erro'}`, 'error');
+        }
+    } catch (err) {
+        showToast(`Erro na requisição: ${err.message}`, "error");
+        appendDisparadorLog(`Erro de conexão no teste: ${err.message}`, 'error');
+    }
+};
+
+
+
 
 

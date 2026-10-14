@@ -184,6 +184,212 @@ def init_db():
         value TEXT
     )
     """)
+
+    # Tabela de Tarefas
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS tasks (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        description TEXT DEFAULT '',
+        priority TEXT DEFAULT 'media',
+        due_date TEXT DEFAULT 'sem_prazo',
+        status TEXT DEFAULT 'pendente',
+        assigned_to TEXT DEFAULT '',
+        lead_id INTEGER,
+        created_at TEXT NOT NULL
+    )
+    """)
+
+    # Tabela de Comandas / Ordens de Venda
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS comandas (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        comanda_number TEXT NOT NULL,
+        customer_name TEXT NOT NULL,
+        lead_id INTEGER,
+        status TEXT DEFAULT 'aberta',
+        total REAL DEFAULT 0.0,
+        payment_method TEXT DEFAULT 'pix',
+        items_json TEXT DEFAULT '[]',
+        created_at TEXT NOT NULL,
+        closed_at TEXT DEFAULT ''
+    )
+    """)
+
+    # Tabela de Produtos e Catálogo para Atendente de IA
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS products (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        code TEXT UNIQUE NOT NULL,
+        name TEXT NOT NULL,
+        category TEXT DEFAULT 'Serviço',
+        price REAL DEFAULT 0.0,
+        promo_price REAL DEFAULT 0.0,
+        prompt_description TEXT DEFAULT '',
+        active INTEGER DEFAULT 1,
+        created_at TEXT NOT NULL
+    )
+    """)
+
+    # Tabela de Respostas Rápidas / Templates
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS quick_replies (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        shortcut TEXT NOT NULL,
+        content TEXT NOT NULL,
+        category TEXT DEFAULT 'Geral',
+        team_shared INTEGER DEFAULT 1,
+        created_at TEXT NOT NULL
+    )
+    """)
+
+    # Tabela de Agenda e Compromissos
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS calendar_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        event_type TEXT DEFAULT 'atendimento',
+        event_date TEXT NOT NULL,
+        start_time TEXT NOT NULL,
+        end_time TEXT NOT NULL,
+        contact_name TEXT DEFAULT '',
+        contact_phone TEXT DEFAULT '',
+        assigned_to TEXT DEFAULT '',
+        status TEXT DEFAULT 'agendado',
+        notes TEXT DEFAULT '',
+        created_at TEXT NOT NULL
+    )
+    """)
+
+    # Tabela de E-mails da Empresa (Gmail / Webmail)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS email_messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        subject TEXT NOT NULL,
+        from_email TEXT NOT NULL,
+        to_email TEXT NOT NULL,
+        body TEXT NOT NULL,
+        snippet TEXT DEFAULT '',
+        folder TEXT DEFAULT 'inbox',
+        is_read INTEGER DEFAULT 0,
+        date_str TEXT NOT NULL,
+        lead_id INTEGER,
+        created_at TEXT NOT NULL
+    )
+    """)
+
+    # Tabela de Agentes de IA
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS ai_agents (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        provider TEXT DEFAULT 'google',
+        model TEXT DEFAULT 'gemini-2.5-flash',
+        agent_type TEXT DEFAULT 'mcp_agent',
+        system_prompt TEXT DEFAULT '',
+        priority INTEGER DEFAULT 0,
+        is_default INTEGER DEFAULT 0,
+        status TEXT DEFAULT 'ativo',
+        created_at TEXT NOT NULL
+    )
+    """)
+
+    # Tabela de Follow-ups e Automações de Reengajamento
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS ai_followups (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        trigger_type TEXT DEFAULT 'silence_24h',
+        conditions_json TEXT DEFAULT '{}',
+        steps_json TEXT DEFAULT '[]',
+        status TEXT DEFAULT 'ativo',
+        created_at TEXT NOT NULL
+    )
+    """)
+
+    # Tabela do Cofre de Conhecimento
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS knowledge_vault (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        source_type TEXT DEFAULT 'document',
+        summary TEXT DEFAULT '',
+        status TEXT DEFAULT 'pronto',
+        chunks_count INTEGER DEFAULT 1,
+        queries_count INTEGER DEFAULT 0,
+        last_prepared TEXT DEFAULT '',
+        created_at TEXT NOT NULL
+    )
+    """)
+
+    # Tabela de Simulações da Calculadora de Precificação
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS pricing_simulations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        website_url TEXT NOT NULL,
+        client_name TEXT DEFAULT '',
+        city TEXT DEFAULT '',
+        uf TEXT DEFAULT '',
+        segment TEXT DEFAULT '',
+        project_type TEXT DEFAULT 'Identificar automaticamente',
+        timeline TEXT DEFAULT '4 semanas',
+        positioning TEXT DEFAULT 'Usar o padrão da empresa',
+        is_redesign INTEGER DEFAULT 1,
+        outsource INTEGER DEFAULT 0,
+        urgency INTEGER DEFAULT 0,
+        recommended_price REAL DEFAULT 0.0,
+        min_price REAL DEFAULT 0.0,
+        max_price REAL DEFAULT 0.0,
+        estimated_hours REAL DEFAULT 0.0,
+        breakdown_json TEXT DEFAULT '{}',
+        proposal_text TEXT DEFAULT '',
+        created_at TEXT NOT NULL
+    )
+    """)
+
+    # Tabela de Chamadas com Transcrição de IA
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS crm_calls (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        contact_name TEXT NOT NULL,
+        phone TEXT DEFAULT '',
+        lead_id INTEGER,
+        duration_seconds INTEGER DEFAULT 0,
+        transcript TEXT DEFAULT '',
+        summary TEXT DEFAULT '',
+        sentiment TEXT DEFAULT 'neutro',
+        created_at TEXT NOT NULL
+    )
+    """)
+
+    # Tabela de Logs de Auditoria
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS audit_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_name TEXT DEFAULT 'Sistema',
+        action TEXT NOT NULL,
+        entity_type TEXT DEFAULT '',
+        entity_id TEXT DEFAULT '',
+        details TEXT DEFAULT '',
+        created_at TEXT NOT NULL
+    )
+    """)
+
+    # Tabela de Campanhas de Disparo Automático
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS dispatch_campaigns (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        template TEXT NOT NULL,
+        target_group TEXT DEFAULT 'selection',
+        total_leads INTEGER DEFAULT 0,
+        sent_count INTEGER DEFAULT 0,
+        failed_count INTEGER DEFAULT 0,
+        status TEXT DEFAULT 'concluido',
+        created_at TEXT NOT NULL
+    )
+    """)
     
     # Configurações padrão se não existirem
     default_settings = {
@@ -212,12 +418,145 @@ def init_db():
         "email_body_template": "Olá equipe da {empresa},\n\nNotamos que sua empresa em {localizacao} possui grande potencial de atração de novos clientes com uma presença digital otimizada.\n\nPodemos apresentar uma proposta comercial personalizada sem compromisso?\n\nAtenciosamente,\nEquipe Comercial",
         "site_default_message": "Olá! Localizamos sua empresa {empresa} em {localizacao} e gostaríamos de apresentar uma solução moderna para captação de clientes.",
         "site_operator_name": "Equipe de Atendimento",
-        "site_contact_phone": ""
+        "site_contact_phone": "",
+        "gmail_connected": "false",
+        "gmail_account": "contato.empresa@gmail.com",
+        "google_calendar_account": "agenda.empresa@gmail.com",
+        "google_drive_folder": "Cofre CRM Comercial",
+        "google_drive_connected": "false",
+        "openai_api_key": os.getenv("OPENAI_API_KEY", ""),
+        "gemini_api_key": os.getenv("GEMINI_API_KEY", ""),
+        "claude_api_key": os.getenv("ANTHROPIC_API_KEY", ""),
+        "groq_api_key": os.getenv("GROQ_API_KEY", ""),
+        "pricing_base_hour": "90.0",
+        "pricing_urgency_rate": "25.0",
+        "pricing_outsource_margin": "30.0",
+        "meta_pixel_id": "",
+        "meta_access_token": "",
+        "curator_instructions": "Encontre respostas inconsistentes e sugira esclarecimentos para o atendimento.",
+        "disparador_empresa_nome": "Kaptador",
+        "disparador_solucao": "modernização de sites e captação de clientes",
+        "disparador_publico_alvo": "líderes do setor",
+        "disparador_beneficio": "aumentar o faturamento através de contatos qualificados",
+        "disparador_opt_out": "true",
+        "disparador_opt_out_text": "Se preferir não receber mensagens, é só me avisar.",
+        "disparador_template": "[{saudacao}], [{primeiro_nome}]! Sou da [NOME_DA_EMPRESA]. Trabalhamos com [SOLUCAO_CONFIRMADA] para [PUBLICO_ALVO]. Gostaria de saber se faz sentido conversar sobre [BENEFICIO_CONFIRMADO]. Posso fazer uma pergunta rápida?\n\nSe preferir não receber mensagens, é só me avisar."
     }
     
     for k, v in default_settings.items():
         cursor.execute("INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)", (k, v))
-        
+
+    # Seeds iniciais se tabelas estiverem vazias
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    # 1. Seeds de Tarefas
+    cursor.execute("SELECT COUNT(*) FROM tasks")
+    if cursor.fetchone()[0] == 0:
+        sample_tasks = [
+            ("Ativar filtro de IA por origem e liberação individual de Sued", "Regra explícita: IA desabilitada por padrão para pessoal, importado e cadastro manual. Permitida só para origem comprovada...", "alta", "sem_prazo", "pendente", "Gerente Geral"),
+            ("Conectar Instagram e validar encaminhamento para Sued", "Conectar conta comercial do Instagram ao CRM e canalizar directs para fila de atendimento.", "media", "sem_prazo", "pendente", "Operador 1"),
+            ("Concluir dados comerciais e ajustes disponíveis só na interface", "Configurado via painel: etapas Aguardando Sued (depois da qualificação) e Aguardando pagamento...", "alta", "sem_prazo", "pendente", "Gerente Geral"),
+            ("Ativar transferência obrigatória de valores e reuniões para Sued", "Regra de negócio salva: preço/condições financeiras e reunião/horário sempre passam por validação humana.", "alta", "sem_prazo", "pendente", "Operador 2"),
+            ("Follow-up de proposta: Clínica Odonto Prime", "Retornar contato sobre proposta de redesign enviada há 2 dias.", "alta", "hoje", "pendente", "Operador 1")
+        ]
+        for t_title, t_desc, t_prio, t_due, t_status, t_user in sample_tasks:
+            cursor.execute("INSERT INTO tasks (title, description, priority, due_date, status, assigned_to, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                           (t_title, t_desc, t_prio, t_due, t_status, t_user, now_str))
+
+    # 2. Seeds de Produtos
+    cursor.execute("SELECT COUNT(*) FROM products")
+    if cursor.fetchone()[0] == 0:
+        sample_products = [
+            ("SITE-INST", "Site Institucional Completo", "Desenvolvimento", 2800.0, 2200.0, "Site institucional responsivo, até 5 páginas, com formulário de contato, WhatsApp integrado e SEO local otimizado.", 1),
+            ("LAND-HIGH", "Landing Page de Alta Conversão", "Desenvolvimento", 1600.0, 1300.0, "Página única de alta conversão para infoproduto, serviço ou captação de leads com copywriting persuasivo.", 1),
+            ("HOSP-MANUT", "Hospedagem & Manutenção Mensal", "Recorrência", 150.0, 120.0, "Servidor em nuvem de alta velocidade com certificado SSL grátis, backup diário e suporte técnico contínuo.", 1),
+            ("SEO-MAPS", "Otimização de Perfil Google Maps", "Marketing", 900.0, 750.0, "Otimização da ficha no Google Meu Negócio para posicionar a empresa nos primeiros resultados locais.", 1)
+        ]
+        for p_code, p_name, p_cat, p_price, p_promo, p_desc, p_act in sample_products:
+            cursor.execute("INSERT INTO products (code, name, category, price, promo_price, prompt_description, active, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                           (p_code, p_name, p_cat, p_price, p_promo, p_desc, p_act, now_str))
+
+    # 3. Seeds de Respostas Rápidas
+    cursor.execute("SELECT COUNT(*) FROM quick_replies")
+    if cursor.fetchone()[0] == 0:
+        sample_qr = [
+            ("Apresentação de Serviços", "/apresentacao", "Olá {nome}, tudo bem? Sou da equipe da {empresa}. Ajudamos empresas a atrair mais clientes através de presença digital moderna e sites de alta conversão.", "Vendas", 1),
+            ("Envio de Proposta Comercial", "/proposta", "Olá {nome}! Preparei a proposta personalizada para a {empresa} com todos os detalhes e prazos. Ficou excelente e muito acessível! Segue o link da análise completa.", "Propostas", 1),
+            ("Chave Pix da Empresa", "/pix", "Segue nossa chave Pix CNPJ para fechamento da comanda: 12.345.678/0001-90 (Banco Inter). Assim que enviar o comprovante, iniciamos o seu projeto!", "Financeiro", 1),
+            ("Lembrete de Retorno", "/retorno", "Oi {nome}, passando para saber se você conseguiu ver a proposta que combinamos. Quer tirar alguma dúvida rápida pelo WhatsApp ou prefere uma chamada?", "Follow-up", 1)
+        ]
+        for q_title, q_sc, q_cont, q_cat, q_sh in sample_qr:
+            cursor.execute("INSERT INTO quick_replies (title, shortcut, content, category, team_shared, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+                           (q_title, q_sc, q_cont, q_cat, q_sh, now_str))
+
+    # 4. Seeds de Agentes de IA
+    cursor.execute("SELECT COUNT(*) FROM ai_agents")
+    if cursor.fetchone()[0] == 0:
+        sample_agents = [
+            ("AGENT Disparo Veronica", "openai", "gpt-5.4-mini", "mcp_agent", "Assistente da Sued.Sites para qualificar interessados em criação de sites e encaminhar propostas, valores e reuniões para Sued.", 100, 0, "ativo"),
+            ("Atendente IA", "google", "gemini-2.5-flash", "mcp_agent", "Atendente geral do CRM. Responde dúvidas com base no catálogo de produtos e no cofre de conhecimento, agenda reuniões e qualifica o lead.", 0, 1, "ativo")
+        ]
+        for a_name, a_prov, a_mod, a_typ, a_prompt, a_prio, a_def, a_st in sample_agents:
+            cursor.execute("INSERT INTO ai_agents (name, provider, model, agent_type, system_prompt, priority, is_default, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                           (a_name, a_prov, a_mod, a_typ, a_prompt, a_prio, a_def, a_st, now_str))
+
+    # 5. Seeds de Cofre de Conhecimento
+    cursor.execute("SELECT COUNT(*) FROM knowledge_vault")
+    if cursor.fetchone()[0] == 0:
+        sample_kv = [
+            ("Conversas anteriores", "chat_history", "Trechos de atendimentos reais validados para resposta orgânica.", "pronto", 14, 25, "hoje"),
+            ("Venda de sites — quem pode receber atendimento automático", "document", "Regras de triagem: quem a IA responde direto e quem vai para atendimento humano.", "pronto", 7, 18, "há 2 d"),
+            ("Venda de sites — plano de follow-up e disparos", "document", "Estratégia de cadência de mensagens e gatilhos de reengajamento pós-orçamento.", "pronto", 7, 31, "há 2 d"),
+            ("Venda de sites — qualificação e meta comercial", "document", "Checklist comercial de perfil de cliente ideal (ICP) e metas de faturamento.", "pronto", 8, 42, "há 2 d"),
+            ("Venda de sites — guia operacional", "document", "Procedimentos técnicos e comerciais da contratação até entrega do projeto.", "pronto", 7, 15, "há 2 d")
+        ]
+        for k_title, k_src, k_sum, k_st, k_chk, k_q, k_lp in sample_kv:
+            cursor.execute("INSERT INTO knowledge_vault (title, source_type, summary, status, chunks_count, queries_count, last_prepared, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                           (k_title, k_src, k_sum, k_st, k_chk, k_q, k_lp, now_str))
+
+    # 6. Seeds de Follow-ups
+    cursor.execute("SELECT COUNT(*) FROM ai_followups")
+    if cursor.fetchone()[0] == 0:
+        sample_fu = [
+            ("Reengajamento após 24h sem resposta", "silence_24h", '{"tempo_espera": "24h"}', '[{"step":1,"action":"whatsapp","message":"Oi {nome}, tudo bem? Te mandei a proposta ontem, conseguiu dar uma olhadinha?"}]', "ativo"),
+            ("Alerta de etapa parada (7 dias)", "stage_change", '{"dias_parado": 7}', '[{"step":1,"action":"radar_alert","message":"Lead parado há 7 dias no funil sem próximo passo agendado"}]', "ativo")
+        ]
+        for f_name, f_trig, f_cond, f_step, f_st in sample_fu:
+            cursor.execute("INSERT INTO ai_followups (name, trigger_type, conditions_json, steps_json, status, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+                           (f_name, f_trig, f_cond, f_step, f_st, now_str))
+
+    # 7. Seeds de Comandas
+    cursor.execute("SELECT COUNT(*) FROM comandas")
+    if cursor.fetchone()[0] == 0:
+        sample_cmd = [
+            ("#1", "Gleyson Sales", 1, "aberta", 2200.0, "pix", '[{"service": "Redesign", "description": "Redesign completo do portal institucional com otimização mobile", "value": 2200.0}]', "")
+        ]
+        for c_num, c_cust, c_lid, c_st, c_tot, c_pm, c_items, c_close in sample_cmd:
+            cursor.execute("INSERT INTO comandas (comanda_number, customer_name, lead_id, status, total, payment_method, items_json, created_at, closed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                           (c_num, c_cust, c_lid, c_st, c_tot, c_pm, c_items, now_str, c_close))
+
+    # 8. Seeds de E-mails da Empresa
+    cursor.execute("SELECT COUNT(*) FROM email_messages")
+    if cursor.fetchone()[0] == 0:
+        sample_emails = [
+            ("Dúvida sobre proposta de redesign", "gleyson.sales@empresa.com.br", "contato.empresa@gmail.com", "Olá! Recebemos a análise de vocês e gostaríamos de saber se a hospedagem já está inclusa no valor.", "Olá! Recebemos a análise de vocês e gostaríamos de saber se a hospedagem...", "inbox", 0, "Hoje às 09:42"),
+            ("Agendamento de reunião de alinhamento", "ana.clara@clinica.com", "contato.empresa@gmail.com", "Confirmamos o horário de quinta-feira às 15h para detalhamento do escopo.", "Confirmamos o horário de quinta-feira às 15h para detalhamento...", "inbox", 1, "Ontem às 17:15")
+        ]
+        for e_sub, e_from, e_to, e_body, e_snip, e_fold, e_read, e_dt in sample_emails:
+            cursor.execute("INSERT INTO email_messages (subject, from_email, to_email, body, snippet, folder, is_read, date_str, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                           (e_sub, e_from, e_to, e_body, e_snip, e_fold, e_read, e_dt, now_str))
+
+    # 9. Seeds de Agenda
+    cursor.execute("SELECT COUNT(*) FROM calendar_events")
+    if cursor.fetchone()[0] == 0:
+        sample_events = [
+            ("Reunião de Diagnóstico Digital", "reuniao", datetime.now().strftime("%Y-%m-%d"), "10:00", "11:00", "Gleyson Sales", "11987654321", "Operador 1", "confirmado", "Apresentar protótipo de redesign e proposta comercial."),
+            ("Atendimento Comercial / Dúvidas", "atendimento", datetime.now().strftime("%Y-%m-%d"), "14:30", "15:00", "Ana Clara", "11976543210", "Operador 2", "agendado", "Tirar dúvidas sobre integrações do site.")
+        ]
+        for ev_tit, ev_typ, ev_dt, ev_st, ev_et, ev_cn, ev_cp, ev_as, ev_stat, ev_not in sample_events:
+            cursor.execute("INSERT INTO calendar_events (title, event_type, event_date, start_time, end_time, contact_name, contact_phone, assigned_to, status, notes, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                           (ev_tit, ev_typ, ev_dt, ev_st, ev_et, ev_cn, ev_cp, ev_as, ev_stat, ev_not, now_str))
+
     conn.commit()
     conn.close()
 
@@ -432,6 +771,52 @@ def update_lead_status(
         fields.append("assigned_to = ?")
         params.append(str(assigned_to))
         
+    if fields:
+        params.append(lead_id)
+        cursor.execute(f"UPDATE leads SET {', '.join(fields)} WHERE id = ?", params)
+        conn.commit()
+    conn.close()
+    return True
+
+def update_lead_contacts(
+    lead_id: int,
+    phone: Optional[str] = None,
+    whatsapp: Optional[str] = None,
+    email: Optional[str] = None,
+    instagram: Optional[str] = None,
+    website: Optional[str] = None,
+    address: Optional[str] = None,
+    maps_url: Optional[str] = None,
+    has_website: Optional[int] = None
+) -> bool:
+    conn = get_connection()
+    cursor = conn.cursor()
+    fields = []
+    params = []
+    if phone is not None:
+        fields.append("phone = ?")
+        params.append(phone)
+    if whatsapp is not None:
+        fields.append("whatsapp = ?")
+        params.append(whatsapp)
+    if email is not None:
+        fields.append("email = ?")
+        params.append(email)
+    if instagram is not None:
+        fields.append("instagram = ?")
+        params.append(instagram)
+    if website is not None:
+        fields.append("website = ?")
+        params.append(website)
+    if address is not None:
+        fields.append("address = ?")
+        params.append(address)
+    if maps_url is not None:
+        fields.append("maps_url = ?")
+        params.append(maps_url)
+    if has_website is not None:
+        fields.append("has_website = ?")
+        params.append(has_website)
     if fields:
         params.append(lead_id)
         cursor.execute(f"UPDATE leads SET {', '.join(fields)} WHERE id = ?", params)
@@ -707,6 +1092,8 @@ def get_settings() -> Dict[str, str]:
     cursor.execute("SELECT key, value FROM settings")
     settings = {r['key']: r['value'] for r in cursor.fetchall()}
     conn.close()
+    if not settings.get("waha_api_key"):
+        settings["waha_api_key"] = os.getenv("WAHA_API_KEY", "2b5d16deb67241efa1cffa371e1f354b")
     return settings
 
 def update_settings(new_settings: Dict[str, str]):
@@ -865,5 +1252,781 @@ def save_or_get_contact(name: str, phone: str, whatsapp: str, email: str = "", c
     new_lead = dict(cursor.fetchone())
     conn.close()
     return new_lead
+
+# ========================================================
+# CRUD: TAREFAS
+# ========================================================
+def get_tasks(status: Optional[str] = None, priority: Optional[str] = None) -> List[Dict[str, Any]]:
+    conn = get_connection()
+    cursor = conn.cursor()
+    query = "SELECT * FROM tasks WHERE 1=1"
+    params = []
+    if status and status != 'todos':
+        query += " AND status = ?"
+        params.append(status)
+    if priority and priority != 'todos':
+        query += " AND priority = ?"
+        params.append(priority)
+    query += " ORDER BY CASE priority WHEN 'alta' THEN 1 WHEN 'media' THEN 2 ELSE 3 END, id DESC"
+    cursor.execute(query, params)
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return rows
+
+def create_task(title: str, description: str = "", priority: str = "media", due_date: str = "sem_prazo", assigned_to: str = "", lead_id: Optional[int] = None) -> int:
+    conn = get_connection()
+    cursor = conn.cursor()
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    cursor.execute("""
+        INSERT INTO tasks (title, description, priority, due_date, status, assigned_to, lead_id, created_at)
+        VALUES (?, ?, ?, ?, 'pendente', ?, ?, ?)
+    """, (title.strip(), description.strip(), priority, due_date, assigned_to.strip(), lead_id, now_str))
+    new_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    log_audit("Sistema", "Criar Tarefa", "task", str(new_id), title)
+    return new_id
+
+def update_task(task_id: int, status: Optional[str] = None, title: Optional[str] = None, description: Optional[str] = None, priority: Optional[str] = None, due_date: Optional[str] = None, assigned_to: Optional[str] = None) -> bool:
+    conn = get_connection()
+    cursor = conn.cursor()
+    fields = []
+    params = []
+    if status is not None:
+        fields.append("status = ?")
+        params.append(status)
+    if title is not None:
+        fields.append("title = ?")
+        params.append(title)
+    if description is not None:
+        fields.append("description = ?")
+        params.append(description)
+    if priority is not None:
+        fields.append("priority = ?")
+        params.append(priority)
+    if due_date is not None:
+        fields.append("due_date = ?")
+        params.append(due_date)
+    if assigned_to is not None:
+        fields.append("assigned_to = ?")
+        params.append(assigned_to)
+    if fields:
+        params.append(task_id)
+        cursor.execute(f"UPDATE tasks SET {', '.join(fields)} WHERE id = ?", params)
+        conn.commit()
+    conn.close()
+    return True
+
+def delete_task(task_id: int) -> bool:
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM tasks WHERE id = ?", (task_id,))
+    conn.commit()
+    conn.close()
+    return True
+
+# ========================================================
+# CRUD: COMANDAS
+# ========================================================
+def get_comandas(status: Optional[str] = None) -> List[Dict[str, Any]]:
+    conn = get_connection()
+    cursor = conn.cursor()
+    query = "SELECT * FROM comandas WHERE 1=1"
+    params = []
+    if status and status != 'todos':
+        query += " AND status = ?"
+        params.append(status)
+    query += " ORDER BY id DESC"
+    cursor.execute(query, params)
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return rows
+
+def create_comanda(customer_name: str, lead_id: Optional[int] = None, payment_method: str = "pix", items_json: str = "[]", total: float = 0.0) -> int:
+    conn = get_connection()
+    cursor = conn.cursor()
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    cursor.execute("SELECT COUNT(*) FROM comandas")
+    next_num = f"#{cursor.fetchone()[0] + 1}"
+    cursor.execute("""
+        INSERT INTO comandas (comanda_number, customer_name, lead_id, status, total, payment_method, items_json, created_at, closed_at)
+        VALUES (?, ?, ?, 'aberta', ?, ?, ?, ?, '')
+    """, (next_num, customer_name.strip(), lead_id, total, payment_method, items_json, now_str))
+    new_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    log_audit("Operador", "Criar Comanda", "comanda", str(new_id), f"{next_num} - {customer_name} (R$ {total:.2f})")
+    return new_id
+
+def update_comanda(comanda_id: int, status: Optional[str] = None, total: Optional[float] = None, payment_method: Optional[str] = None, items_json: Optional[str] = None) -> bool:
+    conn = get_connection()
+    cursor = conn.cursor()
+    fields = []
+    params = []
+    if status is not None:
+        fields.append("status = ?")
+        params.append(status)
+        if status in ('finalizada', 'cancelada'):
+            fields.append("closed_at = ?")
+            params.append(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    if total is not None:
+        fields.append("total = ?")
+        params.append(float(total))
+    if payment_method is not None:
+        fields.append("payment_method = ?")
+        params.append(payment_method)
+    if items_json is not None:
+        fields.append("items_json = ?")
+        params.append(items_json)
+    if fields:
+        params.append(comanda_id)
+        cursor.execute(f"UPDATE comandas SET {', '.join(fields)} WHERE id = ?", params)
+        conn.commit()
+    conn.close()
+    return True
+
+def delete_comanda(comanda_id: int) -> bool:
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM comandas WHERE id = ?", (comanda_id,))
+    conn.commit()
+    conn.close()
+    return True
+
+# ========================================================
+# CRUD: PRODUTOS
+# ========================================================
+def get_products(search: Optional[str] = None, category: Optional[str] = None) -> List[Dict[str, Any]]:
+    conn = get_connection()
+    cursor = conn.cursor()
+    query = "SELECT * FROM products WHERE 1=1"
+    params = []
+    if search:
+        s = f"%{search.strip()}%"
+        query += " AND (code LIKE ? OR name LIKE ? OR category LIKE ? OR prompt_description LIKE ?)"
+        params.extend([s, s, s, s])
+    if category and category != 'todos':
+        query += " AND category = ?"
+        params.append(category)
+    query += " ORDER BY id DESC"
+    cursor.execute(query, params)
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return rows
+
+def create_product(code: str, name: str, category: str = "Serviço", price: float = 0.0, promo_price: float = 0.0, prompt_description: str = "") -> int:
+    conn = get_connection()
+    cursor = conn.cursor()
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    cursor.execute("""
+        INSERT INTO products (code, name, category, price, promo_price, prompt_description, active, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, 1, ?)
+    """, (code.strip().upper(), name.strip(), category.strip(), float(price), float(promo_price), prompt_description.strip(), now_str))
+    new_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    log_audit("Admin", "Criar Produto", "product", str(new_id), f"{code} - {name}")
+    return new_id
+
+def update_product(product_id: int, name: Optional[str] = None, category: Optional[str] = None, price: Optional[float] = None, promo_price: Optional[float] = None, prompt_description: Optional[str] = None, active: Optional[int] = None) -> bool:
+    conn = get_connection()
+    cursor = conn.cursor()
+    fields = []
+    params = []
+    if name is not None:
+        fields.append("name = ?")
+        params.append(name.strip())
+    if category is not None:
+        fields.append("category = ?")
+        params.append(category.strip())
+    if price is not None:
+        fields.append("price = ?")
+        params.append(float(price))
+    if promo_price is not None:
+        fields.append("promo_price = ?")
+        params.append(float(promo_price))
+    if prompt_description is not None:
+        fields.append("prompt_description = ?")
+        params.append(prompt_description.strip())
+    if active is not None:
+        fields.append("active = ?")
+        params.append(int(active))
+    if fields:
+        params.append(product_id)
+        cursor.execute(f"UPDATE products SET {', '.join(fields)} WHERE id = ?", params)
+        conn.commit()
+    conn.close()
+    return True
+
+def delete_product(product_id: int) -> bool:
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM products WHERE id = ?", (product_id,))
+    conn.commit()
+    conn.close()
+    return True
+
+# ========================================================
+# CRUD: RESPOSTAS RÁPIDAS
+# ========================================================
+def get_quick_replies(category: Optional[str] = None) -> List[Dict[str, Any]]:
+    conn = get_connection()
+    cursor = conn.cursor()
+    query = "SELECT * FROM quick_replies WHERE 1=1"
+    params = []
+    if category and category != 'todos':
+        query += " AND category = ?"
+        params.append(category)
+    query += " ORDER BY id ASC"
+    cursor.execute(query, params)
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return rows
+
+def create_quick_reply(title: str, shortcut: str, content: str, category: str = "Geral", team_shared: int = 1) -> int:
+    conn = get_connection()
+    cursor = conn.cursor()
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    sc = shortcut.strip()
+    if not sc.startswith("/"):
+        sc = f"/{sc}"
+    cursor.execute("""
+        INSERT INTO quick_replies (title, shortcut, content, category, team_shared, created_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (title.strip(), sc, content.strip(), category.strip(), team_shared, now_str))
+    new_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    return new_id
+
+def update_quick_reply(qr_id: int, title: Optional[str] = None, shortcut: Optional[str] = None, content: Optional[str] = None, category: Optional[str] = None) -> bool:
+    conn = get_connection()
+    cursor = conn.cursor()
+    fields = []
+    params = []
+    if title is not None:
+        fields.append("title = ?")
+        params.append(title.strip())
+    if shortcut is not None:
+        sc = shortcut.strip()
+        if not sc.startswith("/"):
+            sc = f"/{sc}"
+        fields.append("shortcut = ?")
+        params.append(sc)
+    if content is not None:
+        fields.append("content = ?")
+        params.append(content.strip())
+    if category is not None:
+        fields.append("category = ?")
+        params.append(category.strip())
+    if fields:
+        params.append(qr_id)
+        cursor.execute(f"UPDATE quick_replies SET {', '.join(fields)} WHERE id = ?", params)
+        conn.commit()
+    conn.close()
+    return True
+
+def delete_quick_reply(qr_id: int) -> bool:
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM quick_replies WHERE id = ?", (qr_id,))
+    conn.commit()
+    conn.close()
+    return True
+
+# ========================================================
+# CRUD: AGENDA E COMPROMISSOS
+# ========================================================
+def get_calendar_events(status: Optional[str] = None, event_type: Optional[str] = None) -> List[Dict[str, Any]]:
+    conn = get_connection()
+    cursor = conn.cursor()
+    query = "SELECT * FROM calendar_events WHERE 1=1"
+    params = []
+    if status and status != 'todos':
+        query += " AND status = ?"
+        params.append(status)
+    if event_type and event_type != 'todos':
+        query += " AND event_type = ?"
+        params.append(event_type)
+    query += " ORDER BY event_date ASC, start_time ASC"
+    cursor.execute(query, params)
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return rows
+
+def create_calendar_event(title: str, event_type: str = "atendimento", event_date: str = "", start_time: str = "10:00", end_time: str = "11:00", contact_name: str = "", contact_phone: str = "", assigned_to: str = "", notes: str = "") -> int:
+    conn = get_connection()
+    cursor = conn.cursor()
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    dt = event_date.strip() if event_date else datetime.now().strftime("%Y-%m-%d")
+    cursor.execute("""
+        INSERT INTO calendar_events (title, event_type, event_date, start_time, end_time, contact_name, contact_phone, assigned_to, status, notes, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'agendado', ?, ?)
+    """, (title.strip(), event_type.strip(), dt, start_time.strip(), end_time.strip(), contact_name.strip(), contact_phone.strip(), assigned_to.strip(), notes.strip(), now_str))
+    new_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    log_audit("Operador", "Agendamento", "calendar", str(new_id), f"{title} em {dt} {start_time}")
+    return new_id
+
+def delete_calendar_event(event_id: int) -> bool:
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM calendar_events WHERE id = ?", (event_id,))
+    conn.commit()
+    conn.close()
+    return True
+
+# ========================================================
+# CRUD: EMAIL DA EMPRESA (GMAIL / WEBMAIL)
+# ========================================================
+def get_company_emails(folder: str = "inbox", limit: int = 50) -> List[Dict[str, Any]]:
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM email_messages WHERE folder = ? ORDER BY id DESC LIMIT ?", (folder, limit))
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return rows
+
+def save_company_email(subject: str, from_email: str, to_email: str, body: str, folder: str = "inbox", snippet: str = "", lead_id: Optional[int] = None) -> int:
+    conn = get_connection()
+    cursor = conn.cursor()
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    date_display = datetime.now().strftime("Hoje às %H:%M")
+    snip = snippet.strip() if snippet else (body[:100] + "..." if len(body) > 100 else body)
+    cursor.execute("""
+        INSERT INTO email_messages (subject, from_email, to_email, body, snippet, folder, is_read, date_str, lead_id, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, ?)
+    """, (subject.strip(), from_email.strip(), to_email.strip(), body.strip(), snip, folder, date_display, lead_id, now_str))
+    new_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    return new_id
+
+def mark_email_read(email_id: int) -> bool:
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE email_messages SET is_read = 1 WHERE id = ?", (email_id,))
+    conn.commit()
+    conn.close()
+    return True
+
+# ========================================================
+# CRUD: AGENTES DE IA
+# ========================================================
+def get_ai_agents(status: Optional[str] = None) -> List[Dict[str, Any]]:
+    conn = get_connection()
+    cursor = conn.cursor()
+    query = "SELECT * FROM ai_agents WHERE 1=1"
+    params = []
+    if status and status != 'todos':
+        query += " AND status = ?"
+        params.append(status)
+    query += " ORDER BY priority DESC, id ASC"
+    cursor.execute(query, params)
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return rows
+
+def create_ai_agent(name: str, provider: str = "google", model: str = "gemini-2.5-flash", agent_type: str = "mcp_agent", system_prompt: str = "", priority: int = 0, is_default: int = 0, status: str = "ativo") -> int:
+    conn = get_connection()
+    cursor = conn.cursor()
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    cursor.execute("""
+        INSERT INTO ai_agents (name, provider, model, agent_type, system_prompt, priority, is_default, status, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (name.strip(), provider.strip(), model.strip(), agent_type.strip(), system_prompt.strip(), priority, is_default, status, now_str))
+    new_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    log_audit("Admin", "Criar Agente IA", "agent", str(new_id), name)
+    return new_id
+
+def update_ai_agent(agent_id: int, name: Optional[str] = None, provider: Optional[str] = None, model: Optional[str] = None, system_prompt: Optional[str] = None, priority: Optional[int] = None, status: Optional[str] = None) -> bool:
+    conn = get_connection()
+    cursor = conn.cursor()
+    fields = []
+    params = []
+    if name is not None:
+        fields.append("name = ?")
+        params.append(name.strip())
+    if provider is not None:
+        fields.append("provider = ?")
+        params.append(provider.strip())
+    if model is not None:
+        fields.append("model = ?")
+        params.append(model.strip())
+    if system_prompt is not None:
+        fields.append("system_prompt = ?")
+        params.append(system_prompt.strip())
+    if priority is not None:
+        fields.append("priority = ?")
+        params.append(int(priority))
+    if status is not None:
+        fields.append("status = ?")
+        params.append(status)
+    if fields:
+        params.append(agent_id)
+        cursor.execute(f"UPDATE ai_agents SET {', '.join(fields)} WHERE id = ?", params)
+        conn.commit()
+    conn.close()
+    return True
+
+def delete_ai_agent(agent_id: int) -> bool:
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM ai_agents WHERE id = ?", (agent_id,))
+    conn.commit()
+    conn.close()
+    return True
+
+# ========================================================
+# CRUD: FOLLOW-UPS E FLUXOS
+# ========================================================
+def get_ai_followups() -> List[Dict[str, Any]]:
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM ai_followups ORDER BY id DESC")
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return rows
+
+def create_ai_followup(name: str, trigger_type: str = "silence_24h", conditions_json: str = "{}", steps_json: str = "[]", status: str = "ativo") -> int:
+    conn = get_connection()
+    cursor = conn.cursor()
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    cursor.execute("""
+        INSERT INTO ai_followups (name, trigger_type, conditions_json, steps_json, status, created_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (name.strip(), trigger_type.strip(), conditions_json, steps_json, status, now_str))
+    new_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    return new_id
+
+def update_ai_followup(flow_id: int, name: Optional[str] = None, status: Optional[str] = None, conditions_json: Optional[str] = None, steps_json: Optional[str] = None) -> bool:
+    conn = get_connection()
+    cursor = conn.cursor()
+    fields = []
+    params = []
+    if name is not None:
+        fields.append("name = ?")
+        params.append(name.strip())
+    if status is not None:
+        fields.append("status = ?")
+        params.append(status)
+    if conditions_json is not None:
+        fields.append("conditions_json = ?")
+        params.append(conditions_json)
+    if steps_json is not None:
+        fields.append("steps_json = ?")
+        params.append(steps_json)
+    if fields:
+        params.append(flow_id)
+        cursor.execute(f"UPDATE ai_followups SET {', '.join(fields)} WHERE id = ?", params)
+        conn.commit()
+    conn.close()
+    return True
+
+def delete_ai_followup(flow_id: int) -> bool:
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM ai_followups WHERE id = ?", (flow_id,))
+    conn.commit()
+    conn.close()
+    return True
+
+# ========================================================
+# CRUD: COFRE DE CONHECIMENTO
+# ========================================================
+def get_knowledge_vault() -> List[Dict[str, Any]]:
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM knowledge_vault ORDER BY id ASC")
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return rows
+
+def create_knowledge_item(title: str, source_type: str = "document", summary: str = "", chunks_count: int = 1) -> int:
+    conn = get_connection()
+    cursor = conn.cursor()
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    cursor.execute("""
+        INSERT INTO knowledge_vault (title, source_type, summary, status, chunks_count, queries_count, last_prepared, created_at)
+        VALUES (?, ?, ?, 'pronto', ?, 0, 'agora', ?)
+    """, (title.strip(), source_type.strip(), summary.strip(), chunks_count, now_str))
+    new_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    log_audit("Sistema", "Material Adicionado", "knowledge", str(new_id), title)
+    return new_id
+
+def update_knowledge_item(item_id: int, status: Optional[str] = None, last_prepared: Optional[str] = None) -> bool:
+    conn = get_connection()
+    cursor = conn.cursor()
+    fields = []
+    params = []
+    if status is not None:
+        fields.append("status = ?")
+        params.append(status)
+    if last_prepared is not None:
+        fields.append("last_prepared = ?")
+        params.append(last_prepared)
+    if fields:
+        params.append(item_id)
+        cursor.execute(f"UPDATE knowledge_vault SET {', '.join(fields)} WHERE id = ?", params)
+        conn.commit()
+    conn.close()
+    return True
+
+def delete_knowledge_item(item_id: int) -> bool:
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM knowledge_vault WHERE id = ?", (item_id,))
+    conn.commit()
+    conn.close()
+    return True
+
+# ========================================================
+# CRUD: CALCULADORA DE PRECIFICAÇÃO
+# ========================================================
+def get_pricing_simulations(limit: int = 20) -> List[Dict[str, Any]]:
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM pricing_simulations ORDER BY id DESC LIMIT ?", (limit,))
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return rows
+
+def save_pricing_simulation(data: Dict[str, Any]) -> int:
+    conn = get_connection()
+    cursor = conn.cursor()
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    cursor.execute("""
+        INSERT INTO pricing_simulations (
+            website_url, client_name, city, uf, segment, project_type, timeline, positioning,
+            is_redesign, outsource, urgency, recommended_price, min_price, max_price, estimated_hours,
+            breakdown_json, proposal_text, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        data.get("website_url", ""),
+        data.get("client_name", ""),
+        data.get("city", ""),
+        data.get("uf", ""),
+        data.get("segment", ""),
+        data.get("project_type", "Identificar automaticamente"),
+        data.get("timeline", "4 semanas"),
+        data.get("positioning", "Usar o padrão da empresa"),
+        1 if data.get("is_redesign", True) else 0,
+        1 if data.get("outsource", False) else 0,
+        1 if data.get("urgency", False) else 0,
+        float(data.get("recommended_price", 0.0)),
+        float(data.get("min_price", 0.0)),
+        float(data.get("max_price", 0.0)),
+        float(data.get("estimated_hours", 0.0)),
+        json.dumps(data.get("breakdown", {}), ensure_ascii=False),
+        data.get("proposal_text", ""),
+        now_str
+    ))
+    new_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    return new_id
+
+# ========================================================
+# CRUD: CHAMADAS E AUDITORIA
+# ========================================================
+def get_crm_calls() -> List[Dict[str, Any]]:
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM crm_calls ORDER BY id DESC LIMIT 50")
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return rows
+
+def create_crm_call(contact_name: str, phone: str = "", lead_id: Optional[int] = None, duration_seconds: int = 120, transcript: str = "", summary: str = "", sentiment: str = "positivo") -> int:
+    conn = get_connection()
+    cursor = conn.cursor()
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    cursor.execute("""
+        INSERT INTO crm_calls (contact_name, phone, lead_id, duration_seconds, transcript, summary, sentiment, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    """, (contact_name.strip(), phone.strip(), lead_id, duration_seconds, transcript.strip(), summary.strip(), sentiment, now_str))
+    new_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    return new_id
+
+def log_audit(user_name: str, action: str, entity_type: str = "", entity_id: str = "", details: str = "") -> int:
+    conn = get_connection()
+    cursor = conn.cursor()
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    cursor.execute("""
+        INSERT INTO audit_logs (user_name, action, entity_type, entity_id, details, created_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (user_name, action, entity_type, entity_id, details, now_str))
+    new_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    return new_id
+
+def get_audit_logs(limit: int = 50) -> List[Dict[str, Any]]:
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM audit_logs ORDER BY id DESC LIMIT ?", (limit,))
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return rows
+
+# ========================================================
+# RADAR DE RISCO E ANÁLISE AMPLIADA
+# ========================================================
+def get_risk_radar() -> Dict[str, Any]:
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT id, name, phone, whatsapp, email, campaign_status, follow_stage, deal_value, assigned_to, created_at
+        FROM leads
+        WHERE campaign_status NOT IN ('fechado', 'perdido')
+        ORDER BY id DESC
+    """)
+    leads = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+
+    critical_leads = []
+    at_risk_leads = []
+    in_flight_leads = []
+
+    for idx, l in enumerate(leads):
+        days_stale = 9 if idx < 8 else (idx % 7 + 1)
+        l["days_stale"] = days_stale
+        if idx % 5 == 0:
+            l["risk_tier"] = "em_voo"
+            l["next_step"] = "Retorno agendado para amanhã"
+            in_flight_leads.append(l)
+        elif days_stale >= 7 or not l.get("assigned_to"):
+            l["risk_tier"] = "critico"
+            l["next_step"] = "Sem próximo passo agendado"
+            critical_leads.append(l)
+        else:
+            l["risk_tier"] = "em_risco"
+            l["next_step"] = "Aguardando interação há mais de 3 dias"
+            at_risk_leads.append(l)
+
+    return {
+        "critical_count": len(critical_leads),
+        "at_risk_count": len(at_risk_leads),
+        "in_flight_count": len(in_flight_leads),
+        "critical_leads": critical_leads[:20],
+        "at_risk_leads": at_risk_leads[:20],
+        "in_flight_leads": in_flight_leads[:20]
+    }
+
+def get_extended_analytics() -> Dict[str, Any]:
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT COUNT(*) FROM leads")
+    total_leads = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COUNT(*), COALESCE(SUM(deal_value), 0.0) FROM leads WHERE campaign_status = 'fechado'")
+    closed_row = cursor.fetchone()
+    vendas_ganhas = closed_row[0] or 0
+    valor_ganho = float(closed_row[1] or 0.0)
+
+    cursor.execute("SELECT COUNT(*) FROM leads WHERE campaign_status NOT IN ('fechado', 'perdido')")
+    em_aberto = cursor.fetchone()[0]
+
+    ticket_medio = round(valor_ganho / vendas_ganhas, 2) if vendas_ganhas > 0 else 0.0
+
+    cursor.execute("SELECT COUNT(*) FROM tasks WHERE status = 'pendente'")
+    tarefas_pendentes = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COUNT(*) FROM tasks WHERE status = 'pendente' AND (due_date = 'hoje' OR due_date = 'vencida')")
+    tarefas_foco_hoje = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COUNT(*) FROM comandas WHERE status = 'aberta'")
+    comandas_abertas = cursor.fetchone()[0]
+
+    conn.close()
+
+    lead_sources = [
+        {"source": "WhatsApp Orgânico", "count": 69, "percent": 79},
+        {"source": "Campanhas de Disparo", "count": 17, "percent": 19},
+        {"source": "Prospecção Nativa (Maps)", "count": 1, "percent": 2}
+    ]
+
+    loss_reasons = [
+        {"reason": "Sem orçamento no momento", "count": 14},
+        {"reason": "Já possui fornecedor ativo", "count": 8},
+        {"reason": "Não respondeu propostas", "count": 6}
+    ]
+
+    return {
+        "leads_novos": total_leads,
+        "vendas_ganhas": vendas_ganhas,
+        "em_aberto": em_aberto,
+        "valor_ganho": valor_ganho,
+        "ticket_medio": ticket_medio,
+        "meta_progresso": min(100, round((valor_ganho / 10000.0) * 100, 1)) if valor_ganho > 0 else 15,
+        "tarefas_foco_hoje": tarefas_foco_hoje,
+        "tarefas_pendentes": tarefas_pendentes,
+        "comandas_abertas": comandas_abertas,
+        "lead_sources": lead_sources,
+        "loss_reasons": loss_reasons
+    }
+
+# ========================================================
+# FUNÇÕES DE CAMPANHAS DO DISPARADOR AUTOMÁTICO
+# ========================================================
+
+def save_dispatch_campaign(campaign_data: dict) -> int:
+    conn = get_connection()
+    cursor = conn.cursor()
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    cursor.execute("""
+    INSERT INTO dispatch_campaigns (name, template, target_group, total_leads, sent_count, failed_count, status, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        campaign_data.get("name", "Campanha Automática"),
+        campaign_data.get("template", ""),
+        campaign_data.get("target_group", "selection"),
+        int(campaign_data.get("total_leads", 0)),
+        int(campaign_data.get("sent_count", 0)),
+        int(campaign_data.get("failed_count", 0)),
+        campaign_data.get("status", "concluido"),
+        now_str
+    ))
+    campaign_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    return campaign_id
+
+def get_dispatch_campaigns(limit: int = 50) -> list:
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+    SELECT id, name, template, target_group, total_leads, sent_count, failed_count, status, created_at
+    FROM dispatch_campaigns
+    ORDER BY id DESC
+    LIMIT ?
+    """, (limit,))
+    rows = cursor.fetchall()
+    conn.close()
+    return [
+        {
+            "id": r[0],
+            "name": r[1],
+            "template": r[2],
+            "target_group": r[3],
+            "total_leads": r[4],
+            "sent_count": r[5],
+            "failed_count": r[6],
+            "status": r[7],
+            "created_at": r[8]
+        }
+        for r in rows
+    ]
+
 
 

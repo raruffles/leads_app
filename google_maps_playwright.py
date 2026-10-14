@@ -125,7 +125,7 @@ async def scrape_google_maps_real(query: str, limit: int = 15) -> List[Dict[str,
                     try:
                         await link_el.scroll_into_view_if_needed()
                         await link_el.click()
-                        await page.wait_for_timeout(2000)
+                        await page.wait_for_timeout(2500)
                         
                         # Captura URL real do local no Google Maps
                         current_url = page.url
@@ -134,25 +134,44 @@ async def scrape_google_maps_real(query: str, limit: int = 15) -> List[Dict[str,
                         elif raw_card_href and raw_card_href.startswith("http"):
                             maps_url = raw_card_href
 
-                        # Localiza o painel lateral exclusivo deste estabelecimento
-                        detail_pane = await page.query_selector('div[role="main"]')
+                        # Localiza o painel lateral exclusivo deste estabelecimento (o último div[role="main"])
+                        mains = await page.query_selector_all('div[role="main"]')
+                        detail_pane = mains[-1] if len(mains) > 1 else (mains[0] if mains else page)
                         scope = detail_pane if detail_pane else page
 
-                        # Extrai Telefone Oficial direto do botão do Maps
-                        phone_el = await scope.query_selector('button[data-item-id^="phone:"]')
+                        # 1. Extrai Telefone Oficial com seletores modernos e múltiplos fallbacks
+                        phone_el = await scope.query_selector('button[data-item-id^="phone:"], a[href^="tel:"], button[aria-label*="Telefone" i], button[aria-label*="Phone" i], div[data-item-id^="phone:"]')
+                        if not phone_el:
+                            phone_el = await page.query_selector('button[data-item-id^="phone:"], a[href^="tel:"], button[aria-label*="Telefone" i], button[aria-label*="Phone" i], div[data-item-id^="phone:"]')
+                        
                         if phone_el:
                             item_id = await phone_el.get_attribute("data-item-id") or ""
+                            href = await phone_el.get_attribute("href") or ""
+                            aria = await phone_el.get_attribute("aria-label") or ""
+                            
                             if "phone:tel:" in item_id:
                                 raw_digits = item_id.split("phone:tel:")[-1].strip()
                                 if raw_digits.startswith("0") and len(raw_digits) in (11, 12):
                                     raw_digits = raw_digits[1:]
                                 phone = raw_digits
+                            elif href.startswith("tel:"):
+                                raw_digits = href.replace("tel:", "").strip()
+                                if raw_digits.startswith("0") and len(raw_digits) in (11, 12):
+                                    raw_digits = raw_digits[1:]
+                                phone = raw_digits
+                            elif aria:
+                                m = re.search(r'(?:\(?(\d{2})\)?\s*)?(?:[2-9]\d{3,4}[-\s]?\d{4})', aria)
+                                if m:
+                                    phone = m.group(0)
+                                    
                             if not phone:
                                 phone_raw = await phone_el.inner_text()
                                 phone = clean_unicode_text(phone_raw)
                                 
-                        # Extrai Website Oficial
+                        # 2. Extrai Website Oficial
                         site_el = await scope.query_selector('a[data-item-id="authority"], a[aria-label*="site" i], a[aria-label*="website" i]')
+                        if not site_el:
+                            site_el = await page.query_selector('a[data-item-id="authority"], a[aria-label*="site" i], a[aria-label*="website" i]')
                         if site_el:
                             href = await site_el.get_attribute("href") or ""
                             if "google.com/url?q=" in href:
@@ -162,13 +181,19 @@ async def scrape_google_maps_real(query: str, limit: int = 15) -> List[Dict[str,
                             elif href.startswith("http"):
                                 website = href
                                 
-                        # Extrai Endereço Completo Oficial
-                        addr_el = await scope.query_selector('button[data-item-id="address"]')
+                        # 3. Extrai Endereço Completo Oficial
+                        addr_el = await scope.query_selector('button[data-item-id="address"], button[aria-label*="Endereço" i], button[aria-label*="Address" i]')
+                        if not addr_el:
+                            addr_el = await page.query_selector('button[data-item-id="address"], button[aria-label*="Endereço" i], button[aria-label*="Address" i]')
                         if addr_el:
-                            addr_raw = await addr_el.inner_text()
-                            address = clean_unicode_text(addr_raw)
+                            aria = await addr_el.get_attribute("aria-label") or ""
+                            if aria and "Endereço:" in aria:
+                                address = clean_unicode_text(aria.replace("Endereço:", "").strip())
+                            else:
+                                addr_raw = await addr_el.inner_text()
+                                address = clean_unicode_text(addr_raw)
 
-                        # Extrai Fotos Reais do Estabelecimento exclusivamente dentro do painel deste local
+                        # 4. Extrai Fotos Reais do Estabelecimento exclusivamente dentro do painel deste local
                         if detail_pane:
                             img_els = await detail_pane.query_selector_all('button[jsaction*="heroHeaderImage"] img, div[jsaction*="heroHeaderImage"] img, button[aria-label*="Foto" i] img, button[aria-label*="foto" i] img')
                             for img_el in img_els:
@@ -213,8 +238,8 @@ async def scrape_google_maps_real(query: str, limit: int = 15) -> List[Dict[str,
                                 uname = match_i.group(1).lower()
                                 if uname not in ['p', 'reel', 'stories', 'explore', 'google', 'maps']:
                                     instagram = f"@{match_i.group(1)}"
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        print(f"Aviso no card {name}: {e}")
                 
                 # Fallback para site a partir do card se não pegou no painel
                 if not website:
@@ -245,16 +270,26 @@ async def scrape_google_maps_real(query: str, limit: int = 15) -> List[Dict[str,
                     if not address and len(lines) > 1:
                         address = clean_unicode_text(lines[1])
 
+                # Identifica WhatsApp direto se for celular
+                whatsapp = ""
+                if phone:
+                    p_digits = re.sub(r'\D', '', phone)
+                    if p_digits.startswith("55") and len(p_digits) in (12, 13):
+                        p_digits = p_digits[2:]
+                    if (len(p_digits) == 11 and p_digits[2] == '9') or (len(p_digits) == 10 and p_digits[2] == '9'):
+                        whatsapp = f"55{p_digits}"
+
                 # Links diretos para análise humana
-                clean_address = address or query
+                clean_address = address
                 if not maps_url:
-                    maps_url = raw_card_href or f"https://www.google.com/maps/search/?api=1&query={urllib.parse.quote_plus(name + ' ' + clean_address)}"
+                    maps_url = raw_card_href or f"https://www.google.com/maps/search/?api=1&query={urllib.parse.quote_plus(name + ' ' + (clean_address or query))}"
                 
-                google_url = f"https://www.google.com/search?q={urllib.parse.quote_plus(name + ' ' + clean_address)}"
+                google_url = f"https://www.google.com/search?q={urllib.parse.quote_plus(name + ' ' + (clean_address or query))}"
 
                 leads.append({
                     "name": name,
                     "phone": phone,
+                    "whatsapp": whatsapp,
                     "website": website,
                     "address": clean_address,
                     "rating": rating,
