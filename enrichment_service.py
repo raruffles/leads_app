@@ -74,8 +74,14 @@ async def _resolve_maps_playwright_async(name: str, location: str = "") -> Dict[
             else:
                 result["maps_url"] = maps_search_url
 
+            mains = await page.query_selector_all('div[role="main"]')
+            detail_pane = mains[-1] if len(mains) > 1 else (mains[0] if mains else page)
+            scope = detail_pane if detail_pane else page
+
             # Telefone
-            phone_el = await page.query_selector('button[data-item-id^="phone:"], a[href^="tel:"], button[aria-label*="Telefone" i]')
+            phone_el = await scope.query_selector('button[data-item-id^="phone:"], a[href^="tel:"], button[aria-label*="Telefone" i]')
+            if not phone_el:
+                phone_el = await page.query_selector('button[data-item-id^="phone:"], a[href^="tel:"], button[aria-label*="Telefone" i]')
             if phone_el:
                 item_id = await phone_el.get_attribute("data-item-id") or ""
                 if "phone:tel:" in item_id:
@@ -91,8 +97,22 @@ async def _resolve_maps_playwright_async(name: str, location: str = "") -> Dict[
                     if m:
                         result["phone"] = clean_phone(m.group(0))
 
+            # Extrai WhatsApp direto de botão ou link se houver
+            wa_el = await scope.query_selector('a[href*="wa.me"], a[href*="whatsapp.com"], a[href*="api.whatsapp.com"], button[data-item-id*="whatsapp" i]')
+            if not wa_el:
+                wa_el = await page.query_selector('a[href*="wa.me"], a[href*="whatsapp.com"], a[href*="api.whatsapp.com"], button[data-item-id*="whatsapp" i]')
+            if wa_el:
+                wa_href = await wa_el.get_attribute("href") or ""
+                wa_match = re.search(r'(?:wa\.me/|phone=|send\?phone=)([0-9\+]+)', wa_href)
+                if wa_match:
+                    wa_digits = re.sub(r'\D', '', wa_match.group(1))
+                    if wa_digits:
+                        result["whatsapp"] = format_whatsapp_number(wa_digits)
+
             # Endereço
-            addr_el = await page.query_selector('button[data-item-id="address"], button[aria-label*="Endereço" i]')
+            addr_el = await scope.query_selector('button[data-item-id="address"], button[aria-label*="Endereço" i]')
+            if not addr_el:
+                addr_el = await page.query_selector('button[data-item-id="address"], button[aria-label*="Endereço" i]')
             if addr_el:
                 aria = await addr_el.get_attribute("aria-label") or ""
                 if "Endereço:" in aria:
@@ -101,7 +121,9 @@ async def _resolve_maps_playwright_async(name: str, location: str = "") -> Dict[
                     result["address"] = clean_unicode_text(await addr_el.inner_text())
 
             # Site
-            site_el = await page.query_selector('a[data-item-id="authority"], a[aria-label*="site" i]')
+            site_el = await scope.query_selector('a[data-item-id="authority"], a[aria-label*="site" i]')
+            if not site_el:
+                site_el = await page.query_selector('a[data-item-id="authority"], a[aria-label*="site" i]')
             if site_el:
                 href = await site_el.get_attribute("href") or ""
                 if "google.com/url?q=" in href:
@@ -112,8 +134,13 @@ async def _resolve_maps_playwright_async(name: str, location: str = "") -> Dict[
                     result["website"] = href
 
             # WhatsApp se for celular
-            if result["phone"]:
+            if result["phone"] and not result["whatsapp"]:
                 digits = re.sub(r'\D', '', result["phone"])
+                if digits.startswith("55") and len(digits) in (12, 13):
+                    digits = digits[2:]
+                if len(digits) == 10 and digits[2] in ('6', '7', '8', '9'):
+                    digits = f"{digits[:2]}9{digits[2:]}"
+                    result["phone"] = f"({digits[:2]}) {digits[2:7]}-{digits[7:]}"
                 if len(digits) == 11 and digits[2] == '9':
                     result["whatsapp"] = format_whatsapp_number(digits)
 
@@ -232,7 +259,8 @@ def search_web_contacts(name: str, location: str = "") -> Dict[str, str]:
                 clean_emails = [
                     e for e in emails 
                     if not any(e.lower().endswith(ext) for ext in ['.png', '.jpg', '.jpeg', '.webp', '.svg'])
-                    and 'sentry' not in e.lower() and len(e) < 55
+                    and not re.search(r'@\d+\.\d+|slick|npm|intl-|carousel|sentry', e.lower())
+                    and len(e) < 55
                 ]
                 if clean_emails:
                     found["email"] = clean_emails[0]

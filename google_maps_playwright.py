@@ -111,6 +111,7 @@ async def scrape_google_maps_real(query: str, limit: int = 15) -> List[Dict[str,
                 
                 # Clicar no card para abrir o painel lateral com detalhes completos
                 phone = ""
+                whatsapp = ""
                 website = ""
                 address = ""
                 instagram = ""
@@ -167,6 +168,20 @@ async def scrape_google_maps_real(query: str, limit: int = 15) -> List[Dict[str,
                             if not phone:
                                 phone_raw = await phone_el.inner_text()
                                 phone = clean_unicode_text(phone_raw)
+
+                        # 1b. Extrai WhatsApp oficial se houver botão ou link direto
+                        wa_el = await scope.query_selector('a[href*="wa.me"], a[href*="whatsapp.com"], a[href*="api.whatsapp.com"], button[data-item-id*="whatsapp" i]')
+                        if not wa_el:
+                            wa_el = await page.query_selector('a[href*="wa.me"], a[href*="whatsapp.com"], a[href*="api.whatsapp.com"], button[data-item-id*="whatsapp" i]')
+                        if wa_el:
+                            wa_href = await wa_el.get_attribute("href") or ""
+                            wa_match = re.search(r'(?:wa\.me/|phone=|send\?phone=)([0-9\+]+)', wa_href)
+                            if wa_match:
+                                wa_digits = re.sub(r'\D', '', wa_match.group(1))
+                                if wa_digits.startswith("55") and len(wa_digits) in (12, 13):
+                                    whatsapp = wa_digits
+                                elif len(wa_digits) in (10, 11):
+                                    whatsapp = f"55{wa_digits}"
                                 
                         # 2. Extrai Website Oficial
                         site_el = await scope.query_selector('a[data-item-id="authority"], a[aria-label*="site" i], a[aria-label*="website" i]')
@@ -270,13 +285,15 @@ async def scrape_google_maps_real(query: str, limit: int = 15) -> List[Dict[str,
                     if not address and len(lines) > 1:
                         address = clean_unicode_text(lines[1])
 
-                # Identifica WhatsApp direto se for celular
-                whatsapp = ""
-                if phone:
+                # Identifica WhatsApp direto se for celular ou se ainda não detectado
+                if not whatsapp and phone:
                     p_digits = re.sub(r'\D', '', phone)
                     if p_digits.startswith("55") and len(p_digits) in (12, 13):
                         p_digits = p_digits[2:]
-                    if (len(p_digits) == 11 and p_digits[2] == '9') or (len(p_digits) == 10 and p_digits[2] == '9'):
+                    if len(p_digits) == 10 and p_digits[2] in ('6', '7', '8', '9'):
+                        p_digits = f"{p_digits[:2]}9{p_digits[2:]}"
+                        phone = f"({p_digits[:2]}) {p_digits[2:7]}-{p_digits[7:]}"
+                    if len(p_digits) == 11 and p_digits[2] == '9':
                         whatsapp = f"55{p_digits}"
 
                 # Links diretos para análise humana

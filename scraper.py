@@ -51,6 +51,8 @@ def clean_phone(phone_str: str) -> str:
     digits = re.sub(r'\D', '', phone_str)
     if digits.startswith("55") and len(digits) >= 12:
         digits = digits[2:]
+    if len(digits) == 10 and digits[2] in ('6', '7', '8', '9'):
+        digits = f"{digits[:2]}9{digits[2:]}"
     if len(digits) == 11:
         return f"({digits[:2]}) {digits[2:7]}-{digits[7:]}"
     elif len(digits) == 10:
@@ -64,8 +66,12 @@ def format_whatsapp_number(raw_num: str) -> str:
     digits = re.sub(r'\D', '', raw_num)
     if not digits:
         return ""
-    if digits.startswith("55"):
-        return digits
+    if digits.startswith("55") and len(digits) >= 12:
+        digits = digits[2:]
+    if len(digits) == 10 and digits[2] in ('6', '7', '8', '9'):
+        digits = f"{digits[:2]}9{digits[2:]}"
+    if len(digits) == 11 and digits[2] == '9':
+        return f"55{digits}"
     if len(digits) in (10, 11):
         return f"55{digits}"
     return digits
@@ -727,10 +733,11 @@ class LeadScraper:
 
             # Se temos telefone celular válido e ainda não temos WhatsApp, define o WhatsApp automaticamente
             if not whatsapp and digits:
+                if len(digits) == 10 and digits[2] in ('6', '7', '8', '9'):
+                    digits = f"{digits[:2]}9{digits[2:]}"
+                    phone = clean_phone(digits)
                 if len(digits) == 11 and digits[2] == '9':
                     whatsapp = format_whatsapp_number(digits)
-                elif len(digits) == 10 and digits[2] == '9':
-                    whatsapp = format_whatsapp_number(f"{digits[:2]}9{digits[2:]}")
 
             # Se ainda não temos WhatsApp, tenta busca externa de WhatsApp real comercial
             if not whatsapp:
